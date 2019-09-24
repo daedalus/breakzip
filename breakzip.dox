@@ -1,0 +1,11 @@
+# Doxyfile 1.8.11
+
+#---------------------------------------------------------------------------
+# This is a bare-bones Doxygen template. To generate a full template file
+# with all available options, use "doxygen -g <filename>"
+#---------------------------------------------------------------------------
+
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "breakzip"
+STRIP_FROM_PATH        = /home/leaf/Pyrofex/Customers/Tolsi/breakzip/
+INPUT                  = src 
