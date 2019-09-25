@@ -4,6 +4,8 @@
 #ifndef __BREAKZIP_H__
 #define __BREAKZIP_H__
 
+#include "types.h"
+
 namespace breakzip {
 
     int main(int argc, char* argv[]);
