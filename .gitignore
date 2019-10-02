@@ -1,14 +1,24 @@
-*.o
-*.lo
 *.a
+*.bak
+*.diff
 *.la
+*.lo
+*.log
+*.o
 *.so
 *.swp
-*.diff
 *.sym
 
 build.out/**
-**/config.log
+          **/config.log
 **/.libs
 third-party/check-0.12.0/tests/check_*
 third-party/check-0.12.0/tests/ex_output
+
+
+
+third-party/zip30/flags                                                   
+third-party/zip30/zip                                                
+third-party/zip30/zipcloak
+third-party/zip30/zipnote
+third-party/zip30/zipsplit   
