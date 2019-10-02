@@ -12,13 +12,13 @@
 #include "../breakzip.h"
 
 using namespace breakzip;
+using namespace zip;
 using namespace std;
 
 START_TEST(test_always_pass) {
     ck_assert(true);
 }
 END_TEST
-
 
 Suite* make_suite(const std::string name) {
     Suite* s;
@@ -36,7 +36,7 @@ Suite* make_suite(const std::string name) {
 int main(int argc, char* argv[]) {
     vector<string> inputs;
     InitBreakZip(argc, argv);
-    
+
     int failed = 0;
     Suite* s = nullptr;
     SRunner* sr = nullptr;

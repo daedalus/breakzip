@@ -1,4 +1,4 @@
-set(tests check_simple)
+set(tests check_simple check_header)
 
 foreach(test ${tests})
     add_executable(${test} ${test}.cpp)

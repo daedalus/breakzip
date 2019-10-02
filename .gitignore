@@ -1,0 +1,14 @@
+*.o
+*.lo
+*.a
+*.la
+*.so
+*.swp
+*.diff
+*.sym
+
+build.out/**
+**/config.log
+**/.libs
+third-party/check-0.12.0/tests/check_*
+third-party/check-0.12.0/tests/ex_output
