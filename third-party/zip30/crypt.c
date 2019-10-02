@@ -219,7 +219,10 @@ void crypthead(passwd, crc)
      * often poorly implemented.
      */
     if (++calls == 1) {
-        srand((unsigned)time(NULL) ^ ZCR_SEED2);
+        time_t t = time(NULL);
+        unsigned int seed = (unsigned)t ^ ZCR_SEED2;
+        srand(seed);
+        fprintf(stderr, "crypthead: time = %ld | seed = %d\n", t, seed);
     }
     init_keys(passwd);
     for (n = 0; n < RAND_HEAD_LEN-2; n++) {

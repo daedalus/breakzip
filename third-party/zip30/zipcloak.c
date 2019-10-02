@@ -32,6 +32,9 @@
 #  include <stdlib.h>
 #endif
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #if CRYPT       /* defined (as TRUE or FALSE) in crypt.h */
 
 int main OF((int argc, char **argv));
@@ -335,6 +338,9 @@ int main(argc, argv)
 
     char **args;               /* copy of argv that can be freed */
 
+    pid_t pid = getpid();
+    fprintf(stderr, "ZipCloak PID: %d\n", pid);
+
 #ifdef THEOS
     setlocale(LC_CTYPE, "I");
 #endif
@@ -537,7 +543,6 @@ int main(argc, argv)
           }
           free(value);
           break;
-
         default:
           ziperr(ZE_PARMS, "unknown option");
       }
