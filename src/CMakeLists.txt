@@ -1,10 +1,16 @@
+# Author: Nash E. Foster
+
 add_subdirectory (test)
 configure_file(breakzip_config.h.in breakzip_config.h)
 add_library(breakzipcore breakzip.cpp)
+
 add_executable(breakzip main.cpp)
 target_link_libraries(breakzip breakzipcore ${LIBS})
 
-install(TARGETS breakzip breakzipcore
+add_executable(recoverseed recoverseed.cpp)
+target_link_libraries(recoverseed breakzipcore ${LIBS})
+
+install(TARGETS breakzip recoverseed breakzipcore
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib/breakziplib)

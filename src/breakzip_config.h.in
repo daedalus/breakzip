@@ -1,6 +1,6 @@
-/* Copyright (c) 2019, Pyrofex Corporation.
+/***
  * Author: Nash E. Foster
- * */
+ */
 #define BREAKZIP_VERSION_MAJOR @breakzip_VERSION_MAJOR@
 #define BREAKZIP_VERSION_MINOR @breakzip_VERSION_MINOR@
 #define BREAKZIP_VERSION_PATCH @breakzip_VERSION_PATCH@
