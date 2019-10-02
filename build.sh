@@ -11,7 +11,7 @@ set -ex
 TPDIR="third-party"
 THIRD_PARTY_BUILD="${1:-build.out}"
 DEF_PFX="$(readlink -f $(pwd))/build.out"
-BUILD="${2:-${DEF_PFX}}"
+BUILD_DIR="${2:-${DEF_PFX}}"
 LIBDIR="${THIRD_PARTY_BUILD}/lib"
 export VERBOSE=1
 export DEBUG=1
@@ -32,19 +32,19 @@ if [ "${TPBUILD}" = "yes" ] ; then {
 } ; fi
 
 SRCDIR=$(readlink -f $(pwd))
-if [ ! -d ${BUILD} ] ; then {
-	mkdir -p ${BUILD};
+if [ ! -d ${BUILD_DIR} ] ; then {
+	mkdir -p ${BUILD_DIR};
 } ; fi
 
 # Build and Unit test
-cd ${BUILD}
-cmake -B${BUILD} -H${SRCDIR}
+cd ${BUILD_DIR}
+cmake ${CMAKE_VARS} -B${BUILD_DIR} -H${SRCDIR}
 make -j 8
 
-CTEST_OUTPUT_ON_FAILURE=TRUE make test
-
 # Build the package
-cd ${BUILD}
+cd ${BUILD_DIR}
 make package
+
+CTEST_OUTPUT_ON_FAILURE=TRUE make test
 
 
