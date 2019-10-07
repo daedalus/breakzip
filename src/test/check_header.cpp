@@ -12,7 +12,6 @@
 #include "../breakzip.h"
 
 using namespace breakzip;
-using namespace zip;
 using namespace std;
 
 START_TEST(test_always_pass) {

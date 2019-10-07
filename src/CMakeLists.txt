@@ -2,7 +2,7 @@
 
 add_subdirectory (test)
 configure_file(breakzip_config.h.in breakzip_config.h)
-add_library(breakzipcore breakzip.cpp)
+add_library(breakzipcore breakzip.cpp stages.cpp)
 
 add_executable(breakzip main.cpp)
 target_link_libraries(breakzip breakzipcore ${LIBS})
