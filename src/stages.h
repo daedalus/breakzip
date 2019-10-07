@@ -36,19 +36,41 @@ namespace breakzip {
     // We guess [chunk2 = LSB(CRC(key00, 0)) (8 bits)]
     // We guess [chunk3 = MSB(key10 * 0x08088405), carry for x, carry for y (10 bits)]
     // We guess [chunk4 = bits 16..23 of key20 (8 bits)]
+    //    - note if chunk4 is a uint32_t then the bits should be in the correct
+    //    position, otherwise you have to bitshift them before combining with chunk1
+    //    during the computation of s1x below.
     // (42 bits total)
     // 
-    // From chunk1 we compute s0.
-    // For each file
-    // We get x0 from the header
-    // From that and chunk2 we compute LSB(key01x) * 0x08088405 + 1
-    // From that and chunk3 we compute MSB(key11x)
-    // From that and chunk4 we compute s1x
+    // From chunk1 we compute s0 as follows:
+    //      temp = key20 | 3;
+    //      s0 = ((temp * (temp ^ 1)) >> 8) & 0xff;
+    // For each file, get x0 from the header.
+    // From that and chunk2 we compute:
+    //      temp = crctab[x0] & 0xff;
+    //      temp ^= chunk2
+    //      temp *= 0x08088405
+    //      temp = (temp + 1) >> 24;
+    // From that and chunk3 we compute MSB(key11x):
+    //      MSB(key11x) = temp + chunk3 + carry for x
+    // From that and chunk4 we compute s1x:
+    //      r = chunk4 | chunk1
+    //      key21x_low24bits = crc32(r, MSB(key11x))
+    //      temp = key21x_low24bits | 3;
+    //      s1x = ((temp * (temp ^ 1)) >> 8 & 0xff
     //           
     // y0 = x0 ^ s0
     // From that and chunk2 we compute LSB(key01y) * 0x08088405 + 1
-    // From that and chunk3 we compute MSB(key11y)
+    //      temp = crctab[y0] & 0xff;
+    //      temp ^= chunk2
+    //      temp *= 0x08088405
+    //      temp = (temp + 1) >> 24;
+    // From that and chunk3 we compute MSB(key11y):
+    //      MSB(key11y) = temp + chunk3 + carry for y
     // From that and chunk4 we compute s1y
+    //      r = chunk4 | chunk1
+    //      key21y_low24bits = crc32(r, MSB(key11y))
+    //      temp = key21y_low24bits | 3;
+    //      s1y = ((temp * (temp ^ 1)) >> 8 & 0xff
     // 
     // We compute x1 ^ s1x ^ s1y and compare it to h1.  If it's wrong, our guess was wrong.
     // 
