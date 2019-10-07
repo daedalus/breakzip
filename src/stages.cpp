@@ -56,8 +56,8 @@ namespace breakzip {
     };
 
     /* Need an implementation of this function. */
-    uint32_t crc32 (uint32_t x, uint32_t y) {
-        abort();
+    uint32_t crc32 (uint32_t x, uint8_t y) {
+        return (x>>8) ^ crc32tab[y] ^ crc32tab[x & 0xff];
     }
 
     int stage1(const crack_t* state, vector<guess_t> out) {
