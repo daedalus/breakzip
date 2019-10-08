@@ -76,9 +76,10 @@ namespace breakzip {
 
             bool wrong = false;
 
-            for (int i = 0; i < state->random_bytes.size(); ++i) {
-                auto x_array = state->random_bytes[i];
-                auto h_array = state->crypt_header_bytes[i];
+            auto zip = state->zip;
+            for (auto file: zip.files) {
+                auto x_array = file.random_bytes;
+                auto h_array = file.header_second;
 
                 uint32_t temp = crc32tab[x_array[0]] & 0xff;
                 temp ^= chunk2;
