@@ -55,7 +55,6 @@ namespace breakzip {
 
     };
 
-    /* Need an implementation of this function. */
     uint32_t crc32 (uint32_t x, uint8_t y) {
         return (x>>8) ^ crc32tab[y] ^ crc32tab[x & 0xff];
     }
@@ -69,7 +68,7 @@ namespace breakzip {
             uint8_t chunk3 = (guess_bits >> 24) & 0xff;
             uint8_t carry_for_x = (guess_bits >> 32) & 0x01;
             uint8_t carry_for_y = (guess_bits >> 33) & 0x01;
-            uint8_t chunk4_tmp = (guess_bits >> 34) & 0xff;
+            uint8_t chunk4_tmp = (guess_bits >> 18) & 0xff0000;
 
             // Position the bits in chunk4.
             uint32_t chunk4 = (chunk4_tmp << 24);

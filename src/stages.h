@@ -21,7 +21,7 @@ namespace breakzip {
      * thread.
      */
     typedef struct crack {
-        vector<uint64_t> random_seeds;
+        vector<uint32_t> random_seeds;
         vector<vector<uint8_t>> random_bytes;
         vector<array<uint8_t, 12>> crypt_header_bytes;
         uint64_t stage1_start;
