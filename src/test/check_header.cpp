@@ -10,27 +10,14 @@
 #include <gflags/gflags.h>
 
 #include "../breakzip.h"
-
-struct zip_crypt_testfile {
-    uint8_t random_bytes[10];
-    uint8_t header_first[10];
-    uint8_t header_second[10];
-};
-
-struct zip_crypt_test {
-    pid_t pid;
-    time_t time;
-    unsigned int seed;
-    uint32_t keys[3];
-    struct zip_crypt_testfile files[2];
-};
+#include "../stages.h"
 
 /* Our tests are based on ZIP files created with 2 files in each one. These
  * were then encrypted by an instrumented version of zipcloak with simple
  * passwords. The bytes below correspond to the internal states of various
  * encryption variables relevant to the crack.
  */
-struct zip_crypt_test test1[5] = {
+zip_crack_t crypt_tests[5] = {
     {
         13426, 1570546266, 1570543144, // pid, time, seed
         { 0xe4858bae, 0xa8254576, 0x3743e7bb }, // keys
@@ -110,6 +97,20 @@ using namespace std;
 
 START_TEST(test_always_pass) {
     ck_assert(true);
+}
+END_TEST
+
+START_TEST(test_crypt) {
+
+    for (auto test: crypt_tests) {
+        crack_t state;
+        state.random_seeds.push_back(test.seed);
+
+        // TODO(leaf): Figure out a way to constrain this a bit more than
+        // just the range of 42-bit numbers.
+        state.stage1_start = 0;
+        state.stage1_end = 0x000003ffffffffff;
+    }
 }
 END_TEST
 

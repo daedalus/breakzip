@@ -20,14 +20,25 @@ namespace breakzip {
     /* Structure for containing the global state of the cracking job on this
      * thread.
      */
+    typedef struct zip_cryptfile {
+        uint8_t random_bytes[10];
+        uint8_t header_first[10];
+        uint8_t header_second[10];
+    } zip_cryptfile_t;
+
+    typedef struct zip_crack {
+        pid_t pid;
+        time_t time;
+        unsigned int seed;
+        uint32_t keys[3];
+        zip_cryptfile_t files[2];
+    } zip_crack_t;
+
     typedef struct crack {
-        vector<uint32_t> random_seeds;
-        vector<vector<uint8_t>> random_bytes;
-        vector<array<uint8_t, 12>> crypt_header_bytes;
         uint64_t stage1_start;
         uint64_t stage1_end;
+        zip_crack_t zip;
     } crack_t;
-
 
     // Notation:
     // 
