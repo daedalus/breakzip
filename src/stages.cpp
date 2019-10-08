@@ -70,9 +70,6 @@ namespace breakzip {
             uint8_t carry_for_y = (guess_bits >> 33) & 0x01;
             uint8_t chunk4_tmp = (guess_bits >> 18) & 0xff0000;
 
-            // Position the bits in chunk4.
-            uint32_t chunk4 = (chunk4_tmp << 24);
-
             // Compute s0.
             uint16_t tmp = chunk1 | 3;
             uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
