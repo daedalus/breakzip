@@ -31,6 +31,10 @@ namespace breakzip {
         time_t time;
         unsigned int seed;
         uint32_t keys[3];
+        // TODO(leaf): Because the specific target archive for which we're
+        // writing this crack has only two files, we hard-coded that number
+        // here. To make this attack generally useful, we would need a vector
+        // here instead.
         zip_cryptfile_t files[2];
     } zip_crack_t;
 
