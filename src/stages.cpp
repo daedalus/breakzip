@@ -59,15 +59,57 @@ namespace breakzip {
         return (x>>8) ^ crc32tab[y] ^ crc32tab[x & 0xff];
     }
 
+    /* The stage1_correct_guess function takes a crack_t that contains complete
+     * information about the internal crypto-state, e.g. from a test. It
+     * produces the correct 42-bit stage1 guess.
+     */
+    uint64_t stage1_correct_guess(const crack_t crypt_test) {
+        uint32_t k00 = crypt_test.zip.keys[0];
+        uint32_t k10 = crypt_test.zip.keys[1];
+        uint32_t k20 = crypt_test.zip.keys[2];
+        uint8_t  x0  = crypt_test.zip.files[0].random_bytes[0];
+
+        uint16_t chunk1  = k20 & 0xffff;
+        uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
+        uint16_t chunk3  = k10 >> 24;
+        uint32_t crcx0   = crc32tab[x0];
+        uint8_t  lsbk11x = (chunk2 ^ crcx0) & 0xff;
+        uint32_t low24x  = (lsbk11x * 0x08088405 + 1) & 0x00ffffff;
+        uint8_t  carryx  = (low24x + (k10 & 0x00ffffff)) > (1 << 24);
+        uint8_t  chunk4  = k20 & 0xff0000;
+        uint16_t temp1x  = (k20 | 3) & 0xffff;
+        uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
+        uint8_t  y0      = x0 ^ s0;
+        uint32_t crcy0   = crc32tab[y0];
+        uint8_t  lsbk11y = (chunk2 ^ crcy0) & 0xff;
+        uint32_t low24y  = (lsbk11y * 0x08088405 + 1) & 0x00ffffff;
+        uint8_t  carryy  = (low24y + (k10 & 0x00ffffff)) > (1 << 24);
+
+        uint64_t guess_bits = chunk1 | (chunk2 << 16) | (chunk3 << 24) |
+            (carryx << 32) | (carryy << 33) | (chunk4 << 18);
+
+    }
+
+    uint64_t stage1_correct_guess_start(uint64_t correct_guess) {
+        return correct_guess & ~ 0xffff;
+    }
+
+    uint64_t stage1_correct_guess_end(uint64_t correct_guess) {
+        return correct_guess | 0xffff;
+    }
+
     int stage1(const crack_t* state, vector<guess_t> out) {
 
         uint64_t guess_bits = state->stage1_start;
         while (guess_bits < state->stage1_end) {
             uint16_t chunk1 = guess_bits & 0xffff;
             uint8_t chunk2 = (guess_bits >> 16) & 0xff;
+            // chunk3: high 8 bits of key10 * 0x08088405.
             uint8_t chunk3 = (guess_bits >> 24) & 0xff;
-            uint8_t carry_for_x = (guess_bits >> 32) & 0x01;
-            uint8_t carry_for_y = (guess_bits >> 33) & 0x01;
+            uint8_t carry_for_x00 = (guess_bits >> 32) & 0x01;
+            uint8_t carry_for_x01 = (guess_bits >> 33) & 0x01;
+            uint8_t carry_for_y00 = (guess_bits >> 34) & 0x01;
+            uint8_t carry_for_y01 = (guess_bits >> 35) & 0x01;
             uint8_t chunk4 = (guess_bits >> 18) & 0xff0000;
 
             // Compute s0.

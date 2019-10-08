@@ -44,6 +44,11 @@ namespace breakzip {
         zip_crack_t zip;
     } crack_t;
 
+    /* Helper functions for testing stage1. */
+    uint64_t stage1_correct_guess(crack_t crypt_test);
+    uint64_t stage1_correct_guess_start(uint64_t correct_guess);
+    uint64_t stage1_correct_guess_end(uint64_t correct_guess);
+
     // Notation:
     // 
     // key00, key10, key20 are the keys after having processed the password.

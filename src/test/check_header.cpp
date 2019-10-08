@@ -125,6 +125,15 @@ START_TEST(test_crypt) {
     for (auto crack_test: crypt_tests) {
         auto zip = crack_test.zip;
 
+        uint64_t correct = stage1_correct_guess(crack_test);
+        //fprintf(stderr, ">>>>>>> test pid=%d: correct guess is 0x%lx\n",
+        //        zip.pid, correct);
+        /* crack_test.stage1_start = stage1_correct_guess_start(correct);
+        crack_test.stage1_end = stage1_correct_guess_end(correct);
+
+        fprintf(stderr, ">>>>>>> test pid=%d: start=%lx end=%lx\n", zip.pid,
+                crack_test.stage1_start, crack_test.stage1_end);
+        */
         for (auto file: zip.files) {
             ck_assert_msg(file.random_bytes[0] == file.header_second[0],
                     "Invalid test data: random_bytes[0] is not decrypted in "
