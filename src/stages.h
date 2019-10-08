@@ -3,6 +3,7 @@
  */
 
 #include <vector>
+#include <array>
 #include <cstdint>
 
 namespace breakzip {
@@ -15,6 +16,18 @@ namespace breakzip {
         uint32_t stage3_bits : 18;
         uint32_t stage4_bits : 18;
     } guess_t;
+
+    /* Structure for containing the global state of the cracking job on this
+     * thread.
+     */
+    typedef struct crack {
+        vector<uint32_t> random_seeds;
+        vector<vector<uint8_t>> random_bytes;
+        vector<array<uint8_t, 12>> crypt_header_bytes;
+        uint64_t stage1_start;
+        uint64_t stage1_end;
+    } crack_t;
+
 
     // Notation:
     // 
@@ -84,7 +97,7 @@ namespace breakzip {
      * errors happen, returns 0 and sets errno.
      */
 
-    int stage1(const uint64_t start, const uint64_t end, vector<guess_t> out);
+    int stage1(const crack_t* state, vector<guess_t> out);
 
     // stage 2:
 
@@ -106,7 +119,9 @@ namespace breakzip {
      * stage2 will include 42 bits from stage 1 as a 64-bit integer and 26 bits
      * from stage2 as a 32-bit integer.
      */
-    int stage2(const vector<guess_t> in, vector<guess_t> out);
+
+    int stage2(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t> out);
 
     // stage 3:
     // We guess [chunk8 = bits 24..32 of key00 (8 bits)]
@@ -122,7 +137,8 @@ namespace breakzip {
     /*
      * stage3 depends on guesses from stage2. 
      */
-    int stage3(const vector<guess_t> in, vector<guess_t> out);
+    int stage3(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t> out);
 
 
     // stage 4:
@@ -135,21 +151,24 @@ namespace breakzip {
     // 18} = 2**55 work where the 37 in the exponent is from stage 3 and the 18
     // from stage 4.
 
-    int stage4(const vector<guess_t> in, vector<guess_t> out);
+    int stage4(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t> out);
 
     // 
     // stage 5:
     // No guesses, just filtration with h4 in each file.  
     // We expect 2**{38 - 16} = 2**{22} chunk1-11 tuples to pass, 2**38 work
     // where the 38 in the exponent is from stage 4.
-    int stage5(const vector<guess_t> in, vector<guess_t> out);
+    int stage5(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t> out);
 
     // 
     // stage 6:
     // No guesses, just filtration with h5 in each file.  
     // We expect 2**{22 - 16} = 2**{6} chunk1-11 tuples to pass, 2**22 work
     // where the 22 in the exponent is from stage 5.
-    int stage6(const vector<guess_t> in, vector<guess_t> out);
+    int stage6(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t> out);
 
     // 
     // stage 7:
@@ -157,6 +176,7 @@ namespace breakzip {
     // We expect 2**{6 - 16} = 2**{-10} chunk1-11 tuples to pass, 2**6 work
     // i.e. only the right one, where the 6 in the exponent is from stage 6.
     // 
-    int stage7(const vector<guess_t> in, vector<guess_t> out);
+    int stage7(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t> out);
 
 }; // namespace
