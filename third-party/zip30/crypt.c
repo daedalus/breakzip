@@ -172,6 +172,9 @@ void init_keys(__G__ passwd)
         update_keys(__G__ (int)*passwd);
         passwd++;
     }
+    fprintf(stderr, "init_keys: 0: 0x%08x 1: 0x%08x 2: 0x%08x\n",
+        (unsigned int)GLOBAL(keys[0]), (unsigned int)GLOBAL(keys[1]),
+        (unsigned int)GLOBAL(keys[2]));
 }
 
 
@@ -225,15 +228,33 @@ void crypthead(passwd, crc)
         fprintf(stderr, "crypthead: time = %ld | seed = %d\n", t, seed);
     }
     init_keys(passwd);
+    uch randbytes[RAND_HEAD_LEN];
     for (n = 0; n < RAND_HEAD_LEN-2; n++) {
         c = (rand() >> 7) & 0xff;
+        randbytes[n] = c;
         header[n] = (uch)zencode(c, t);
     }
+    fprintf(stderr, "crypthead bytes: [random seq] ");
+    for (n = 0; n < RAND_HEAD_LEN-2; n++) {
+        fprintf(stderr, "%02x ", randbytes[n]);
+    }
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "crypthead bytes: [1st crypt] ");
+    for (n = 0; n < RAND_HEAD_LEN-2; n++) {
+        fprintf(stderr, "%02x ", header[n]);
+    }
+    fprintf(stderr, "\n");
+
+
     /* Encrypt random header (last two bytes is high word of crc) */
     init_keys(passwd);
+    fprintf(stderr, "crypthead bytes: [2nd crypt] ");
     for (n = 0; n < RAND_HEAD_LEN-2; n++) {
         header[n] = (uch)zencode(header[n], t);
+        fprintf(stderr, "%02x ", header[n]);
     }
+    fprintf(stderr, "\n");
     header[RAND_HEAD_LEN-2] = (uch)zencode((int)(crc >> 16) & 0xff, t);
     header[RAND_HEAD_LEN-1] = (uch)zencode((int)(crc >> 24) & 0xff, t);
     bfwrite(header, 1, RAND_HEAD_LEN, BFWRITE_DATA);
