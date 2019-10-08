@@ -172,6 +172,13 @@ void init_keys(__G__ passwd)
         update_keys(__G__ (int)*passwd);
         passwd++;
     }
+    /* NB(leaf): On x86_64 Linux machines, the definition of z_uint4 does not
+     * properly define the type of the keys global. Instead, they are defined
+     * as unsigned long, which is 8 bytes instead of 4 bytes. As far as I can
+     * tell, everywhere the keys are actually used there's an explicit cast
+     * that throws away the high order 4 bytes, so it doesn't matter. In order
+     * to print them correctly, we cast directly to unsigned int here.
+     */
     fprintf(stderr, "init_keys: 0: 0x%08x 1: 0x%08x 2: 0x%08x\n",
         (unsigned int)GLOBAL(keys[0]), (unsigned int)GLOBAL(keys[1]),
         (unsigned int)GLOBAL(keys[2]));
