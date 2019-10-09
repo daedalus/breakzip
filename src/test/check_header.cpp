@@ -138,6 +138,16 @@ START_TEST(test_crypt) {
         ck_assert_msg(stage1_start != stage1_end,
             "Expect start != end, got: 0x%08lx == 0x%08lx\n", 
             stage1_start, stage1_end);
+
+        crack_test.stage1_start = stage1_start;
+        crack_test.stage1_end = stage1_end;
+
+        vector<guess_t> out;
+
+        ck_assert(stage1(&crack_test, out));
+        ck_assert_msg(out.size() > 0,
+                "Expected at least one valid guess, got %d\n",
+                out.size());
     }
 }
 END_TEST
