@@ -186,9 +186,9 @@ namespace breakzip {
                 fprintf(stderr, "S0: 0x%x\n", s0);
 
                 if ((expected_s0 & 0x100)) {
-                    if (s0 == (uint16_t)(expected_s0 && 0xff)) {
+                    if (s0 == (expected_s0 & 0xff)) {
                         fprintf(stderr, "OK: expected s0 is 0x%x, got 0x%x\n",
-                            expected_s0 & 0xff, s0 & 0xff);
+                            expected_s0, s0);
                     } else {
                         fprintf(stderr, "FATAL ERROR: stream byte 0 not calculated "
                                 "correctly: expected 0x%x, got 0x%x, but guess is "

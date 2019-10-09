@@ -6,6 +6,8 @@
 #include <array>
 #include <cstdint>
 
+#pragma pack(1)
+
 namespace breakzip {
 
     using namespace std;
