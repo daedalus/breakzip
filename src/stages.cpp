@@ -203,8 +203,8 @@ namespace breakzip {
                 }
 
                 uint8_t msb_key11x = temp + chunk3 + carry_for_x;
-                const uint32_t r = (chunk4 << 16) | chunk1;
-                uint32_t key21x_low24bits = crc32(r, msb_key11x);
+                const uint32_t key20_low24bits = (chunk4 << 16) | chunk1;
+                uint32_t key21x_low24bits = crc32(key20_low24bits, msb_key11x);
                 uint32_t t = key21x_low24bits | 3;
                 uint32_t s1x = (t * (t ^ 1)) >> 8 & 0xff;
 
@@ -215,7 +215,7 @@ namespace breakzip {
                 tt = (tt + 1) >> 24;
 
                 uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
-                uint32_t key21y_low24bits = crc32(r, msb_key11y);
+                uint32_t key21y_low24bits = crc32(key20_low24bits, msb_key11y);
                 uint32_t ttt = key21y_low24bits | 3;
                 uint8_t s1y = (ttt * (ttt ^ 1)) >> 8 & 0xff;
 
