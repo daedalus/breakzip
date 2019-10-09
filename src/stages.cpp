@@ -4,6 +4,8 @@
 
 #include "stages.h"
 
+#include <algorithm>
+
 namespace breakzip {
     using namespace std;
 
@@ -108,9 +110,9 @@ namespace breakzip {
         uint32_t bound = (1L << 24) - (k10mx0 & 0x00ffffff);
 
         if (carry_bit) {
-              *lower = bound;
+              *lower = std::max(*lower, bound);
         } else {
-              *upper = bound - 1;
+              *upper = std::min(*upper, bound - 1);
         }
 
         return true;
