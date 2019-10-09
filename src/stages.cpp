@@ -66,6 +66,8 @@ namespace breakzip {
         const uint32_t k10 = crypt_test.zip.keys[1];
         const uint32_t k20 = crypt_test.zip.keys[2];
 
+        fprintf(stderr, "Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
+
         const uint16_t chunk1  = k20 & 0xffff;
         const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
         const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
@@ -140,7 +142,7 @@ namespace breakzip {
 
 
     int stage1(const crack_t* state, vector<guess_t> out,
-            uint64_t correct_guess) {
+            uint64_t correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
         // used to figure out where it's being ignored, if at all.
 
@@ -178,6 +180,24 @@ namespace breakzip {
             uint16_t tmp = chunk1 | 3;
             uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
 
+            if (correct_guess != 0 && (guess_bits == correct_guess)) {
+                fprintf(stderr, "chunk1: 0x%x\n", chunk1);
+                fprintf(stderr, "S0 tmp: 0x%x\n", tmp);
+                fprintf(stderr, "S0: 0x%x\n", s0);
+
+                if ((expected_s0 & 0x100)) {
+                    if (s0 == (uint16_t)(expected_s0 && 0xff)) {
+                        fprintf(stderr, "OK: expected s0 is 0x%x, got 0x%x\n",
+                            expected_s0 & 0xff, s0 & 0xff);
+                    } else {
+                        fprintf(stderr, "FATAL ERROR: stream byte 0 not calculated "
+                                "correctly: expected 0x%x, got 0x%x, but guess is "
+                                "expected(0x%lx)==guess(0x%lx)\n",
+                                expected_s0 & 0xff, s0 & 0xff, correct_guess, guess_bits);
+                    }
+                }
+            }
+
             bool wrong = false;
 
             auto zip = state->zip;
@@ -203,7 +223,7 @@ namespace breakzip {
                 if (upper < lower) {
                     // Guess is wrong. Abort.
                     wrong = true;
-                    if (guess_bits == correct_guess) {
+                    if (correct_guess != 0 && guess_bits == correct_guess) {
                         fprintf(stderr, "ERROR: upper(0x%x) < lower(0x%x) but "
                                 "guess appears correct: 0x%lx == 0x%lx\n",
                                 upper, lower, guess_bits, correct_guess);
@@ -216,7 +236,7 @@ namespace breakzip {
                 const uint32_t key20_low24bits = (chunk4 << 16) | chunk1;
                 uint32_t key21x_low24bits = crc32(key20_low24bits, msb_key11x);
                 uint32_t t = key21x_low24bits | 3;
-                uint32_t s1x = (t * (t ^ 1)) >> 8 & 0xff;
+                uint32_t s1x = ((t * (t ^ 1)) >> 8) & 0xff;
 
                 uint8_t y0 = x_array[0] ^ s0;
                 uint32_t tt = crc32tab[y0] & 0xff;
@@ -227,13 +247,13 @@ namespace breakzip {
                 uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
                 uint32_t key21y_low24bits = crc32(key20_low24bits, msb_key11y);
                 uint32_t ttt = key21y_low24bits | 3;
-                uint8_t s1y = (ttt * (ttt ^ 1)) >> 8 & 0xff;
+                uint8_t s1y = ((ttt * (ttt ^ 1)) >> 8) & 0xff;
 
                 uint8_t maybe_h1 = x_array[1] ^ s1x ^ s1y;
                 if (maybe_h1 != h_array[1]) {
                     // Guess is wrong. Abort.
                     wrong = true;
-                    if (guess_bits == correct_guess) {
+                    if (correct_guess != 0 && guess_bits == correct_guess) {
                         fprintf(stderr, "ERROR: maybe_h1(0x%x) != h_array[1](0x%x), but "
                                 "guess appears correct: 0x%lx == 0x%lx\n",
                                 maybe_h1, h_array[1], guess_bits, correct_guess);

@@ -125,29 +125,48 @@ START_TEST(test_crypt) {
     for (auto crack_test: crypt_tests) {
         auto zip = crack_test.zip;
 
+        uint8_t expected_s0s[2];
+
+        int fileidx = 0;
         for (auto file: zip.files) {
             ck_assert_msg(file.random_bytes[0] == file.header_second[0],
                     "Invalid test data: random_bytes[0] is not decrypted in "
                     "header_second[0]!");
+            expected_s0s[fileidx] = file.random_bytes[0] ^ file.header_first[0];
+            fprintf(stderr, "crypt_test: 0x%x ^ 0x%x == 0x%x\n",
+                    file.random_bytes[0], file.header_first[0], 
+                    expected_s0s[fileidx]);
+            ++fileidx;
         }
+
+        ck_assert_msg(expected_s0s[0] == expected_s0s[1],
+                "The s0's didn't match!");
 
         auto correct_guess = stage1_correct_guess(crack_test);
         auto stage1_start = stage1_correct_guess_start(correct_guess);
         auto stage1_end = stage1_correct_guess_end(correct_guess);
 
-        ck_assert(correct_guess > stage1_start);
+        ck_assert(correct_guess >= stage1_start);
         ck_assert(correct_guess < stage1_end);
 
         ck_assert_msg(stage1_start != stage1_end,
-            "Expect start != end, got: 0x%08lx == 0x%08lx", 
-            stage1_start, stage1_end);
+                "Expect start != end, got: 0x%08lx == 0x%08lx", 
+                stage1_start, stage1_end);
 
         crack_test.stage1_start = stage1_start;
         crack_test.stage1_end = stage1_end;
 
         vector<guess_t> out;
 
-        ck_assert(stage1(&crack_test, out, correct_guess));
+        uint16_t expected_s0_arg = 0x100;
+        expected_s0_arg |= (uint16_t)expected_s0s[0];
+        ck_assert_msg((expected_s0_arg & 0xff00) == 0x100,
+                "Expected s0 arg should be 0x100, was 0x%x",
+                expected_s0_arg);
+
+        fprintf(stderr, "test_crypt: expect_s0_arg = 0x%x\n", expected_s0_arg);
+
+        ck_assert(stage1(&crack_test, out, correct_guess, expected_s0_arg));
         ck_assert_msg(out.size() > 0,
                 "Expected at least one valid guess, got %d",
                 out.size());

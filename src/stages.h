@@ -118,7 +118,7 @@ namespace breakzip {
      */
 
     int stage1(const crack_t* state, vector<guess_t> out,
-            uint64_t correct_guess=0);
+            uint64_t correct_guess=0, uint16_t expected_s0=0);
 
     // stage 2:
 
