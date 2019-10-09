@@ -235,8 +235,7 @@ void crypthead(passwd, crc)
         srand(seed);
         fprintf(stderr, "crypthead: \ncrypthead: {\n"
                         "crypthead:    0, 0, // start, end\n"
-                        "crypthead:    {\n");
-        fprintf(stderr, "crypthead: { %d, %ld, %d, // pid, time, seed\n",
+        fprintf(stderr, "crypthead:    { %d, %ld, %d, // pid, time, seed\n",
                 getpid(), t, seed);
     }
     init_keys(passwd);

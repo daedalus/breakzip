@@ -13,6 +13,8 @@
     fprintf(stderr, x, __VA_ARGS__); \
     abort(); \
 }
+#define DEBUG false
+#define DPRINT(x, ...) if (DEBUG) { fprintf(stderr, x, __VA_ARGS__); }
 
 namespace breakzip {
     using namespace std;
@@ -74,7 +76,7 @@ namespace breakzip {
         const uint32_t k10 = crypt_test.zip.keys[1];
         const uint32_t k20 = crypt_test.zip.keys[2];
 
-        fprintf(stderr, "Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
+        DPRINT("Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
 
         const uint16_t chunk1  = k20 & 0xffff;
         const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
@@ -189,16 +191,13 @@ namespace breakzip {
             uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
 
             if (correct_guess != 0 && (guess_bits == correct_guess)) {
-                fprintf(stderr, "chunk1: 0x%x\n", chunk1);
-                fprintf(stderr, "S0 tmp: 0x%x\n", tmp);
-                fprintf(stderr, "S0: 0x%x\n", s0);
+                DPRINT("chunk1: 0x%x\n", chunk1);
+                DPRINT("S0 tmp: 0x%x\n", tmp);
+                DPRINT("S0: 0x%x\n", s0);
 
                 if ((expected_s0 & 0x100)) {
-                    if (s0 == (expected_s0 & 0xff)) {
-                        fprintf(stderr, "OK: expected s0 is 0x%x, got 0x%x\n",
-                            expected_s0 & 0xff, s0);
-                    } else {
-                        fprintf(stderr, "FATAL ERROR: stream byte 0 not calculated "
+                    if (s0 != (expected_s0 & 0xff)) {
+                        CGABORT("FATAL ERROR: stream byte 0 not calculated "
                                 "correctly: expected 0x%x, got 0x%x, but guess is "
                                 "expected(0x%lx)==guess(0x%lx)\n",
                                 expected_s0 & 0xff, s0 & 0xff, correct_guess, guess_bits);
