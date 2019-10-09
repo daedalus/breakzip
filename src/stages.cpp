@@ -118,9 +118,20 @@ namespace breakzip {
             
 
     int stage1(const crack_t* state, vector<guess_t> out) {
-
         uint64_t guess_bits = state->stage1_start;
         while (guess_bits < state->stage1_end) {
+            /**
+             * Packed structure:
+             *   chunk1: uint16_t (0-15)
+             *   chunk2: uint8_t  (16-23)
+             *   chunk3: uint8_t  (24-31)
+             *   chunk4: uint8_t  (32-39)
+             *   carry0x: bool    (40)
+             *   carry0y: bool    (41)
+             *   carry1x: bool    (42)
+             *   carry1y: bool    (43)
+             */
+
             uint16_t chunk1 = guess_bits & 0xffff;
             uint8_t chunk2 = (guess_bits >> 16) & 0xff;
             // chunk3: high 8 bits of key10 * 0x08088405.
@@ -131,10 +142,10 @@ namespace breakzip {
             uint32_t lower = 0;
 
             bool carry_bits[2][2] = {
-                (bool)(guess_bits >> 32) & 0x01,
-                (bool)(guess_bits >> 33) & 0x01,
-                (bool)(guess_bits >> 34) & 0x01,
-                (bool)(guess_bits >> 35) & 0x01
+                (bool)(guess_bits >> 40) & 0x01,
+                (bool)(guess_bits >> 41) & 0x01,
+                (bool)(guess_bits >> 42) & 0x01,
+                (bool)(guess_bits >> 43) & 0x01
             };
 
             // Compute s0.
