@@ -6,6 +6,14 @@
 
 #include <algorithm>
 
+#define CGPRINT(x, ...) if ((correct_guess != 0) && (guess_bits == correct_guess)) { \
+    fprintf(stderr, x, __VA_ARGS__); \
+}
+#define CGABORT(x, ...) if ((correct_guess != 0) && (guess_bits == correct_guess)) { \
+    fprintf(stderr, x, __VA_ARGS__); \
+    abort(); \
+}
+
 namespace breakzip {
     using namespace std;
 
@@ -141,7 +149,7 @@ namespace breakzip {
     }
 
 
-    int stage1(const crack_t* state, vector<guess_t> out,
+    int stage1(const crack_t* state, vector<guess_t>& out,
             uint64_t correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
         // used to figure out where it's being ignored, if at all.
@@ -188,7 +196,7 @@ namespace breakzip {
                 if ((expected_s0 & 0x100)) {
                     if (s0 == (expected_s0 & 0xff)) {
                         fprintf(stderr, "OK: expected s0 is 0x%x, got 0x%x\n",
-                            expected_s0, s0);
+                            expected_s0 & 0xff, s0);
                     } else {
                         fprintf(stderr, "FATAL ERROR: stream byte 0 not calculated "
                                 "correctly: expected 0x%x, got 0x%x, but guess is "
@@ -223,12 +231,9 @@ namespace breakzip {
                 if (upper < lower) {
                     // Guess is wrong. Abort.
                     wrong = true;
-                    if (correct_guess != 0 && guess_bits == correct_guess) {
-                        fprintf(stderr, "ERROR: upper(0x%x) < lower(0x%x) but "
-                                "guess appears correct: 0x%lx == 0x%lx\n",
-                                upper, lower, guess_bits, correct_guess);
-                        abort();
-                    }
+                    CGABORT("ERROR: upper(0x%x) < lower(0x%x) but "
+                            "guess appears correct: 0x%lx == 0x%lx\n",
+                            upper, lower, guess_bits, correct_guess);
                     break;
                 }
 
@@ -236,7 +241,9 @@ namespace breakzip {
                 const uint32_t key20_low24bits = (chunk4 << 16) | chunk1;
                 uint32_t key21x_low24bits = crc32(key20_low24bits, msb_key11x);
                 uint32_t t = key21x_low24bits | 3;
-                uint32_t s1x = ((t * (t ^ 1)) >> 8) & 0xff;
+                uint8_t s1x = ((t * (t ^ 1)) >> 8) & 0xff;
+                CGPRINT("correct guess: s1x(0x%x) | t(0x%x) | key21_low24(0x%x)\n",
+                        s1x, t, key21x_low24bits);
 
                 uint8_t y0 = x_array[0] ^ s0;
                 uint32_t tt = crc32tab[y0] & 0xff;
@@ -249,16 +256,16 @@ namespace breakzip {
                 uint32_t ttt = key21y_low24bits | 3;
                 uint8_t s1y = ((ttt * (ttt ^ 1)) >> 8) & 0xff;
 
+                // NB(leaf): No parens needed because xor is commutative.
                 uint8_t maybe_h1 = x_array[1] ^ s1x ^ s1y;
+                CGPRINT("maybe_h1(0x%x) = x[1](0x%x) ^ s1x(0x%x) ^ s1y(0x%x)\n",
+                        maybe_h1, x_array[1], s1x, s1y);
                 if (maybe_h1 != h_array[1]) {
                     // Guess is wrong. Abort.
                     wrong = true;
-                    if (correct_guess != 0 && guess_bits == correct_guess) {
-                        fprintf(stderr, "ERROR: maybe_h1(0x%x) != h_array[1](0x%x), but "
-                                "guess appears correct: 0x%lx == 0x%lx\n",
-                                maybe_h1, h_array[1], guess_bits, correct_guess);
-                        abort();
-                    }
+                    CGABORT("ERROR: maybe_h1(0x%x) != h_array[1](0x%x), but "
+                            "guess appears correct: 0x%lx == 0x%lx\n",
+                            maybe_h1, h_array[1], guess_bits, correct_guess);
                     break;
                 }
 

@@ -27,7 +27,7 @@ using namespace std;
  * zip_cryptfile_t's, which are the actual encrypted files and their associated
  * crypto state data.
  */
-crack_t crypt_tests[5] = {
+crack_t crypt_tests[6] = {
     {
         0, 0, // start, end
         {
@@ -95,11 +95,32 @@ crack_t crypt_tests[5] = {
                 }
             }
         }
+    },{ // passwd: wobble
+        0, 0, // start, end
+        {
+            9029, 1570650276, 1570642913, // pid, time, seed
+            { 0x407b7258, 0xdd852762, 0x7dd9ef3f }, // keys
+            { // files
+                { // 1st file
+                    //init_keys[0]: 0: 0x3ff57daf 1: 0xc4ca8c56 2: 0x2a12f27b
+                    { 0xfe, 0xd5, 0x3e, 0x4a, 0x4b, 0xb0, 0x67, 0x13, 0x05, 0xbf }, // rand
+                    { 0x3c, 0x01, 0x02, 0x5b, 0xed, 0x81, 0x05, 0x29, 0xfe, 0x1e }, // 1st
+                    //init_keys[0]: 0: 0x4a9fde33 1: 0xe0aa99ea 2: 0x161116aa
+                    { 0xfe, 0xbe, 0x8c, 0x3d, 0x94, 0x53, 0x68, 0x4d, 0x5f, 0xef }, // 2nd
+                },{ // 2nd file
+                    //init_keys[0]: 0: 0xacfc8232 1: 0xd8a215e5 2: 0x3e13ae34
+                    { 0x73, 0x3c, 0x64, 0x26, 0x70, 0x9b, 0xe0, 0xa3, 0x2e, 0x24 }, // rand
+                    { 0xb1, 0x1d, 0x08, 0xa6, 0x21, 0x51, 0xe8, 0x98, 0x5f, 0x14 }, // 1st
+                    //init_keys[0]: 0: 0xd99621ae 1: 0xbcc20851 2: 0x74cc0b75
+                    { 0x73, 0x78, 0x52, 0x60, 0x3a, 0x6b, 0x83, 0x06, 0x97, 0x48 }, // 2nd
+                }
+            }
+        }
     },{
         0, 0, // start, end
         {
             13431, 1570546274, 1570543125, // pid, time, seed
-            { 0x31dc100l, 0x64feafb1, 0x2f4333bb }, // keys
+            { 0x31dc1008, 0x64feafb1, 0x2f4333bb }, // keys
             { // files
                 { // 1st file
                     { 0xc0, 0xa5, 0x7e, 0x9b, 0x5f, 0xb4, 0x19, 0x01, 0xe4, 0xc1 }, // rand
@@ -133,9 +154,9 @@ START_TEST(test_crypt) {
                     "Invalid test data: random_bytes[0] is not decrypted in "
                     "header_second[0]!");
             expected_s0s[fileidx] = file.random_bytes[0] ^ file.header_first[0];
-            fprintf(stderr, "crypt_test: 0x%x ^ 0x%x == 0x%x\n",
-                    file.random_bytes[0], file.header_first[0], 
-                    expected_s0s[fileidx]);
+            //fprintf(stderr, "crypt_test: 0x%x ^ 0x%x == 0x%x\n",
+            //        file.random_bytes[0], file.header_first[0], 
+            //        expected_s0s[fileidx]);
             ++fileidx;
         }
 
@@ -145,6 +166,8 @@ START_TEST(test_crypt) {
         auto correct_guess = stage1_correct_guess(crack_test);
         auto stage1_start = stage1_correct_guess_start(correct_guess);
         auto stage1_end = stage1_correct_guess_end(correct_guess);
+
+        fprintf(stderr, "test_crypt: correct guess is 0x%lx\n", correct_guess);
 
         ck_assert(correct_guess >= stage1_start);
         ck_assert(correct_guess < stage1_end);
@@ -164,12 +187,23 @@ START_TEST(test_crypt) {
                 "Expected s0 arg should be 0x100, was 0x%x",
                 expected_s0_arg);
 
-        fprintf(stderr, "test_crypt: expect_s0_arg = 0x%x\n", expected_s0_arg);
+        //fprintf(stderr, "test_crypt: expect_s0_arg = 0x%x\n", expected_s0_arg);
 
         ck_assert(stage1(&crack_test, out, correct_guess, expected_s0_arg));
         ck_assert_msg(out.size() > 0,
                 "Expected at least one valid guess, got %d",
                 out.size());
+
+        int num_correct = 0;
+        for (auto i: out) {
+            uint64_t stage1_guess = ((uint64_t)i.stage1_bits) & 0xfffffffffff;
+            fprintf(stderr, "stage1 guess: 0x%lx | 0x%lx\n", i.stage1_bits, stage1_guess);
+            if (correct_guess == i.stage1_bits) {
+                ++num_correct;
+            }
+        }
+        ck_assert_msg(num_correct == 1, "Correct guess not in list! num_correct=%d",
+                num_correct);
     }
 }
 END_TEST

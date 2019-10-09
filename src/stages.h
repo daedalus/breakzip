@@ -13,7 +13,7 @@ namespace breakzip {
     using namespace std;
 
     typedef struct guess {
-        uint64_t stage1_bits : 42;
+        uint64_t stage1_bits : 44;
         uint32_t stage2_bits : 26;
         uint32_t stage3_bits : 18;
         uint32_t stage4_bits : 18;
@@ -119,7 +119,7 @@ namespace breakzip {
      * errors happen, returns 0 and sets errno.
      */
 
-    int stage1(const crack_t* state, vector<guess_t> out,
+    int stage1(const crack_t* state, vector<guess_t>& out,
             uint64_t correct_guess=0, uint16_t expected_s0=0);
 
     // stage 2:
