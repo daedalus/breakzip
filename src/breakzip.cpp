@@ -380,20 +380,20 @@ namespace breakzip {
             }
         }
 
-        fprintf(stderr, "Found %d central directory records of "
+        fprintf(stderr, "Found %ld central directory records of "
                 "%d EOCDR total.\n",
                 cdrs_.size(), eocdr_->cdir_records_total());
 
         for (auto cdr: cdrs_) {
             auto lfh_offset = cdr->lfh_offset();
             if (lfh_offset > filestats_.st_size) {
-                fprintf(stderr, "Invalid LFH offset %d is greater than file size %d.\n",
+                fprintf(stderr, "Invalid LFH offset %d is greater than file size %ld.\n",
                         lfh_offset, filestats_.st_size);
                 return -1;
             }
 
             auto p = (char*)mapped_ + lfh_offset;
-            fprintf(stderr, "Createing LFH at 0x%p\n: offset=%ld of %ld total.\n", 
+            fprintf(stderr, "Createing LFH at 0x%p\n: offset=%d of %ld total.\n", 
                     p, lfh_offset, filestats_.st_size);
             auto lfh = new LocalFileHeader(p);
             if (!lfh->check_signature()) {

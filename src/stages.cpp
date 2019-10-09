@@ -4,6 +4,18 @@
 
 #include "stages.h"
 
+#include <algorithm>
+
+#define CGPRINT(x, ...) if ((correct_guess != 0) && (guess_bits == correct_guess)) { \
+    fprintf(stderr, x, __VA_ARGS__); \
+}
+#define CGABORT(x, ...) if ((correct_guess != 0) && (guess_bits == correct_guess)) { \
+    fprintf(stderr, x, __VA_ARGS__); \
+    abort(); \
+}
+#define DEBUG false
+#define DPRINT(x, ...) if (DEBUG) { fprintf(stderr, x, __VA_ARGS__); }
+
 namespace breakzip {
     using namespace std;
 
@@ -59,38 +71,178 @@ namespace breakzip {
         return (x>>8) ^ crc32tab[y] ^ crc32tab[x & 0xff];
     }
 
-    int stage1(const crack_t* state, vector<guess_t> out) {
+    uint64_t stage1_correct_guess(const crack_t crypt_test) {
+        const uint32_t k00 = crypt_test.zip.keys[0];
+        const uint32_t k10 = crypt_test.zip.keys[1];
+        const uint32_t k20 = crypt_test.zip.keys[2];
+
+        DPRINT("Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
+
+        const uint16_t chunk1  = k20 & 0xffff;
+        const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
+        const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
+        const uint8_t chunk4 = (k20 >> 16) & 0xff;
+
+        uint8_t carry_bits[2][2];
+
+        const auto zip = crypt_test.zip;
+        int fileidx = 0;
+        for (auto file: zip.files) {
+            const uint8_t x0 = file.random_bytes[0];
+
+            const uint32_t crcx0   = crc32tab[x0];
+            const uint8_t  lsbk01x = (chunk2 ^ crcx0) & 0xff;
+            const uint32_t low24x  = (lsbk01x * 0x08088405 + 1) & 0x00ffffff;
+            carry_bits[fileidx][0] =
+                (low24x + ((k10 * 0x08088405) & 0x00ffffff)) >= (1 << 24);
+
+            const uint16_t temp1x  = (k20 | 3) & 0xffff;
+            const uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
+            const uint8_t  y0      = x0 ^ s0;
+            const uint32_t crcy0   = crc32tab[y0];
+            const uint8_t  lsbk01y = (chunk2 ^ crcy0) & 0xff;
+            const uint32_t low24y  = (lsbk01y * 0x08088405 + 1) & 0x00ffffff;
+            carry_bits[fileidx][1] =
+                (low24y + ((k10 * 0x08088405) & 0x00ffffff)) >= (1 << 24);
+
+            ++fileidx;
+        }
+
+        uint64_t rval = 0;
+        rval |= (uint64_t)chunk1;
+        rval |= (uint64_t)chunk2 << 16;
+        rval |= (uint64_t)chunk3 << 24;
+        rval |= (uint64_t)chunk4 << 32;
+        rval |= (uint64_t)(carry_bits[0][0]) << 40;
+        rval |= (uint64_t)(carry_bits[0][1]) << 41;
+        rval |= (uint64_t)(carry_bits[1][0]) << 42;
+        rval |= (uint64_t)(carry_bits[1][1]) << 43;
+        return rval;
+    }
+
+    uint64_t stage1_correct_guess_start(uint64_t correct_guess) {
+        return correct_guess & ~ 0xffff;
+    }
+
+    uint64_t stage1_correct_guess_end(uint64_t correct_guess) {
+        return correct_guess | 0xffff;
+    }
+
+    bool set_bound_from_carry_bit(const uint8_t chunk, const bool carry_bit,
+            const uint8_t x0, uint32_t* upper, uint32_t* lower) {
+        if (nullptr == upper || nullptr == lower) {
+            fprintf(stderr, "FATAL error: null pointer in call to "
+                    "set_bound_from_carry_bit. Aborting.\n");
+            abort();
+        }
+
+        uint32_t k10mx0 = (((crc32tab[x0] ^ chunk) & 0xff) * 0x08088405 + 1);
+
+        // Depending on the carry bit, this will either be an upper or lower bound.
+        uint32_t bound = (1L << 24) - (k10mx0 & 0x00ffffff);
+
+        if (carry_bit) {
+            *lower = std::max(*lower, bound);
+        } else {
+            *upper = std::min(*upper, bound - 1);
+        }
+
+        return true;
+    }
+
+
+    int stage1(const crack_t* state, vector<guess_t>& out,
+            uint64_t correct_guess, uint16_t expected_s0) {
+        // For testing, we accept a correct_guess parameter that can be
+        // used to figure out where it's being ignored, if at all.
 
         uint64_t guess_bits = state->stage1_start;
         while (guess_bits < state->stage1_end) {
+            /**
+             * Packed structure:
+             *   chunk1: uint16_t (0-15)
+             *   chunk2: uint8_t  (16-23)
+             *   chunk3: uint8_t  (24-31)
+             *   chunk4: uint8_t  (32-39)
+             *   carry0x: bool    (40)
+             *   carry0y: bool    (41)
+             *   carry1x: bool    (42)
+             *   carry1y: bool    (43)
+             */
+
             uint16_t chunk1 = guess_bits & 0xffff;
             uint8_t chunk2 = (guess_bits >> 16) & 0xff;
+            // chunk3: high 8 bits of key10 * 0x08088405.
             uint8_t chunk3 = (guess_bits >> 24) & 0xff;
-            uint8_t carry_for_x = (guess_bits >> 32) & 0x01;
-            uint8_t carry_for_y = (guess_bits >> 33) & 0x01;
-            uint8_t chunk4_tmp = (guess_bits >> 18) & 0xff0000;
+            uint8_t chunk4 = (guess_bits >> 32) & 0xff;
+
+            uint32_t upper = 0x00ffffff;
+            uint32_t lower = 0;
+
+            bool carry_bits[2][2] = {
+                (bool)(guess_bits >> 40) & 0x01,
+                (bool)(guess_bits >> 41) & 0x01,
+                (bool)(guess_bits >> 42) & 0x01,
+                (bool)(guess_bits >> 43) & 0x01
+            };
 
             // Compute s0.
             uint16_t tmp = chunk1 | 3;
             uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
 
+            if (correct_guess != 0 && (guess_bits == correct_guess)) {
+                DPRINT("chunk1: 0x%x\n", chunk1);
+                DPRINT("S0 tmp: 0x%x\n", tmp);
+                DPRINT("S0: 0x%x\n", s0);
+
+                if ((expected_s0 & 0x100)) {
+                    if (s0 != (expected_s0 & 0xff)) {
+                        CGABORT("FATAL ERROR: stream byte 0 not calculated "
+                                "correctly: expected 0x%x, got 0x%x, but guess is "
+                                "expected(0x%lx)==guess(0x%lx)\n",
+                                expected_s0 & 0xff, s0 & 0xff, correct_guess, guess_bits);
+                    }
+                }
+            }
+
             bool wrong = false;
 
-            for (int i = 0; i < state->random_bytes.size(); ++i) {
-                auto x_array = state->random_bytes[i];
-                auto h_array = state->crypt_header_bytes[i];
+            auto zip = state->zip;
+            int fileidx = 0;
+            for (auto file: zip.files) {
+                auto x_array = file.random_bytes;
+                auto h_array = file.header_second;
+
+                uint8_t carry_for_x = (uint8_t)carry_bits[fileidx][0];
+                uint8_t carry_for_y = (uint8_t)carry_bits[fileidx][1];
 
                 uint32_t temp = crc32tab[x_array[0]] & 0xff;
                 temp ^= chunk2;
                 temp *= 0x08088405;
                 temp = (temp + 1) >> 24;
 
-                uint8_t msb_key11x = temp + chunk3 + carry_for_x;
+                // Insert bounds checking w/carry bit calculation here.
+                set_bound_from_carry_bit(chunk2, carry_for_x, x_array[0],
+                        &upper, &lower);
+                set_bound_from_carry_bit(chunk2, carry_for_y, x_array[0],
+                        &upper, &lower);
 
-                const uint32_t r = chunk4 | chunk1;
-                uint32_t key21x_low24bits = crc32(r, msb_key11x);
+                if (upper < lower) {
+                    // Guess is wrong. Abort.
+                    wrong = true;
+                    CGABORT("ERROR: upper(0x%x) < lower(0x%x) but "
+                            "guess appears correct: 0x%lx == 0x%lx\n",
+                            upper, lower, guess_bits, correct_guess);
+                    break;
+                }
+
+                uint8_t msb_key11x = temp + chunk3 + carry_for_x;
+                const uint32_t key20_low24bits = (chunk4 << 16) | chunk1;
+                uint32_t key21x_low24bits = crc32(key20_low24bits, msb_key11x);
                 uint32_t t = key21x_low24bits | 3;
-                uint32_t s1x = (t * (t ^ 1)) >> 8 & 0xff;
+                uint8_t s1x = ((t * (t ^ 1)) >> 8) & 0xff;
+                CGPRINT("correct guess: s1x(0x%x) | t(0x%x) | key21_low24(0x%x)\n",
+                        s1x, t, key21x_low24bits);
 
                 uint8_t y0 = x_array[0] ^ s0;
                 uint32_t tt = crc32tab[y0] & 0xff;
@@ -99,16 +251,24 @@ namespace breakzip {
                 tt = (tt + 1) >> 24;
 
                 uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
-                uint32_t key21y_low24bits = crc32(r, msb_key11y);
+                uint32_t key21y_low24bits = crc32(key20_low24bits, msb_key11y);
                 uint32_t ttt = key21y_low24bits | 3;
-                uint8_t s1y = (ttt * (ttt ^ 1)) >> 8 & 0xff;
+                uint8_t s1y = ((ttt * (ttt ^ 1)) >> 8) & 0xff;
 
+                // NB(leaf): No parens needed because xor is commutative.
                 uint8_t maybe_h1 = x_array[1] ^ s1x ^ s1y;
+                CGPRINT("maybe_h1(0x%x) = x[1](0x%x) ^ s1x(0x%x) ^ s1y(0x%x)\n",
+                        maybe_h1, x_array[1], s1x, s1y);
                 if (maybe_h1 != h_array[1]) {
                     // Guess is wrong. Abort.
                     wrong = true;
+                    CGABORT("ERROR: maybe_h1(0x%x) != h_array[1](0x%x), but "
+                            "guess appears correct: 0x%lx == 0x%lx\n",
+                            maybe_h1, h_array[1], guess_bits, correct_guess);
                     break;
                 }
+
+                ++fileidx;
             }
 
             if (!wrong) {

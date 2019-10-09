@@ -6,12 +6,14 @@
 #include <array>
 #include <cstdint>
 
+#pragma pack(1)
+
 namespace breakzip {
 
     using namespace std;
 
     typedef struct guess {
-        uint64_t stage1_bits : 42;
+        uint64_t stage1_bits : 44;
         uint32_t stage2_bits : 26;
         uint32_t stage3_bits : 18;
         uint32_t stage4_bits : 18;
@@ -20,14 +22,34 @@ namespace breakzip {
     /* Structure for containing the global state of the cracking job on this
      * thread.
      */
+    typedef struct zip_cryptfile {
+        uint8_t random_bytes[10];
+        uint8_t header_first[10];
+        uint8_t header_second[10];
+    } zip_cryptfile_t;
+
+    typedef struct zip_crack {
+        pid_t pid;
+        time_t time;
+        unsigned int seed;
+        uint32_t keys[3];
+        // TODO(leaf): Because the specific target archive for which we're
+        // writing this crack has only two files, we hard-coded that number
+        // here. To make this attack generally useful, we would need a vector
+        // here instead.
+        zip_cryptfile_t files[2];
+    } zip_crack_t;
+
     typedef struct crack {
-        vector<uint32_t> random_seeds;
-        vector<vector<uint8_t>> random_bytes;
-        vector<array<uint8_t, 12>> crypt_header_bytes;
         uint64_t stage1_start;
         uint64_t stage1_end;
+        zip_crack_t zip;
     } crack_t;
 
+    /* Helper functions for testing stage1. */
+    uint64_t stage1_correct_guess(crack_t crypt_test);
+    uint64_t stage1_correct_guess_start(uint64_t correct_guess);
+    uint64_t stage1_correct_guess_end(uint64_t correct_guess);
 
     // Notation:
     // 
@@ -97,7 +119,8 @@ namespace breakzip {
      * errors happen, returns 0 and sets errno.
      */
 
-    int stage1(const crack_t* state, vector<guess_t> out);
+    int stage1(const crack_t* state, vector<guess_t>& out,
+            uint64_t correct_guess=0, uint16_t expected_s0=0);
 
     // stage 2:
 
