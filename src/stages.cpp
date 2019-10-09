@@ -102,7 +102,11 @@ namespace breakzip {
 
     bool set_bound_from_carry_bit(const uint8_t chunk, const bool carry_bit,
             const uint8_t x0, uint32_t* upper, uint32_t* lower) {
-        if (nullptr == upper || nullptr == lower) { return false; }
+        if (nullptr == upper || nullptr == lower) {
+            fprintf(stderr, "FATAL error: null pointer in call to "
+                    "set_bound_from_carry_bit. Aborting.\n");
+            abort();
+        }
 
         uint32_t k10mx0 = (((crc32tab[x0] ^ chunk) & 0xff) * 0x08088405 + 1);
 
@@ -171,14 +175,10 @@ namespace breakzip {
                 temp = (temp + 1) >> 24;
 
                 // Insert bounds checking w/carry bit calculation here.
-                if (false == set_bound_from_carry_bit(chunk2,
-                        carry_for_x, x_array[0], &upper, &lower) ||
-                    false == set_bound_from_carry_bit(chunk2,
-                        carry_for_y, x_array[0], &upper, &lower)) {
-                    fprintf(stderr, "FATAL error: null pointer in call to "
-                            "set_bound_from_carry_bit. Aborting.\n");
-                    abort();
-                }
+                set_bound_from_carry_bit(chunk2, carry_for_x, x_array[0],
+                        &upper, &lower);
+                set_bound_from_carry_bit(chunk2, carry_for_y, x_array[0],
+                        &upper, &lower);
 
                 if (upper < lower) {
                     // Guess is wrong. Abort.
