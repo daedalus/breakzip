@@ -68,7 +68,7 @@ namespace breakzip {
 
         const uint16_t chunk1  = k20 & 0xffff;
         const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
-        const uint16_t chunk3  = k10 >> 24;
+        const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
         const uint8_t chunk4 = (k20 >> 16) & 0xff;
 
         uint8_t carry_bits[2][2];
@@ -139,7 +139,11 @@ namespace breakzip {
     }
 
 
-    int stage1(const crack_t* state, vector<guess_t> out) {
+    int stage1(const crack_t* state, vector<guess_t> out,
+            uint64_t correct_guess) {
+        // For testing, we accept a correct_guess parameter that can be
+        // used to figure out where it's being ignored, if at all.
+
         uint64_t guess_bits = state->stage1_start;
         while (guess_bits < state->stage1_end) {
             /**
@@ -160,7 +164,7 @@ namespace breakzip {
             uint8_t chunk3 = (guess_bits >> 24) & 0xff;
             uint8_t chunk4 = (guess_bits >> 32) & 0xff;
 
-            uint32_t upper = 0;
+            uint32_t upper = 0x00ffffff;
             uint32_t lower = 0;
 
             bool carry_bits[2][2] = {
@@ -199,6 +203,12 @@ namespace breakzip {
                 if (upper < lower) {
                     // Guess is wrong. Abort.
                     wrong = true;
+                    if (guess_bits == correct_guess) {
+                        fprintf(stderr, "ERROR: upper(0x%x) < lower(0x%x) but "
+                                "guess appears correct: 0x%lx == 0x%lx\n",
+                                upper, lower, guess_bits, correct_guess);
+                        abort();
+                    }
                     break;
                 }
 
@@ -223,6 +233,12 @@ namespace breakzip {
                 if (maybe_h1 != h_array[1]) {
                     // Guess is wrong. Abort.
                     wrong = true;
+                    if (guess_bits == correct_guess) {
+                        fprintf(stderr, "ERROR: maybe_h1(0x%x) != h_array[1](0x%x), but "
+                                "guess appears correct: 0x%lx == 0x%lx\n",
+                                maybe_h1, h_array[1], guess_bits, correct_guess);
+                        abort();
+                    }
                     break;
                 }
 

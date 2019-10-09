@@ -117,7 +117,8 @@ namespace breakzip {
      * errors happen, returns 0 and sets errno.
      */
 
-    int stage1(const crack_t* state, vector<guess_t> out);
+    int stage1(const crack_t* state, vector<guess_t> out,
+            uint64_t correct_guess=0);
 
     // stage 2:
 

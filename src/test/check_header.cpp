@@ -135,8 +135,11 @@ START_TEST(test_crypt) {
         auto stage1_start = stage1_correct_guess_start(correct_guess);
         auto stage1_end = stage1_correct_guess_end(correct_guess);
 
+        ck_assert(correct_guess > stage1_start);
+        ck_assert(correct_guess < stage1_end);
+
         ck_assert_msg(stage1_start != stage1_end,
-            "Expect start != end, got: 0x%08lx == 0x%08lx\n", 
+            "Expect start != end, got: 0x%08lx == 0x%08lx", 
             stage1_start, stage1_end);
 
         crack_test.stage1_start = stage1_start;
@@ -144,9 +147,9 @@ START_TEST(test_crypt) {
 
         vector<guess_t> out;
 
-        ck_assert(stage1(&crack_test, out));
+        ck_assert(stage1(&crack_test, out, correct_guess));
         ck_assert_msg(out.size() > 0,
-                "Expected at least one valid guess, got %d\n",
+                "Expected at least one valid guess, got %d",
                 out.size());
     }
 }
