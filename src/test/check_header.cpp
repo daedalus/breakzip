@@ -131,9 +131,13 @@ START_TEST(test_crypt) {
                     "header_second[0]!");
         }
 
-        // TODO(leaf): This should fail for now, make it pass once we have start/end
-        // data for the archives under test.
-        //ck_assert(crack_test.stage1_start != crack_test.stage1_end);
+        auto correct_guess = stage1_correct_guess(crack_test);
+        auto stage1_start = stage1_correct_guess_start(correct_guess);
+        auto stage1_end = stage1_correct_guess_end(correct_guess);
+
+        ck_assert_msg(stage1_start != stage1_end,
+            "Expect start != end, got: 0x%08lx == 0x%08lx\n", 
+            stage1_start, stage1_end);
     }
 }
 END_TEST
