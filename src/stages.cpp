@@ -98,6 +98,25 @@ namespace breakzip {
         return correct_guess | 0xffff;
     }
 
+    bool set_bound_from_carry_bit(uint8_t chunk, bool carry_bit, uint8_t x0,
+            uint32_t* upper, uint32_t* lower) {
+        if (nullptr == upper || nullptr == lower) { return false; }
+
+        uint32_t k10mx0 = (((crc32tab[x0] ^ chunk) & 0xff) * 0x08088405 + 1);
+
+        // Depending on the carry bit, this will either be an upper or lower bound.
+        uint32_t bound = (1L << 24) - (k10mx0 & 0x00ffffff);
+
+        if (carry_bit) {
+              *lower = bound;
+        } else {
+              *upper = bound - 1;
+        }
+
+        return true;
+    }
+            
+
     int stage1(const crack_t* state, vector<guess_t> out) {
 
         uint64_t guess_bits = state->stage1_start;
@@ -106,11 +125,17 @@ namespace breakzip {
             uint8_t chunk2 = (guess_bits >> 16) & 0xff;
             // chunk3: high 8 bits of key10 * 0x08088405.
             uint8_t chunk3 = (guess_bits >> 24) & 0xff;
-            uint8_t carry_for_x00 = (guess_bits >> 32) & 0x01;
-            uint8_t carry_for_x01 = (guess_bits >> 33) & 0x01;
-            uint8_t carry_for_y00 = (guess_bits >> 34) & 0x01;
-            uint8_t carry_for_y01 = (guess_bits >> 35) & 0x01;
             uint8_t chunk4 = (guess_bits >> 18) & 0xff0000;
+
+            uint32_t upper = 0;
+            uint32_t lower = 0;
+
+            bool carry_bits[2][2] = {
+                (bool)(guess_bits >> 32) & 0x01,
+                (bool)(guess_bits >> 33) & 0x01,
+                (bool)(guess_bits >> 34) & 0x01,
+                (bool)(guess_bits >> 35) & 0x01
+            };
 
             // Compute s0.
             uint16_t tmp = chunk1 | 3;
@@ -119,17 +144,32 @@ namespace breakzip {
             bool wrong = false;
 
             auto zip = state->zip;
+            int fileidx = 0;
             for (auto file: zip.files) {
                 auto x_array = file.random_bytes;
                 auto h_array = file.header_second;
+
+                uint8_t carry_for_x = (uint8_t)carry_bits[fileidx][0];
+                uint8_t carry_for_y = (uint8_t)carry_bits[fileidx][1];
 
                 uint32_t temp = crc32tab[x_array[0]] & 0xff;
                 temp ^= chunk2;
                 temp *= 0x08088405;
                 temp = (temp + 1) >> 24;
 
-                uint8_t msb_key11x = temp + chunk3 + carry_for_x;
+                // Insert bounds checking w/carry bit calculation here.
+                set_bound_from_carry_bit(chunk2, carry_for_x, x_array[0], 
+                        &upper, &lower);
+                set_bound_from_carry_bit(chunk2, carry_for_y, x_array[0],
+                        &upper, &lower);
 
+                if (upper < lower) {
+                    // Guess is wrong. Abort.
+                    wrong = true;
+                    break;
+                }
+
+                uint8_t msb_key11x = temp + chunk3 + carry_for_x;
                 const uint32_t r = chunk4 | chunk1;
                 uint32_t key21x_low24bits = crc32(r, msb_key11x);
                 uint32_t t = key21x_low24bits | 3;
@@ -152,6 +192,8 @@ namespace breakzip {
                     wrong = true;
                     break;
                 }
+
+                ++fileidx;
             }
 
             if (!wrong) {
