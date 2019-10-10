@@ -224,17 +224,7 @@ namespace breakzip {
                 // Insert bounds checking w/carry bit calculation here.
                 set_bound_from_carry_bit(chunk2, carry_for_x, x_array[0],
                         &upper, &lower);
-                set_bound_from_carry_bit(chunk2, carry_for_y, x_array[0],
-                        &upper, &lower);
 
-                if (upper < lower) {
-                    // Guess is wrong. Abort.
-                    wrong = true;
-                    CGABORT("ERROR: upper(0x%x) < lower(0x%x) but "
-                            "guess appears correct: 0x%lx == 0x%lx\n",
-                            upper, lower, guess_bits, correct_guess);
-                    break;
-                }
 
                 uint8_t msb_key11x = temp + chunk3 + carry_for_x;
                 const uint32_t key20_low24bits = (chunk4 << 16) | chunk1;
@@ -245,6 +235,17 @@ namespace breakzip {
                         s1x, t, key21x_low24bits);
 
                 uint8_t y0 = x_array[0] ^ s0;
+                set_bound_from_carry_bit(chunk2, carry_for_y, y0,
+                        &upper, &lower);
+                if (upper < lower) {
+                    // Guess is wrong. Abort.
+                    wrong = true;
+                    CGABORT("ERROR: upper(0x%x) < lower(0x%x) but "
+                            "guess appears correct: 0x%lx == 0x%lx\n",
+                            upper, lower, guess_bits, correct_guess);
+                    break;
+                }
+
                 uint32_t tt = crc32tab[y0] & 0xff;
                 tt ^= chunk2;
                 tt *= 0x08088405;
