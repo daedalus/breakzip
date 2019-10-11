@@ -144,7 +144,8 @@ namespace breakzip {
      */
 
     int stage2(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out);
+            vector<guess_t>& out,
+            uint64_t correct_guess=0, uint16_t expected_s0=0);
 
     // stage 3:
     // We guess [chunk8 = bits 24..32 of key00 (8 bits)]

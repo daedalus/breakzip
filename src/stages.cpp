@@ -151,6 +151,12 @@ namespace breakzip {
     }
 
 
+    uint16_t get_s0_from_chunk1(const uint16_t chunk1) {
+        const uint16_t tmp = chunk1 | 3;
+        const uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
+        return s0;
+    }
+
     int stage1(const crack_t* state, vector<guess_t>& out,
             uint64_t correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
@@ -187,14 +193,9 @@ namespace breakzip {
             };
 
             // Compute s0.
-            uint16_t tmp = chunk1 | 3;
-            uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
+            uint16_t s0 = get_s0_from_chunk1(chunk1);
 
             if (correct_guess != 0 && (guess_bits == correct_guess)) {
-                DPRINT("chunk1: 0x%x\n", chunk1);
-                DPRINT("S0 tmp: 0x%x\n", tmp);
-                DPRINT("S0: 0x%x\n", s0);
-
                 if ((expected_s0 & 0x100)) {
                     if (s0 != (expected_s0 & 0xff)) {
                         CGABORT("FATAL ERROR: stream byte 0 not calculated "
@@ -284,7 +285,159 @@ namespace breakzip {
         return 1;
     }
 
-    int stage2(const crack_t* state, const vector<guess_t> in, vector<guess_t> out) {
+    int stage2(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t>& out, uint64_t correct_guess,
+            uint16_t expected_s0) {
+
+        // For testing, we accept a correct_guess parameter that can be
+        // used to figure out where it's being ignored, if at all.
+
+        // NB(leaf): For now, stage2 begins searching at zero and proceeds
+        // through all 2^28 possibilities. In future, we may need to have
+        // start/end constraints like stage1 does.
+        for (auto guess: in) {
+            const uint16_t chunk1 = guess.stage1_bits & 0xffff;
+            const uint8_t chunk2 = (guess.stage1_bits >> 16) & 0xff;
+            // chunk3: high 8 bits of key10 * 0x08088405.
+            const uint8_t chunk3 = (guess.stage1_bits >> 24) & 0xff;
+            const uint8_t chunk4 = (guess.stage1_bits >> 32) & 0xff;
+
+            const bool stage1_carry_bits[2][2] = {
+                (bool)(guess.stage1_bits >> 40) & 0x01,
+                (bool)(guess.stage1_bits >> 41) & 0x01,
+                (bool)(guess.stage1_bits >> 42) & 0x01,
+                (bool)(guess.stage1_bits >> 43) & 0x01
+            };
+
+            uint32_t guess_bits = 0;
+            // We need to iterate over all values of uint32_t, so our index
+            // variable is 64 bits.
+            for (uint64_t i = 0; i < UINT32_MAX + 1; ++i) {
+                // The guess is the lower 32-bits of the index downcast to a
+                // 32-bit int.
+                guess_bits = (uint32_t)(i & 0xffffffff);
+
+                /**
+                 * Packed structure:
+                 *   chunk5: uint8_t (0-7)
+                 *   chunk6: uint8_t (8-15)
+                 *   chunk7: uint8_t (16-23)
+                 *   carry0x: bool   (24)
+                 *   carry0y: bool   (25)
+                 *   carry1x: bool   (26)
+                 *   carry2x: bool   (27)
+                 */
+                uint8_t chunk5 = guess_bits & 0xff;
+                uint8_t chunk6 = (guess_bits >> 8) & 0xff;
+                uint8_t chunk7 = (guess_bits >> 16) & 0xff;
+
+                bool carry_bits[2][2] = {
+                    (bool)(guess_bits >> 24) & 0x01,
+                    (bool)(guess_bits >> 25) & 0x01,
+                    (bool)(guess_bits >> 26) & 0x01,
+                    (bool)(guess_bits >> 27) & 0x01
+                };
+
+                const uint32_t k20 = chunk1 | (chunk4 << 16) | (chunk5 << 24);
+
+                bool wrong = false;
+                auto zip = state->zip;
+                int fileidx = 0; 
+                for (auto file: zip.files) {
+                    auto x_array = file.random_bytes;
+                    auto h_array = file.header_second;
+                    const uint8_t x0 = x_array[0];
+                    const uint8_t x1 = x_array[1];
+                    const uint8_t x2 = x_array[2];
+
+                    uint32_t stage1_upper = 0x00ffffff;
+                    uint32_t stage1_lower = 0;
+
+                    uint32_t upper = 0x00ffffff;
+                    uint32_t lower = 0;
+
+                    const uint8_t stage1_carry_for_x =
+                        (uint8_t)stage1_carry_bits[fileidx][0];
+                    const uint8_t stage1_carry_for_y =
+                        (uint8_t)stage1_carry_bits[fileidx][1];
+
+                    set_bound_from_carry_bit(chunk2, stage1_carry_for_x, x0,
+                            &stage1_upper, &stage1_lower);
+                    const uint16_t s0 = get_s0_from_chunk1(chunk1);
+                    const uint8_t y0 = x0 ^ s0;
+                    set_bound_from_carry_bit(chunk2, stage1_carry_for_y, y0,
+                            &stage1_upper, &stage1_lower);
+
+                    const uint32_t key20 = chunk1 | (chunk4 << 16) | (chunk5 << 24);
+                    const uint32_t key01x = (chunk2 | (chunk6 << 8)) ^ crc32tab[x0];
+                    const uint8_t lsbkey01x = key01x & 0xff;
+                    const uint32_t key01x_temp = (lsbkey01x * 0x08088405 + 1) >> 24;
+                    const uint8_t msb_key11x =
+                        (uint8_t)(key01x_temp + chunk3 + stage1_carry_for_x);
+
+                    const uint32_t key21x = crc32(key20, msb_key11x);
+                    const uint32_t s1x_temp = (key21x | 3) & 0xffff;
+                    const uint8_t s1x = ((s1x_temp * (s1x_temp ^ 1)) >> 8) & 0xff;
+
+                    set_bound_from_carry_bit(chunk7, carry_bits[fileidx][0], x1,
+                            &upper, &lower); // bounds & carries from stage 2
+
+                    const uint32_t key02x = crc32(key01x, x1);
+                    const uint8_t lsbkey02x = (uint8_t) (key02x & 0xff);
+                    const uint8_t msbkey12x_temp =
+                        ((uint32_t)lsbkey02x * 0x08088405 + 1) >> 24;
+                    const uint8_t msbkey12x =
+                        msbkey12x_temp + chunk7 + carry_bits[fileidx][0];
+                    const uint32_t key22x = crc32(key21x, msbkey12x);
+                    const uint32_t s2x_temp = (key22x | 3) & 0xffff;
+                    const uint8_t s2x = ((s2x_temp * (s2x_temp ^ 1)) >> 8) & 0xff;
+
+                    const uint32_t key01y = (chunk2 | (chunk6 << 8)) ^ crc32tab[y0];
+                    const uint8_t lsbkey01y = key01y & 0xff;
+                    const uint32_t msbkey11y_temp = (lsbkey01y * 0x08088405 + 1) >> 24;
+                    const uint8_t msb_key11y =
+                        msbkey11y_temp + chunk3 + stage1_carry_for_y;
+                    const uint32_t key21y = crc32(key20, msb_key11y);
+                    const uint32_t s1y_temp = (key21y | 3) & 0xffff;
+                    const uint8_t s1y = ((s1y_temp * (s1y_temp ^ 1)) >> 8) & 0xff;
+                    const uint8_t y1 = x1 ^ s1y;
+                    set_bound_from_carry_bit(chunk7, carry_bits[fileidx][1], y1,
+                            &upper, &lower);
+
+                    if (upper < lower) {
+                        wrong = true;
+                        break;
+                    }
+
+                    // TODO: figure out if it's possible to check consistency
+                    // with upper1 & lower1 information looking at the
+                    // remainder of something mod 2^24 If not, remove the
+                    // set_bounds_from_carry_bit calls for stage1
+
+                    const uint32_t key02y = crc32(key01y, x1);
+                    const uint8_t lsbkey02y = key02y & 0xff;
+                    const uint32_t msbkey12y_temp =
+                        (lsbkey02y * 0x08088405 + 1) >> 24;
+                    uint8_t msbkey12y = msbkey12y_temp + chunk7 +
+                        carry_bits[fileidx][1];
+                    const uint32_t key22y = crc32(key21y, msbkey12y);
+                    const uint32_t s2y_temp = (key22y | 3) & 0xffff;
+                    const uint8_t s2y = ((s2y_temp * (s2y_temp ^ 1)) >> 8) & 0xff;
+                    if (h_array[2] != x2 ^ s2x ^ s2y) {
+                        wrong = true;
+                        break;
+                    }
+
+                    ++fileidx;
+                }
+
+                if (!wrong) {
+                    // Guess passed all files, add to output list.
+                    guess.stage2_bits = guess_bits;
+                    out.push_back(guess);
+                }
+            } // foreach stage2 guess
+        } // foreach stage1 guess.
         return 1;
     }
 
