@@ -142,8 +142,8 @@ namespace breakzip {
         const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
         const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
         const uint8_t chunk4 = (k20 >> 16) & 0xff;
-
-        const uint8_t chunk5 = (uint8_t) ((k20 & 0x00ff0000) >> 16);
+        const uint8_t chunk5 = (k20 >> 24) & 0xff;
+        const uint8_t chunk6 = (crc(key00, 0) >> 8) & 0xff;
 
         uint8_t carry_bits[2][2];
         uint8_t stage1_carry_bits[2][2];
@@ -156,27 +156,16 @@ namespace breakzip {
             const uint8_t x0 = file.random_bytes[0];
             const uint8_t x1 = file.random_bytes[1];
 
-            const uint8_t key01x = crc32(k00, 0);
-            const uint8_t key11x = crc32(k10, 0);
+            const uint8_t key01x = crc32(k00, x0);
+            const uint8_t key11x = (k10 + (key01x & 0xff)) * 0x08088405 + 1;
 
-            // NB(leaf): Is this right?
-            const uint8_t maybe_chunk6 = (key01x >> 8) & 0xff;
-            if (0 == fileidx) {
-                chunk6 = maybe_chunk6;
-            } else if (chunk6 != maybe_chunk6) {
-                fprintf(stderr, "FATAL ERROR: chunk6 calculation failed, got different "
-                        "results from each file: %d != %d\n",
-                        chunk6, maybe_chunk6);
-                abort();
-            }
-
-            
             const uint32_t key02x = crc32(key01x, x1);
             const uint8_t t1  = (key02x & 0xff) * 0x08088405 + 1;
             const uint32_t t2 = key11x * 0x08088405;
             const uint8_t carry_for_x =
                     (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
-            const uint8_t maybe_chunk7 = t2 >> 24;
+
+            const uint8_t maybe_chunk7 = (key10 * 0xf4652819) >> 24;
 
             if (0 == fileidx) {
                 chunk7 = maybe_chunk7;
@@ -458,8 +447,10 @@ namespace breakzip {
                     const uint8_t lsbkey02x = (uint8_t) (key02x & 0xff);
                     const uint8_t msbkey12x_temp =
                         ((uint32_t)lsbkey02x * 0x08088405 + 1) >> 24;
+                    const uint8_t correctionx =
+                        ((lsbkey01x * 0x08088405 + 1) * 0x08088405) >> 24;
                     const uint8_t msbkey12x =
-                        msbkey12x_temp + chunk7 + carry_bits[fileidx][0];
+                        msbkey12x_temp + chunk7 + carry_bits[fileidx][0] + correctionx;
                     const uint32_t key22x = crc32(key21x, msbkey12x);
                     const uint32_t s2x_temp = (key22x | 3) & 0xffff;
                     const uint8_t s2x = ((s2x_temp * (s2x_temp ^ 1)) >> 8) & 0xff;
@@ -490,8 +481,12 @@ namespace breakzip {
                     const uint8_t lsbkey02y = key02y & 0xff;
                     const uint32_t msbkey12y_temp =
                         (lsbkey02y * 0x08088405 + 1) >> 24;
-                    uint8_t msbkey12y = msbkey12y_temp + chunk7 +
-                        carry_bits[fileidx][1];
+                    const uint8_t correctiony =
+                        ((lsbkey01y * 0x08088405 + 1) * 0x08088405) >> 24;
+                    uint8_t msbkey12y =
+                        msbkey12y_temp + chunk7 + carry_bits[fileidx][1] +
+                        correctiony;
+
                     const uint32_t key22y = crc32(key21y, msbkey12y);
                     const uint32_t s2y_temp = (key22y | 3) & 0xffff;
                     const uint8_t s2y = ((s2y_temp * (s2y_temp ^ 1)) >> 8) & 0xff;
