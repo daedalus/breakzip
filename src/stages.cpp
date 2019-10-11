@@ -16,6 +16,10 @@
 #define DEBUG false
 #define DPRINT(x, ...) if (DEBUG) { fprintf(stderr, x, __VA_ARGS__); }
 
+
+#define LSB32(x) ((uint8_t)(0x000000ff & x))
+#define MSB32(x) ((uint8_t)((0xff000000 & x) >> 24))
+
 namespace breakzip {
     using namespace std;
 
@@ -309,13 +313,12 @@ namespace breakzip {
                 (bool)(guess.stage1_bits >> 43) & 0x01
             };
 
-            uint32_t guess_bits = 0;
             // We need to iterate over all values of uint32_t, so our index
             // variable is 64 bits.
             for (uint64_t i = 0; i < UINT32_MAX + 1; ++i) {
                 // The guess is the lower 32-bits of the index downcast to a
                 // 32-bit int.
-                guess_bits = (uint32_t)(i & 0xffffffff);
+                const uint32_t guess_bits = (uint32_t)(i & 0xffffffff);
 
                 /**
                  * Packed structure:
