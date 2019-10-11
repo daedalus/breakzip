@@ -51,6 +51,9 @@ namespace breakzip {
     uint64_t stage1_correct_guess_start(uint64_t correct_guess);
     uint64_t stage1_correct_guess_end(uint64_t correct_guess);
 
+    /* Helper functions for testing stage2. */
+    uint32_t stage2_correct_guess(const crack_t crack_test);
+
     // Notation:
     // 
     // key00, key10, key20 are the keys after having processed the password.

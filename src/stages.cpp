@@ -132,6 +132,75 @@ namespace breakzip {
         return correct_guess | 0xffff;
     }
 
+    uint32_t stage2_correct_guess(const crack_t crypt_test) {
+        const uint32_t k00 = crypt_test.zip.keys[0];
+        const uint32_t k10 = crypt_test.zip.keys[1];
+        const uint32_t k20 = crypt_test.zip.keys[2];
+        DPRINT("Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
+
+        const uint16_t chunk1  = k20 & 0xffff;
+        const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
+        const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
+        const uint8_t chunk4 = (k20 >> 16) & 0xff;
+
+        const uint8_t chunk5 = (uint8_t) ((k20 & 0x00ff0000) >> 16);
+
+        uint8_t carry_bits[2][2];
+        uint8_t stage1_carry_bits[2][2];
+        const auto zip = crypt_test.zip;
+        int fileidx = 0;
+
+        uint8_t chunk6 = 0;
+        uint8_t chunk7 = 0;
+        for (auto file: zip.files) {
+            const uint8_t x0 = file.random_bytes[0];
+            const uint8_t x1 = file.random_bytes[1];
+
+            const uint8_t key01x = crc32(k00, 0);
+            const uint8_t key11x = crc32(k10, 0);
+
+            // NB(leaf): Is this right?
+            const uint8_t maybe_chunk6 = (key01x >> 8) & 0xff;
+            if (0 == fileidx) {
+                chunk6 = maybe_chunk6;
+            } else if (chunk6 != maybe_chunk6) {
+                fprintf(stderr, "FATAL ERROR: chunk6 calculation failed, got different "
+                        "results from each file: %d != %d\n",
+                        chunk6, maybe_chunk6);
+                abort();
+            }
+
+            
+            const uint32_t key02x = crc32(key01x, x1);
+            const uint8_t t1  = (key02x & 0xff) * 0x08088405 + 1;
+            const uint32_t t2 = key11x * 0x08088405;
+            const uint8_t carry_for_x =
+                    (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
+            const uint8_t maybe_chunk7 = t2 >> 24;
+
+            if (0 == fileidx) {
+                chunk7 = maybe_chunk7;
+            } else if (chunk7 != maybe_chunk7) {
+                fprintf(stderr, "FATAL ERROR: chunk7 calculation failed, got different "
+                        "results from each file: %d != %d\n",
+                        chunk7, maybe_chunk7);
+                abort();
+            }
+
+            ++fileidx;
+        }
+
+        uint32_t rval = 0;
+        rval |= (uint64_t)chunk5;
+        rval |= (uint64_t)chunk6 << 8;
+        rval |= (uint64_t)chunk7 << 16;
+        rval |= (uint64_t)(carry_bits[0][0]) << 24;
+        rval |= (uint64_t)(carry_bits[0][1]) << 25;
+        rval |= (uint64_t)(carry_bits[1][0]) << 26;
+        rval |= (uint64_t)(carry_bits[1][1]) << 27;
+        return rval;
+    }
+
     bool set_bound_from_carry_bit(const uint8_t chunk, const bool carry_bit,
             const uint8_t x0, uint32_t* upper, uint32_t* lower) {
         if (nullptr == upper || nullptr == lower) {
