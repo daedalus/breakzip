@@ -43,6 +43,9 @@ namespace breakzip {
     typedef struct crack {
         uint64_t stage1_start;
         uint64_t stage1_end;
+
+        uint32_t stage2_start;
+        uint32_t stage2_end;
         zip_crack_t zip;
     } crack_t;
 

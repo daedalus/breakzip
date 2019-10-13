@@ -369,7 +369,10 @@ namespace breakzip {
 
             // We need to iterate over all values of uint32_t, so our index
             // variable is 64 bits.
-            for (uint64_t i = 0; i < UINT32_MAX + 1; ++i) {
+            uint64_t i = (uint64_t)state->stage2_start;
+            uint64_t end = (uint64_t)state->stage2_end;
+            if (0 == end) { end = UINT32_MAX + 1; }
+            while (i < end) {
                 // The guess is the lower 32-bits of the index downcast to a
                 // 32-bit int.
                 const uint32_t guess_bits = (uint32_t)(i & 0xffffffff);
@@ -463,6 +466,7 @@ namespace breakzip {
 
                     const uint32_t msbkey11y_temp =
                         (lsbkey01y * 0x08088405 + 1) >> 24;
+                    // NB(leaf): key01y_temp isn't declared anywhere. What did you mean?
                     const uint8_t msb_key11y =
                         (uint8_t)(key01y_temp + chunk3 + stage1_carry_for_y);
 
@@ -511,6 +515,7 @@ namespace breakzip {
                     guess.stage2_bits = guess_bits;
                     out.push_back(guess);
                 }
+                ++i;
             } // foreach stage2 guess
         } // foreach stage1 guess.
         return 1;
