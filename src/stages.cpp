@@ -143,14 +143,13 @@ namespace breakzip {
         const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
         const uint8_t chunk4 = (k20 >> 16) & 0xff;
         const uint8_t chunk5 = (k20 >> 24) & 0xff;
-        const uint8_t chunk6 = (crc(key00, 0) >> 8) & 0xff;
+        const uint8_t chunk6 = (crc32(k00, 0) >> 8) & 0xff;
 
         uint8_t carry_bits[2][2];
         uint8_t stage1_carry_bits[2][2];
         const auto zip = crypt_test.zip;
         int fileidx = 0;
 
-        uint8_t chunk6 = 0;
         uint8_t chunk7 = 0;
         for (auto file: zip.files) {
             const uint8_t x0 = file.random_bytes[0];
@@ -163,9 +162,9 @@ namespace breakzip {
             const uint8_t t1  = (key02x & 0xff) * 0x08088405 + 1;
             const uint32_t t2 = key11x * 0x08088405;
             const uint8_t carry_for_x =
-                    (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
+                (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
 
-            const uint8_t maybe_chunk7 = (key10 * 0xf4652819) >> 24;
+            const uint8_t maybe_chunk7 = (k10 * 0xf4652819) >> 24;
 
             if (0 == fileidx) {
                 chunk7 = maybe_chunk7;
@@ -190,26 +189,22 @@ namespace breakzip {
         return rval;
     }
 
-    bool set_bound_from_carry_bit(const uint8_t chunk, const bool carry_bit,
-            const uint8_t x0, uint32_t* upper, uint32_t* lower) {
+    void set_bound_from_carry_bit(const bool carry_bit,
+            const uint32_t lowbits, uint32_t* upper, uint32_t* lower) {
         if (nullptr == upper || nullptr == lower) {
             fprintf(stderr, "FATAL error: null pointer in call to "
                     "set_bound_from_carry_bit. Aborting.\n");
             abort();
         }
 
-        uint32_t k10mx0 = (((crc32tab[x0] ^ chunk) & 0xff) * 0x08088405 + 1);
-
         // Depending on the carry bit, this will either be an upper or lower bound.
-        uint32_t bound = (1L << 24) - (k10mx0 & 0x00ffffff);
+        uint32_t bound = (1L << 24) - (lowbits & 0x00ffffff);
 
         if (carry_bit) {
             *lower = std::max(*lower, bound);
         } else {
             *upper = std::min(*upper, bound - 1);
         }
-
-        return true;
     }
 
 
@@ -285,6 +280,7 @@ namespace breakzip {
                 temp = (temp + 1) >> 24;
 
                 // Insert bounds checking w/carry bit calculation here.
+                // TODO(leaf): Confirm with Mike this new approach is right in stage1.
                 set_bound_from_carry_bit(chunk2, carry_for_x, x_array[0],
                         &upper, &lower);
 
@@ -298,8 +294,8 @@ namespace breakzip {
                         s1x, t, key21x_low24bits);
 
                 uint8_t y0 = x_array[0] ^ s0;
-                set_bound_from_carry_bit(chunk2, carry_for_y, y0,
-                        &upper, &lower);
+                // TODO(leaf): Confirm with Mike this new approach is right in stage1.
+                set_bound_from_carry_bit(chunk2, carry_for_y, y0, &upper, &lower);
                 if (upper < lower) {
                     // Guess is wrong. Abort.
                     wrong = true;
@@ -422,49 +418,72 @@ namespace breakzip {
                     const uint8_t stage1_carry_for_y =
                         (uint8_t)stage1_carry_bits[fileidx][1];
 
-                    set_bound_from_carry_bit(chunk2, stage1_carry_for_x, x0,
-                            &stage1_upper, &stage1_lower);
                     const uint16_t s0 = get_s0_from_chunk1(chunk1);
                     const uint8_t y0 = x0 ^ s0;
-                    set_bound_from_carry_bit(chunk2, stage1_carry_for_y, y0,
-                            &stage1_upper, &stage1_lower);
-
                     const uint32_t key20 = chunk1 | (chunk4 << 16) | (chunk5 << 24);
                     const uint32_t key01x = (chunk2 | (chunk6 << 8)) ^ crc32tab[x0];
                     const uint8_t lsbkey01x = key01x & 0xff;
+
+                    const uint32_t bound1x = lsbkey01x * 0x08088405 + 1;
+
+                    // bounds & carries from stage 1
+                    set_bound_from_carry_bit(stage1_carry_for_x, bound1x,
+                            &stage1_upper, &stage1_lower);
+
                     const uint32_t key01x_temp = (lsbkey01x * 0x08088405 + 1) >> 24;
                     const uint8_t msb_key11x =
                         (uint8_t)(key01x_temp + chunk3 + stage1_carry_for_x);
-
                     const uint32_t key21x = crc32(key20, msb_key11x);
                     const uint32_t s1x_temp = (key21x | 3) & 0xffff;
-                    const uint8_t s1x = ((s1x_temp * (s1x_temp ^ 1)) >> 8) & 0xff;
-
-                    set_bound_from_carry_bit(chunk7, carry_bits[fileidx][0], x1,
-                            &upper, &lower); // bounds & carries from stage 2
-
+                    const uint8_t s1x =
+                        ((s1x_temp * (s1x_temp ^ 1)) >> 8) & 0xff;
                     const uint32_t key02x = crc32(key01x, x1);
                     const uint8_t lsbkey02x = (uint8_t) (key02x & 0xff);
-                    const uint8_t msbkey12x_temp =
-                        ((uint32_t)lsbkey02x * 0x08088405 + 1) >> 24;
-                    const uint8_t correctionx =
-                        ((lsbkey01x * 0x08088405 + 1) * 0x08088405) >> 24;
+
+                    const uint32_t bound2x =
+                        lsbkey01x * 0xd4652819 + 0x08088405 +
+                        lsbkey02x * 0x08088405 + 1;
+                    set_bound_from_carry_bit(carry_bits[fileidx][0], bound2x,
+                            &upper, &lower); // bounds & carries from stage 2
+
                     const uint8_t msbkey12x =
-                        msbkey12x_temp + chunk7 + carry_bits[fileidx][0] + correctionx;
+                        chunk7 + carry_bits[fileidx][0] + (bound2x >> 24);
                     const uint32_t key22x = crc32(key21x, msbkey12x);
                     const uint32_t s2x_temp = (key22x | 3) & 0xffff;
-                    const uint8_t s2x = ((s2x_temp * (s2x_temp ^ 1)) >> 8) & 0xff;
+                    const uint8_t s2x =
+                        ((s2x_temp * (s2x_temp ^ 1)) >> 8) & 0xff;
 
-                    const uint32_t key01y = (chunk2 | (chunk6 << 8)) ^ crc32tab[y0];
+                    const uint32_t key01y =
+                        (chunk2 | (chunk6 << 8)) ^ crc32tab[y0];
                     const uint8_t lsbkey01y = key01y & 0xff;
-                    const uint32_t msbkey11y_temp = (lsbkey01y * 0x08088405 + 1) >> 24;
+
+                    const uint32_t bound1y = lsbkey01x * 0x08088405 + 1;
+                    set_bound_from_carry_bit(stage1_carry_for_y, bound1y,
+                            &stage1_upper, &stage1_lower);
+
+                    const uint32_t msbkey11y_temp =
+                        (lsbkey01y * 0x08088405 + 1) >> 24;
                     const uint8_t msb_key11y =
-                        msbkey11y_temp + chunk3 + stage1_carry_for_y;
+                        (uint8_t)(key01y_temp + chunk3 + stage1_carry_for_y);
+
                     const uint32_t key21y = crc32(key20, msb_key11y);
                     const uint32_t s1y_temp = (key21y | 3) & 0xffff;
-                    const uint8_t s1y = ((s1y_temp * (s1y_temp ^ 1)) >> 8) & 0xff;
+                    const uint8_t s1y =
+                        ((s1y_temp * (s1y_temp ^ 1)) >> 8) & 0xff;
                     const uint8_t y1 = x1 ^ s1y;
-                    set_bound_from_carry_bit(chunk7, carry_bits[fileidx][1], y1,
+
+                    // TODO: figure out if it's possible to check consistency
+                    // with stage1_upper & lower information looking at the
+                    // remainder of something mod 2^24 If not, remove the
+                    // set_bounds_from_carry_bit calls for stage1
+
+                    const uint32_t key02y = crc32(key01y, x1);
+                    const uint8_t lsbkey02y = key02y & 0xff;
+
+                    const uint32_t bound2y =
+                        lsbkey01y * 0xd4652819 + 0x08088405 +
+                        lsbkey02y * 0x08088405 + 1;
+                    set_bound_from_carry_bit(carry_bits[fileidx][1], bound2y,
                             &upper, &lower);
 
                     if (upper < lower) {
@@ -472,24 +491,13 @@ namespace breakzip {
                         break;
                     }
 
-                    // TODO: figure out if it's possible to check consistency
-                    // with upper1 & lower1 information looking at the
-                    // remainder of something mod 2^24 If not, remove the
-                    // set_bounds_from_carry_bit calls for stage1
-
-                    const uint32_t key02y = crc32(key01y, x1);
-                    const uint8_t lsbkey02y = key02y & 0xff;
-                    const uint32_t msbkey12y_temp =
-                        (lsbkey02y * 0x08088405 + 1) >> 24;
-                    const uint8_t correctiony =
-                        ((lsbkey01y * 0x08088405 + 1) * 0x08088405) >> 24;
                     uint8_t msbkey12y =
-                        msbkey12y_temp + chunk7 + carry_bits[fileidx][1] +
-                        correctiony;
+                        chunk7 + carry_bits[fileidx][1] + (bound2y >> 24);
 
                     const uint32_t key22y = crc32(key21y, msbkey12y);
                     const uint32_t s2y_temp = (key22y | 3) & 0xffff;
-                    const uint8_t s2y = ((s2y_temp * (s2y_temp ^ 1)) >> 8) & 0xff;
+                    const uint8_t s2y =
+                        ((s2y_temp * (s2y_temp ^ 1)) >> 8) & 0xff;
                     if (h_array[2] != x2 ^ s2x ^ s2y) {
                         wrong = true;
                         break;
