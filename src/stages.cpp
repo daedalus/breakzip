@@ -3,6 +3,7 @@
  */
 
 #include "stages.h"
+#include "breakzip.h"
 
 #include <algorithm>
 
@@ -84,7 +85,7 @@ namespace breakzip {
 
         const uint16_t chunk1  = k20 & 0xffff;
         const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
-        const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
+        const uint16_t chunk3  = (k10 * CRYPTCONST) >> 24;
         const uint8_t chunk4 = (k20 >> 16) & 0xff;
 
         uint8_t carry_bits[2][2];
@@ -96,18 +97,18 @@ namespace breakzip {
 
             const uint32_t crcx0   = crc32tab[x0];
             const uint8_t  lsbk01x = (chunk2 ^ crcx0) & 0xff;
-            const uint32_t low24x  = (lsbk01x * 0x08088405 + 1) & 0x00ffffff;
+            const uint32_t low24x  = (lsbk01x * CRYPTCONST + 1) & 0x00ffffff;
             carry_bits[fileidx][0] =
-                (low24x + ((k10 * 0x08088405) & 0x00ffffff)) >= (1 << 24);
+                (low24x + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             const uint16_t temp1x  = (k20 | 3) & 0xffff;
             const uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
             const uint8_t  y0      = x0 ^ s0;
             const uint32_t crcy0   = crc32tab[y0];
             const uint8_t  lsbk01y = (chunk2 ^ crcy0) & 0xff;
-            const uint32_t low24y  = (lsbk01y * 0x08088405 + 1) & 0x00ffffff;
+            const uint32_t low24y  = (lsbk01y * CRYPTCONST + 1) & 0x00ffffff;
             carry_bits[fileidx][1] =
-                (low24y + ((k10 * 0x08088405) & 0x00ffffff)) >= (1 << 24);
+                (low24y + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             ++fileidx;
         }
@@ -140,7 +141,7 @@ namespace breakzip {
 
         const uint16_t chunk1  = k20 & 0xffff;
         const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
-        const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
+        const uint16_t chunk3  = (k10 * CRYPTCONST) >> 24;
         const uint8_t chunk4 = (k20 >> 16) & 0xff;
         const uint8_t chunk5 = (k20 >> 24) & 0xff;
         const uint8_t chunk6 = (crc32(k00, 0) >> 8) & 0xff;
@@ -156,11 +157,11 @@ namespace breakzip {
             const uint8_t x1 = file.random_bytes[1];
 
             const uint8_t key01x = crc32(k00, x0);
-            const uint8_t key11x = (k10 + (key01x & 0xff)) * 0x08088405 + 1;
+            const uint8_t key11x = (k10 + (key01x & 0xff)) * CRYPTCONST + 1;
 
             const uint32_t key02x = crc32(key01x, x1);
-            const uint8_t t1  = (key02x & 0xff) * 0x08088405 + 1;
-            const uint32_t t2 = key11x * 0x08088405;
+            const uint8_t t1  = (key02x & 0xff) * CRYPTCONST + 1;
+            const uint32_t t2 = key11x * CRYPTCONST;
             const uint8_t carry_for_x =
                 (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
 
@@ -189,25 +190,6 @@ namespace breakzip {
         return rval;
     }
 
-    void set_bound_from_carry_bit(const bool carry_bit,
-            const uint32_t lowbits, uint32_t* upper, uint32_t* lower) {
-        if (nullptr == upper || nullptr == lower) {
-            fprintf(stderr, "FATAL error: null pointer in call to "
-                    "set_bound_from_carry_bit. Aborting.\n");
-            abort();
-        }
-
-        // Depending on the carry bit, this will either be an upper or lower bound.
-        uint32_t bound = (1L << 24) - (lowbits & 0x00ffffff);
-
-        if (carry_bit) {
-            *lower = std::max(*lower, bound);
-        } else {
-            *upper = std::min(*upper, bound - 1);
-        }
-    }
-
-
     uint16_t get_s0_from_chunk1(const uint16_t chunk1) {
         const uint16_t tmp = chunk1 | 3;
         const uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
@@ -235,7 +217,7 @@ namespace breakzip {
 
             uint16_t chunk1 = guess_bits & 0xffff;
             uint8_t chunk2 = (guess_bits >> 16) & 0xff;
-            // chunk3: high 8 bits of key10 * 0x08088405.
+            // chunk3: high 8 bits of key10 * CRYPTCONST.
             uint8_t chunk3 = (guess_bits >> 24) & 0xff;
             uint8_t chunk4 = (guess_bits >> 32) & 0xff;
 
@@ -276,14 +258,8 @@ namespace breakzip {
 
                 uint32_t temp = crc32tab[x_array[0]] & 0xff;
                 temp ^= chunk2;
-                temp *= 0x08088405;
+                temp *= CRYPTCONST;
                 temp = (temp + 1) >> 24;
-
-                // Insert bounds checking w/carry bit calculation here.
-                // TODO(leaf): Confirm with Mike this new approach is right in stage1.
-                set_bound_from_carry_bit(chunk2, carry_for_x, x_array[0],
-                        &upper, &lower);
-
 
                 uint8_t msb_key11x = temp + chunk3 + carry_for_x;
                 const uint32_t key20_low24bits = (chunk4 << 16) | chunk1;
@@ -294,20 +270,9 @@ namespace breakzip {
                         s1x, t, key21x_low24bits);
 
                 uint8_t y0 = x_array[0] ^ s0;
-                // TODO(leaf): Confirm with Mike this new approach is right in stage1.
-                set_bound_from_carry_bit(chunk2, carry_for_y, y0, &upper, &lower);
-                if (upper < lower) {
-                    // Guess is wrong. Abort.
-                    wrong = true;
-                    CGABORT("ERROR: upper(0x%x) < lower(0x%x) but "
-                            "guess appears correct: 0x%lx == 0x%lx\n",
-                            upper, lower, guess_bits, correct_guess);
-                    break;
-                }
-
                 uint32_t tt = crc32tab[y0] & 0xff;
                 tt ^= chunk2;
-                tt *= 0x08088405;
+                tt *= CRYPTCONST;
                 tt = (tt + 1) >> 24;
 
                 uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
@@ -356,7 +321,7 @@ namespace breakzip {
         for (auto guess: in) {
             const uint16_t chunk1 = guess.stage1_bits & 0xffff;
             const uint8_t chunk2 = (guess.stage1_bits >> 16) & 0xff;
-            // chunk3: high 8 bits of key10 * 0x08088405.
+            // chunk3: high 8 bits of key10 * CRYPTCONST.
             const uint8_t chunk3 = (guess.stage1_bits >> 24) & 0xff;
             const uint8_t chunk4 = (guess.stage1_bits >> 32) & 0xff;
 
@@ -427,15 +392,11 @@ namespace breakzip {
                     const uint32_t key01x = (chunk2 | (chunk6 << 8)) ^ crc32tab[x0];
                     const uint8_t lsbkey01x = key01x & 0xff;
 
-                    const uint32_t bound1x = lsbkey01x * 0x08088405 + 1;
+                    const uint32_t bound1x = lsbkey01x * CRYPTCONST + 1;
 
-                    // bounds & carries from stage 1
-                    set_bound_from_carry_bit(stage1_carry_for_x, bound1x,
-                            &stage1_upper, &stage1_lower);
-
-                    const uint32_t key01x_temp = (lsbkey01x * 0x08088405 + 1) >> 24;
+                    const uint32_t msbkey11x_temp = (lsbkey01x * CRYPTCONST + 1) >> 24;
                     const uint8_t msb_key11x =
-                        (uint8_t)(key01x_temp + chunk3 + stage1_carry_for_x);
+                        (uint8_t)(msbkey11x_temp + chunk3 + stage1_carry_for_x);
                     const uint32_t key21x = crc32(key20, msb_key11x);
                     const uint32_t s1x_temp = (key21x | 3) & 0xffff;
                     const uint8_t s1x =
@@ -444,10 +405,8 @@ namespace breakzip {
                     const uint8_t lsbkey02x = (uint8_t) (key02x & 0xff);
 
                     const uint32_t bound2x =
-                        lsbkey01x * 0xd4652819 + 0x08088405 +
-                        lsbkey02x * 0x08088405 + 1;
-                    set_bound_from_carry_bit(carry_bits[fileidx][0], bound2x,
-                            &upper, &lower); // bounds & carries from stage 2
+                        lsbkey01x * 0xd4652819 + CRYPTCONST +
+                        lsbkey02x * CRYPTCONST + 1;
 
                     const uint8_t msbkey12x =
                         chunk7 + carry_bits[fileidx][0] + (bound2x >> 24);
@@ -460,15 +419,12 @@ namespace breakzip {
                         (chunk2 | (chunk6 << 8)) ^ crc32tab[y0];
                     const uint8_t lsbkey01y = key01y & 0xff;
 
-                    const uint32_t bound1y = lsbkey01x * 0x08088405 + 1;
-                    set_bound_from_carry_bit(stage1_carry_for_y, bound1y,
-                            &stage1_upper, &stage1_lower);
+                    const uint32_t bound1y = lsbkey01x * CRYPTCONST + 1;
 
                     const uint32_t msbkey11y_temp =
-                        (lsbkey01y * 0x08088405 + 1) >> 24;
-                    // NB(leaf): key01y_temp isn't declared anywhere. What did you mean?
+                        (lsbkey01y * CRYPTCONST + 1) >> 24;
                     const uint8_t msb_key11y =
-                        (uint8_t)(key01y_temp + chunk3 + stage1_carry_for_y);
+                        (uint8_t)(msbkey11y_temp + chunk3 + stage1_carry_for_y);
 
                     const uint32_t key21y = crc32(key20, msb_key11y);
                     const uint32_t s1y_temp = (key21y | 3) & 0xffff;
@@ -485,15 +441,8 @@ namespace breakzip {
                     const uint8_t lsbkey02y = key02y & 0xff;
 
                     const uint32_t bound2y =
-                        lsbkey01y * 0xd4652819 + 0x08088405 +
-                        lsbkey02y * 0x08088405 + 1;
-                    set_bound_from_carry_bit(carry_bits[fileidx][1], bound2y,
-                            &upper, &lower);
-
-                    if (upper < lower) {
-                        wrong = true;
-                        break;
-                    }
+                        lsbkey01y * 0xd4652819 + CRYPTCONST +
+                        lsbkey02y * CRYPTCONST + 1;
 
                     uint8_t msbkey12y =
                         chunk7 + carry_bits[fileidx][1] + (bound2y >> 24);
