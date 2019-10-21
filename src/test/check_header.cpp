@@ -192,8 +192,6 @@ START_TEST(test_crypt) {
                 "Expected s0 arg should be 0x100, was 0x%x",
                 expected_s0_arg);
 
-        //fprintf(stderr, "test_crypt: expect_s0_arg = 0x%x\n", expected_s0_arg);
-
         ck_assert(stage1(&crack_test, out, correct_guess, expected_s0_arg));
         ck_assert_msg(out.size() > 0,
                 "Expected at least one valid guess, got %d",

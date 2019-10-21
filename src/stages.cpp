@@ -200,6 +200,10 @@ namespace breakzip {
             uint64_t correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
         // used to figure out where it's being ignored, if at all.
+        if (nullptr == state) {
+            fprintf(stderr, "Fatal Error: state pointer cannot be null.\n");
+            abort();
+        }
 
         uint64_t guess_bits = state->stage1_start;
         while (guess_bits < state->stage1_end) {
