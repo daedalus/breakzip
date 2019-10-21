@@ -33,7 +33,7 @@
 #define LOCAL_FILE_HEADER_SIGNATURE 0x04034b50
 
 /* The internal ZIP crypto constant */
-#define CRYPTCONST 134775813L
+#define CRYPTCONST 0x08088405
 
 namespace breakzip {
 
