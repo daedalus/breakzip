@@ -32,6 +32,9 @@
 #define DATA_DESCRIPTOR_SIGNATURE 0x08074b50
 #define LOCAL_FILE_HEADER_SIGNATURE 0x04034b50
 
+/* The internal ZIP crypto constant */
+#define CRYPTCONST 0x08088405
+
 namespace breakzip {
 
     int main(int argc, char* argv[]);

@@ -3,6 +3,7 @@
  */
 
 #include "stages.h"
+#include "breakzip.h"
 
 #include <algorithm>
 
@@ -15,6 +16,10 @@
 }
 #define DEBUG false
 #define DPRINT(x, ...) if (DEBUG) { fprintf(stderr, x, __VA_ARGS__); }
+
+
+#define LSB32(x) ((uint8_t)(0x000000ff & x))
+#define MSB32(x) ((uint8_t)((0xff000000 & x) >> 24))
 
 namespace breakzip {
     using namespace std;
@@ -80,7 +85,7 @@ namespace breakzip {
 
         const uint16_t chunk1  = k20 & 0xffff;
         const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
-        const uint16_t chunk3  = (k10 * 0x08088405) >> 24;
+        const uint16_t chunk3  = (k10 * CRYPTCONST) >> 24;
         const uint8_t chunk4 = (k20 >> 16) & 0xff;
 
         uint8_t carry_bits[2][2];
@@ -92,18 +97,18 @@ namespace breakzip {
 
             const uint32_t crcx0   = crc32tab[x0];
             const uint8_t  lsbk01x = (chunk2 ^ crcx0) & 0xff;
-            const uint32_t low24x  = (lsbk01x * 0x08088405 + 1) & 0x00ffffff;
+            const uint32_t low24x  = (lsbk01x * CRYPTCONST + 1) & 0x00ffffff;
             carry_bits[fileidx][0] =
-                (low24x + ((k10 * 0x08088405) & 0x00ffffff)) >= (1 << 24);
+                (low24x + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             const uint16_t temp1x  = (k20 | 3) & 0xffff;
             const uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
             const uint8_t  y0      = x0 ^ s0;
             const uint32_t crcy0   = crc32tab[y0];
             const uint8_t  lsbk01y = (chunk2 ^ crcy0) & 0xff;
-            const uint32_t low24y  = (lsbk01y * 0x08088405 + 1) & 0x00ffffff;
+            const uint32_t low24y  = (lsbk01y * CRYPTCONST + 1) & 0x00ffffff;
             carry_bits[fileidx][1] =
-                (low24y + ((k10 * 0x08088405) & 0x00ffffff)) >= (1 << 24);
+                (low24y + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             ++fileidx;
         }
@@ -128,33 +133,77 @@ namespace breakzip {
         return correct_guess | 0xffff;
     }
 
-    bool set_bound_from_carry_bit(const uint8_t chunk, const bool carry_bit,
-            const uint8_t x0, uint32_t* upper, uint32_t* lower) {
-        if (nullptr == upper || nullptr == lower) {
-            fprintf(stderr, "FATAL error: null pointer in call to "
-                    "set_bound_from_carry_bit. Aborting.\n");
-            abort();
+    uint32_t stage2_correct_guess(const crack_t crypt_test) {
+        const uint32_t k00 = crypt_test.zip.keys[0];
+        const uint32_t k10 = crypt_test.zip.keys[1];
+        const uint32_t k20 = crypt_test.zip.keys[2];
+        DPRINT("Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
+
+        const uint16_t chunk1  = k20 & 0xffff;
+        const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
+        const uint16_t chunk3  = (k10 * CRYPTCONST) >> 24;
+        const uint8_t chunk4 = (k20 >> 16) & 0xff;
+        const uint8_t chunk5 = (k20 >> 24) & 0xff;
+        const uint8_t chunk6 = (crc32(k00, 0) >> 8) & 0xff;
+
+        uint8_t carry_bits[2][2];
+        uint8_t stage1_carry_bits[2][2];
+        const auto zip = crypt_test.zip;
+        int fileidx = 0;
+
+        uint8_t chunk7 = 0;
+        for (auto file: zip.files) {
+            const uint8_t x0 = file.random_bytes[0];
+            const uint8_t x1 = file.random_bytes[1];
+
+            const uint8_t key01x = crc32(k00, x0);
+            const uint8_t key11x = (k10 + (key01x & 0xff)) * CRYPTCONST + 1;
+
+            const uint32_t key02x = crc32(key01x, x1);
+            const uint8_t t1  = (key02x & 0xff) * CRYPTCONST + 1;
+            const uint32_t t2 = key11x * CRYPTCONST;
+            const uint8_t carry_for_x =
+                (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
+
+            const uint8_t maybe_chunk7 = (k10 * 0xf4652819) >> 24;
+
+            if (0 == fileidx) {
+                chunk7 = maybe_chunk7;
+            } else if (chunk7 != maybe_chunk7) {
+                fprintf(stderr, "FATAL ERROR: chunk7 calculation failed, got different "
+                        "results from each file: %d != %d\n",
+                        chunk7, maybe_chunk7);
+                abort();
+            }
+
+            ++fileidx;
         }
 
-        uint32_t k10mx0 = (((crc32tab[x0] ^ chunk) & 0xff) * 0x08088405 + 1);
-
-        // Depending on the carry bit, this will either be an upper or lower bound.
-        uint32_t bound = (1L << 24) - (k10mx0 & 0x00ffffff);
-
-        if (carry_bit) {
-            *lower = std::max(*lower, bound);
-        } else {
-            *upper = std::min(*upper, bound - 1);
-        }
-
-        return true;
+        uint32_t rval = 0;
+        rval |= (uint64_t)chunk5;
+        rval |= (uint64_t)chunk6 << 8;
+        rval |= (uint64_t)chunk7 << 16;
+        rval |= (uint64_t)(carry_bits[0][0]) << 24;
+        rval |= (uint64_t)(carry_bits[0][1]) << 25;
+        rval |= (uint64_t)(carry_bits[1][0]) << 26;
+        rval |= (uint64_t)(carry_bits[1][1]) << 27;
+        return rval;
     }
 
+    uint16_t get_s0_from_chunk1(const uint16_t chunk1) {
+        const uint16_t tmp = chunk1 | 3;
+        const uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
+        return s0;
+    }
 
     int stage1(const crack_t* state, vector<guess_t>& out,
             uint64_t correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
         // used to figure out where it's being ignored, if at all.
+        if (nullptr == state) {
+            fprintf(stderr, "Fatal Error: state pointer cannot be null.\n");
+            abort();
+        }
 
         uint64_t guess_bits = state->stage1_start;
         while (guess_bits < state->stage1_end) {
@@ -172,7 +221,7 @@ namespace breakzip {
 
             uint16_t chunk1 = guess_bits & 0xffff;
             uint8_t chunk2 = (guess_bits >> 16) & 0xff;
-            // chunk3: high 8 bits of key10 * 0x08088405.
+            // chunk3: high 8 bits of key10 * CRYPTCONST.
             uint8_t chunk3 = (guess_bits >> 24) & 0xff;
             uint8_t chunk4 = (guess_bits >> 32) & 0xff;
 
@@ -187,14 +236,9 @@ namespace breakzip {
             };
 
             // Compute s0.
-            uint16_t tmp = chunk1 | 3;
-            uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
+            uint16_t s0 = get_s0_from_chunk1(chunk1);
 
             if (correct_guess != 0 && (guess_bits == correct_guess)) {
-                DPRINT("chunk1: 0x%x\n", chunk1);
-                DPRINT("S0 tmp: 0x%x\n", tmp);
-                DPRINT("S0: 0x%x\n", s0);
-
                 if ((expected_s0 & 0x100)) {
                     if (s0 != (expected_s0 & 0xff)) {
                         CGABORT("FATAL ERROR: stream byte 0 not calculated "
@@ -218,13 +262,8 @@ namespace breakzip {
 
                 uint32_t temp = crc32tab[x_array[0]] & 0xff;
                 temp ^= chunk2;
-                temp *= 0x08088405;
+                temp *= CRYPTCONST;
                 temp = (temp + 1) >> 24;
-
-                // Insert bounds checking w/carry bit calculation here.
-                set_bound_from_carry_bit(chunk2, carry_for_x, x_array[0],
-                        &upper, &lower);
-
 
                 uint8_t msb_key11x = temp + chunk3 + carry_for_x;
                 const uint32_t key20_low24bits = (chunk4 << 16) | chunk1;
@@ -235,20 +274,9 @@ namespace breakzip {
                         s1x, t, key21x_low24bits);
 
                 uint8_t y0 = x_array[0] ^ s0;
-                set_bound_from_carry_bit(chunk2, carry_for_y, y0,
-                        &upper, &lower);
-                if (upper < lower) {
-                    // Guess is wrong. Abort.
-                    wrong = true;
-                    CGABORT("ERROR: upper(0x%x) < lower(0x%x) but "
-                            "guess appears correct: 0x%lx == 0x%lx\n",
-                            upper, lower, guess_bits, correct_guess);
-                    break;
-                }
-
                 uint32_t tt = crc32tab[y0] & 0xff;
                 tt ^= chunk2;
-                tt *= 0x08088405;
+                tt *= CRYPTCONST;
                 tt = (tt + 1) >> 24;
 
                 uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
@@ -284,7 +312,165 @@ namespace breakzip {
         return 1;
     }
 
-    int stage2(const crack_t* state, const vector<guess_t> in, vector<guess_t> out) {
+    int stage2(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t>& out, uint64_t correct_guess,
+            uint16_t expected_s0) {
+
+        // For testing, we accept a correct_guess parameter that can be
+        // used to figure out where it's being ignored, if at all.
+
+        // NB(leaf): For now, stage2 begins searching at zero and proceeds
+        // through all 2^28 possibilities. In future, we may need to have
+        // start/end constraints like stage1 does.
+        for (auto guess: in) {
+            const uint16_t chunk1 = guess.stage1_bits & 0xffff;
+            const uint8_t chunk2 = (guess.stage1_bits >> 16) & 0xff;
+            // chunk3: high 8 bits of key10 * CRYPTCONST.
+            const uint8_t chunk3 = (guess.stage1_bits >> 24) & 0xff;
+            const uint8_t chunk4 = (guess.stage1_bits >> 32) & 0xff;
+
+            const bool stage1_carry_bits[2][2] = {
+                (bool)(guess.stage1_bits >> 40) & 0x01,
+                (bool)(guess.stage1_bits >> 41) & 0x01,
+                (bool)(guess.stage1_bits >> 42) & 0x01,
+                (bool)(guess.stage1_bits >> 43) & 0x01
+            };
+
+            // We need to iterate over all values of uint32_t, so our index
+            // variable is 64 bits.
+            uint64_t i = (uint64_t)state->stage2_start;
+            uint64_t end = (uint64_t)state->stage2_end;
+            if (0 == end) { end = UINT32_MAX + 1; }
+            while (i < end) {
+                // The guess is the lower 32-bits of the index downcast to a
+                // 32-bit int.
+                const uint32_t guess_bits = (uint32_t)(i & 0xffffffff);
+
+                /**
+                 * Packed structure:
+                 *   chunk5: uint8_t (0-7)
+                 *   chunk6: uint8_t (8-15)
+                 *   chunk7: uint8_t (16-23)
+                 *   carry0x: bool   (24)
+                 *   carry0y: bool   (25)
+                 *   carry1x: bool   (26)
+                 *   carry2x: bool   (27)
+                 */
+                uint8_t chunk5 = guess_bits & 0xff;
+                uint8_t chunk6 = (guess_bits >> 8) & 0xff;
+                uint8_t chunk7 = (guess_bits >> 16) & 0xff;
+
+                bool carry_bits[2][2] = {
+                    (bool)(guess_bits >> 24) & 0x01,
+                    (bool)(guess_bits >> 25) & 0x01,
+                    (bool)(guess_bits >> 26) & 0x01,
+                    (bool)(guess_bits >> 27) & 0x01
+                };
+
+                const uint32_t k20 = chunk1 | (chunk4 << 16) | (chunk5 << 24);
+
+                bool wrong = false;
+                auto zip = state->zip;
+                int fileidx = 0; 
+                for (auto file: zip.files) {
+                    auto x_array = file.random_bytes;
+                    auto h_array = file.header_second;
+                    const uint8_t x0 = x_array[0];
+                    const uint8_t x1 = x_array[1];
+                    const uint8_t x2 = x_array[2];
+
+                    uint32_t stage1_upper = 0x00ffffff;
+                    uint32_t stage1_lower = 0;
+
+                    uint32_t upper = 0x00ffffff;
+                    uint32_t lower = 0;
+
+                    const uint8_t stage1_carry_for_x =
+                        (uint8_t)stage1_carry_bits[fileidx][0];
+                    const uint8_t stage1_carry_for_y =
+                        (uint8_t)stage1_carry_bits[fileidx][1];
+
+                    const uint16_t s0 = get_s0_from_chunk1(chunk1);
+                    const uint8_t y0 = x0 ^ s0;
+                    const uint32_t key20 = chunk1 | (chunk4 << 16) | (chunk5 << 24);
+                    const uint32_t key01x = (chunk2 | (chunk6 << 8)) ^ crc32tab[x0];
+                    const uint8_t lsbkey01x = key01x & 0xff;
+
+                    const uint32_t bound1x = lsbkey01x * CRYPTCONST + 1;
+
+                    const uint32_t msbkey11x_temp = (lsbkey01x * CRYPTCONST + 1) >> 24;
+                    const uint8_t msb_key11x =
+                        (uint8_t)(msbkey11x_temp + chunk3 + stage1_carry_for_x);
+                    const uint32_t key21x = crc32(key20, msb_key11x);
+                    const uint32_t s1x_temp = (key21x | 3) & 0xffff;
+                    const uint8_t s1x =
+                        ((s1x_temp * (s1x_temp ^ 1)) >> 8) & 0xff;
+                    const uint32_t key02x = crc32(key01x, x1);
+                    const uint8_t lsbkey02x = (uint8_t) (key02x & 0xff);
+
+                    const uint32_t bound2x =
+                        lsbkey01x * 0xd4652819 + CRYPTCONST +
+                        lsbkey02x * CRYPTCONST + 1;
+
+                    const uint8_t msbkey12x =
+                        chunk7 + carry_bits[fileidx][0] + (bound2x >> 24);
+                    const uint32_t key22x = crc32(key21x, msbkey12x);
+                    const uint32_t s2x_temp = (key22x | 3) & 0xffff;
+                    const uint8_t s2x =
+                        ((s2x_temp * (s2x_temp ^ 1)) >> 8) & 0xff;
+
+                    const uint32_t key01y =
+                        (chunk2 | (chunk6 << 8)) ^ crc32tab[y0];
+                    const uint8_t lsbkey01y = key01y & 0xff;
+
+                    const uint32_t bound1y = lsbkey01x * CRYPTCONST + 1;
+
+                    const uint32_t msbkey11y_temp =
+                        (lsbkey01y * CRYPTCONST + 1) >> 24;
+                    const uint8_t msb_key11y =
+                        (uint8_t)(msbkey11y_temp + chunk3 + stage1_carry_for_y);
+
+                    const uint32_t key21y = crc32(key20, msb_key11y);
+                    const uint32_t s1y_temp = (key21y | 3) & 0xffff;
+                    const uint8_t s1y =
+                        ((s1y_temp * (s1y_temp ^ 1)) >> 8) & 0xff;
+                    const uint8_t y1 = x1 ^ s1y;
+
+                    // TODO: figure out if it's possible to check consistency
+                    // with stage1_upper & lower information looking at the
+                    // remainder of something mod 2^24 If not, remove the
+                    // set_bounds_from_carry_bit calls for stage1
+
+                    const uint32_t key02y = crc32(key01y, x1);
+                    const uint8_t lsbkey02y = key02y & 0xff;
+
+                    const uint32_t bound2y =
+                        lsbkey01y * 0xd4652819 + CRYPTCONST +
+                        lsbkey02y * CRYPTCONST + 1;
+
+                    uint8_t msbkey12y =
+                        chunk7 + carry_bits[fileidx][1] + (bound2y >> 24);
+
+                    const uint32_t key22y = crc32(key21y, msbkey12y);
+                    const uint32_t s2y_temp = (key22y | 3) & 0xffff;
+                    const uint8_t s2y =
+                        ((s2y_temp * (s2y_temp ^ 1)) >> 8) & 0xff;
+                    if (h_array[2] != x2 ^ s2x ^ s2y) {
+                        wrong = true;
+                        break;
+                    }
+
+                    ++fileidx;
+                }
+
+                if (!wrong) {
+                    // Guess passed all files, add to output list.
+                    guess.stage2_bits = guess_bits;
+                    out.push_back(guess);
+                }
+                ++i;
+            } // foreach stage2 guess
+        } // foreach stage1 guess.
         return 1;
     }
 

@@ -43,6 +43,9 @@ namespace breakzip {
     typedef struct crack {
         uint64_t stage1_start;
         uint64_t stage1_end;
+
+        uint32_t stage2_start;
+        uint32_t stage2_end;
         zip_crack_t zip;
     } crack_t;
 
@@ -50,6 +53,9 @@ namespace breakzip {
     uint64_t stage1_correct_guess(crack_t crypt_test);
     uint64_t stage1_correct_guess_start(uint64_t correct_guess);
     uint64_t stage1_correct_guess_end(uint64_t correct_guess);
+
+    /* Helper functions for testing stage2. */
+    uint32_t stage2_correct_guess(const crack_t crack_test);
 
     // Notation:
     // 
@@ -144,7 +150,8 @@ namespace breakzip {
      */
 
     int stage2(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out);
+            vector<guess_t>& out,
+            uint64_t correct_guess=0, uint16_t expected_s0=0);
 
     // stage 3:
     // We guess [chunk8 = bits 24..32 of key00 (8 bits)]
