@@ -156,16 +156,19 @@ namespace breakzip {
             const uint8_t x0 = file.random_bytes[0];
             const uint8_t x1 = file.random_bytes[1];
 
+            // TODO(stay): Mike, how do I compute key01y and key02y?
             const uint8_t key01x = crc32(k00, x0);
             const uint8_t key11x = (k10 + (key01x & 0xff)) * CRYPTCONST + 1;
-
             const uint32_t key02x = crc32(key01x, x1);
+
+            // TODO(stay): Can I delete this, since I'm computing the carry for x
+            // below?
             const uint8_t t1  = (key02x & 0xff) * CRYPTCONST + 1;
             const uint32_t t2 = key11x * CRYPTCONST;
             const uint8_t carry_for_x =
                 (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
 
-            const uint8_t maybe_chunk7 = (k10 * 0xf4652819) >> 24;
+            const uint8_t maybe_chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
 
             if (0 == fileidx) {
                 chunk7 = maybe_chunk7;
@@ -174,6 +177,32 @@ namespace breakzip {
                         "results from each file: %d != %d\n",
                         chunk7, maybe_chunk7);
                 abort();
+            }
+
+            const uint8_t key12x = (k10 * CRYPTCONST_POW2) +
+                (LSB(key01x) * CRYPTCONST_POW2 + CRYPTCONST +
+                 (LSB(key02x) * CRYPTCONST) + 1);
+
+            uint32_t low24_key10cc2 = (k10 * CRYPTCONST_POW2) & 0xffffff;
+
+            // Compute carry bit for x.
+            uint32_t low24_lsb_key01xcc2 =
+                (LSB(key01x) * CRYPTCONST_POW2) & 0xffffff;
+            uint32_t carry_bit_xtemp = low24_key10cc2 + low24_lsb_key01xcc2 +
+                CRYPTCONST + (LSB(key02x) * CRYPTCONST) + 1;
+            bool has_x_carry_bit = false;
+            if (carry_bit_xtemp > (1L << 24)) {
+                has_x_carry_bit = true;
+            }
+
+            // Compute carry bit for y.
+            uint32_t low24_lsb_key01ycc2 =
+                (LSB(key01y) * CRYPTCONST_POW2) & 0xffffff;
+            uint32_t carry_bit_ytemp = low24_key10cc2 + low24_lsb_key01ycc2 +
+                CRYPTCONST + (LSB(key02y) * CRYPTCONST) + 1;
+            bool has_y_carry_bit = false;
+            if (carry_bit_ytemp > (1L << 24)) {
+                has_y_carry_bit = true;
             }
 
             ++fileidx;
