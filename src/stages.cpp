@@ -79,12 +79,12 @@ namespace breakzip {
 
     /* Functions for calculating the chunks from key material. */
     uint16_t chunk1_from_keys(const std::array<uint32_t, 3> &k) {
-        const uint16_t chunk1 = k[0] & 0xffff;
+        const uint16_t chunk1 = k[2] & 0xffff;
         return chunk1;
     }
 
-    uint16_t chunk2_from_keys(const std::array<uint32_t, 3> &k) {
-        uint8_t chunk2 = ((k[0] >> 8) ^ crc32tab[k[0] & 0xff]) & 0xff;
+    uint8_t chunk2_from_keys(const std::array<uint32_t, 3> &k) {
+        uint8_t chunk2 = crc32(k[0], 0) & 0xff;
         return chunk2;
     }
 
@@ -93,19 +93,24 @@ namespace breakzip {
         return chunk3;
     }
 
-    uint16_t chunk4_from_keys(const std::array<uint32_t, 3> &k) {
+    uint8_t chunk4_from_keys(const std::array<uint32_t, 3> &k) {
         const uint8_t chunk4 = (k[2] >> 16) & 0xff;
         return chunk4;
     }
 
-    uint16_t chunk5_from_keys(const std::array<uint32_t, 3> &k) {
+    uint8_t chunk5_from_keys(const std::array<uint32_t, 3> &k) {
         const uint8_t chunk5 = (k[2] >> 24) & 0xff;
         return chunk5;
     }
 
-    uint16_t chunk6_from_keys(const std::array<uint32_t, 3> &k) {
+    uint8_t chunk6_from_keys(const std::array<uint32_t, 3> &k) {
         const uint8_t chunk6 = (crc32(k[0], 0) >> 8) & 0xff;
         return chunk6;
+    }
+    
+    uint8_t chunk7_from_keys(const std::array<uint32_t, 3> &k) {
+        const uint8_t chunk7 = (k[1] * CRYPTCONST_POW2) >> 24;
+        return chunk7;
     }
 
     uint64_t stage1_correct_guess(const crack_t crypt_test) {
