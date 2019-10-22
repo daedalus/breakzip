@@ -15,10 +15,14 @@ namespace breakzip {
     typedef std::array<bool, 8> carrybits_t;
 
     typedef struct guess {
-        uint64_t stage1_bits : 44;
-        uint32_t stage2_bits : 26;
-        uint32_t stage3_bits : 18;
-        uint32_t stage4_bits : 18;
+        uint16_t chunk1;
+        uint8_t chunk2;
+        uint8_t chunk3;
+        uint8_t chunk4;
+        uint8_t chunk5;
+        uint8_t chunk6;
+        uint8_t chunk7;
+
         carrybits_t carry_bits;
     } guess_t;
 

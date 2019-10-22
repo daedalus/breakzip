@@ -113,70 +113,7 @@ namespace breakzip {
         return chunk7;
     }
 
-    /* Stage1 chunks from guess bits. */
-
-    /** Chunk1 **/
-    uint16_t chunk1_from_guess(uint64_t guess_bits) {
-        return guess_bits & 0xffff;
-    }
-    uint16_t chunk1_from_guess(const guess_t& guess) {
-        return chunk1_from_guess(guess.stage1_bits);
-    }
-
-    /** Chunk2 **/
-    uint8_t chunk2_from_guess(uint64_t guess_bits) { 
-        return (guess_bits >> 16) & 0xff;
-    }
-    uint8_t chunk2_from_guess(const guess_t& guess) {
-        return chunk2_from_guess(guess.stage1_bits);
-    }
-
-    /** Chunk3 **/
-    // chunk3: high 8 bits of key10 * CRYPTCONST.
-    uint8_t chunk3_from_guess(uint64_t guess_bits) { 
-        return (guess_bits >> 24) & 0xff;
-    }
-    uint8_t chunk3_from_guess(const guess_t& guess) {
-        return chunk3_from_guess(guess.stage1_bits);
-    }
-
-    /** Chunk4 **/
-    uint8_t chunk4_from_guess(uint64_t guess_bits) {
-        return (guess_bits >> 32) & 0xff;
-    }
-    uint8_t chunk4_from_guess(const guess_t& guess) {
-        return chunk4_from_guess(guess.stage1_bits);
-    }
-
-    /* Stage2 chunks. */
-
-    /** Chunk5 **/
-    uint8_t chunk5_from_guess(uint32_t guess_bits) {
-        return guess_bits & 0xff;
-    }
-    uint8_t chunk5_from_guess(const guess_t& guess) {
-        return chunk5_from_guess(guess.stage2_bits);
-    }
-
-
-    /** Chunk6 **/
-    uint8_t chunk6_from_guess(uint32_t guess_bits) { 
-        return (guess_bits >> 8) & 0xff;
-    }
-    uint8_t chunk6_from_guess(const guess_t& guess) {
-        return chunk6_from_guess(guess.stage2_bits);
-    }
-
-    /** Chunk7 **/
-    uint8_t chunk7_from_guess(uint32_t guess_bits) { 
-        return (guess_bits >> 16) & 0xff;
-    }
-    uint8_t chunk7_from_guess(const guess_t& guess) {
-        return chunk7_from_guess(guess.stage2_bits);
-    }
-
-
-    void carry_bits_from_guess(guess_t& guess, carrybits_t& out) {
+    void mutable_carry_bits_from_guess(guess_t& guess, carrybits_t& out) {
         out = {
             guess.carry_bits[0],
             guess.carry_bits[1],
