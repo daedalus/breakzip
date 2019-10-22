@@ -177,6 +177,7 @@ namespace breakzip {
         const uint8_t chunk4 = (k20 >> 16) & 0xff;
         const uint8_t chunk5 = (k20 >> 24) & 0xff;
         const uint8_t chunk6 = (crc32(k00, 0) >> 8) & 0xff;
+        const uint8_t maybe_chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
 
         uint8_t carry_bits[2][2];
         uint8_t stage1_carry_bits[2][2];
@@ -188,19 +189,16 @@ namespace breakzip {
             const uint8_t x0 = file.random_bytes[0];
             const uint8_t x1 = file.random_bytes[1];
 
+            const uint16_t temp1x  = (k20 | 3) & 0xffff;
+            const uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
+            const uint8_t  y0      = x0 ^ s0;
+
             // TODO(stay): Mike, how do I compute key01y and key02y?
             const uint8_t key01x = crc32(k00, x0);
             const uint8_t key11x = (k10 + (key01x & 0xff)) * CRYPTCONST + 1;
             const uint32_t key02x = crc32(key01x, x1);
 
-            // TODO(stay): Can I delete this, since I'm computing the carry for x
-            // below?
-            const uint8_t t1  = (key02x & 0xff) * CRYPTCONST + 1;
-            const uint32_t t2 = key11x * CRYPTCONST;
-            const uint8_t carry_for_x =
-                (t1 & 0xffffff) + (t2 & 0xffffff) >= (1L<<24);
-
-            const uint8_t maybe_chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
+            const uint8_t key01y = crc32(k00, y0);
 
             if (0 == fileidx) {
                 chunk7 = maybe_chunk7;
@@ -226,6 +224,30 @@ namespace breakzip {
             if (carry_bit_xtemp > (1L << 24)) {
                 has_x_carry_bit = true;
             }
+
+            uint32_t temp = crc32tab[x0] & 0xff;
+            temp ^= chunk2;
+            temp *= CRYPTCONST;
+            temp = (temp + 1) >> 24;
+
+            uint8_t msb_key11x = temp + chunk3 +
+                (uint8_t)(has_x_carry_bit ? 1 : 0);
+            const uint32_t key21x = crc32(k20, msb_key11x);
+            const uint32_t s1x_temp = (key21x | 3) & 0xffff;
+            const uint8_t s1x =
+                ((s1x_temp * (s1x_temp ^ 1)) >> 8) & 0xff;
+
+            uint32_t tt = crc32tab[y0] & 0xff;
+            tt ^= chunk2;
+            tt *= CRYPTCONST;
+            tt = (tt + 1) >> 24;
+
+            uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
+            uint32_t key21y_low24bits = crc32(key20_low24bits, msb_key11y);
+            uint32_t ttt = key21y_low24bits | 3;
+            uint8_t s1y = ((ttt * (ttt ^ 1)) >> 8) & 0xff;
+            const uint8_t y1 = x1 ^ s1y;
+            const uint8_t key02y = crc32(key01y, y1);
 
             // Compute carry bit for y.
             uint32_t low24_lsb_key01ycc2 =
