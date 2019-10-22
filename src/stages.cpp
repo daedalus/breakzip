@@ -113,6 +113,89 @@ namespace breakzip {
         return chunk7;
     }
 
+    /* Stage1 chunks from guess bits. */
+
+    /** Chunk1 **/
+    uint16_t chunk1_from_guess(uint64_t guess_bits) {
+        return guess_bits & 0xffff;
+    }
+    uint16_t chunk1_from_guess(const guess_t& guess) {
+        return chunk1_from_guess(guess.stage1_bits);
+    }
+
+    /** Chunk2 **/
+    uint8_t chunk2_from_guess(uint64_t guess_bits) { 
+        return (guess_bits >> 16) & 0xff;
+    }
+    uint8_t chunk2_from_guess(const guess_t& guess) {
+        return chunk2_from_guess(guess.stage1_bits);
+    }
+
+    /** Chunk3 **/
+    // chunk3: high 8 bits of key10 * CRYPTCONST.
+    uint8_t chunk3_from_guess(uint64_t guess_bits) { 
+        return (guess_bits >> 24) & 0xff;
+    }
+    uint8_t chunk3_from_guess(const guess_t& guess) {
+        return chunk3_from_guess(guess.stage1_bits);
+    }
+
+    /** Chunk4 **/
+    uint8_t chunk4_from_guess(uint64_t guess_bits) {
+        return (guess_bits >> 32) & 0xff;
+    }
+    uint8_t chunk4_from_guess(const guess_t& guess) {
+        return chunk4_from_guess(guess.stage1_bits);
+    }
+
+    /* Stage2 chunks. */
+
+    /** Chunk5 **/
+    uint8_t chunk5_from_guess(uint32_t guess_bits) {
+        return guess_bits & 0xff;
+    }
+    uint8_t chunk5_from_guess(const guess_t& guess) {
+        return chunk5_from_guess(guess.stage2_bits);
+    }
+
+
+    /** Chunk6 **/
+    uint8_t chunk6_from_guess(uint32_t guess_bits) { 
+        return (guess_bits >> 8) & 0xff;
+    }
+    uint8_t chunk6_from_guess(const guess_t& guess) {
+        return chunk6_from_guess(guess.stage2_bits);
+    }
+
+    /** Chunk7 **/
+    uint8_t chunk7_from_guess(uint32_t guess_bits) { 
+        return (guess_bits >> 16) & 0xff;
+    }
+    uint8_t chunk7_from_guess(const guess_t& guess) {
+        return chunk7_from_guess(guess.stage2_bits);
+    }
+
+
+    void carry_bits_from_guess(guess_t& guess, carrybits_t& out) {
+        out = {
+            guess.carry_bits[0],
+            guess.carry_bits[1],
+            guess.carry_bits[2],
+            guess.carry_bits[3],
+            guess.carry_bits[4],
+            guess.carry_bits[5],
+            guess.carry_bits[6],
+            guess.carry_bits[7] };
+        return;
+    }
+
+    uint16_t get_s0_from_chunk1(const uint16_t chunk1) {
+        const uint16_t tmp = chunk1 | 3;
+        const uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
+        return s0;
+    }
+
+
     uint64_t stage1_correct_guess(const crack_t crypt_test) {
         const uint32_t k00 = crypt_test.zip.keys[0];
         const uint32_t k10 = crypt_test.zip.keys[1];
@@ -276,12 +359,6 @@ namespace breakzip {
         rval |= (uint64_t)(carry_bits[1][0]) << 26;
         rval |= (uint64_t)(carry_bits[1][1]) << 27;
         return rval;
-    }
-
-    uint16_t get_s0_from_chunk1(const uint16_t chunk1) {
-        const uint16_t tmp = chunk1 | 3;
-        const uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;
-        return s0;
     }
 
     int stage1(const crack_t* state, vector<guess_t>& out,

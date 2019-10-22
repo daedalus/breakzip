@@ -11,12 +11,15 @@
 namespace breakzip {
 
     using namespace std;
+   
+    typedef std::array<bool, 8> carrybits_t;
 
     typedef struct guess {
         uint64_t stage1_bits : 44;
         uint32_t stage2_bits : 26;
         uint32_t stage3_bits : 18;
         uint32_t stage4_bits : 18;
+        carrybits_t carry_bits;
     } guess_t;
 
     /* Structure for containing the global state of the cracking job on this
