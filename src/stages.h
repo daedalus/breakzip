@@ -11,20 +11,152 @@
 namespace breakzip {
 
     using namespace std;
-   
-    typedef std::array<bool, 8> carrybits_t;
 
-    typedef struct guess {
-        uint16_t chunk1;
-        uint8_t chunk2;
-        uint8_t chunk3;
-        uint8_t chunk4;
-        uint8_t chunk5;
-        uint8_t chunk6;
-        uint8_t chunk7;
+    /* There are 4 stages with 2 carry bits per stage, one for each file. */
+    typedef std::array<std::array<bool, 2>, 4> carrybits_t;
 
-        carrybits_t carry_bits;
-    } guess_t;
+    class guess_t {
+        public:
+
+            explicit guess_t() :
+                chunk1(0), chunk2(0), chunk3(0), chunk4(0), chunk5(0),
+                chunk6(0), chunk7(0), carry_bits({{{0,0},{0,0},{0,0},{0,0}}}),
+                internal_carry_bit_(0) {};
+
+            uint16_t chunk1;
+            uint8_t chunk2;
+            uint8_t chunk3;
+            uint8_t chunk4;
+            uint8_t chunk5;
+            uint8_t chunk6;
+            uint8_t chunk7;
+
+            carrybits_t carry_bits;
+
+            std::string str() {
+                char cstr[64];
+                snprintf(cstr, 64, "%d-%d-%d-%d-%d-%d-%d", chunk7, chunk6,
+                        chunk5, chunk4, chunk3, chunk2, chunk1);
+
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            std::string hex() {
+                char cstr[64];
+                snprintf(cstr, 64, "0x%08x%04x%04x%04x%04x%04x%04x",
+                        chunk7, chunk6, chunk5, chunk4, chunk3, chunk2, chunk1);
+
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            bool operator==(const guess_t& other) {
+                return (this->chunk1 == other.chunk1 &&
+                        this->chunk2 == other.chunk2 &&
+                        this->chunk3 == other.chunk3 &&
+                        this->chunk4 == other.chunk4 &&
+                        this->chunk5 == other.chunk5 &&
+                        this->chunk6 == other.chunk6 &&
+                        this->chunk7 == other.chunk7 &&
+                        this->carry_bits == other.carry_bits);
+            }
+
+            bool operator!=(const guess_t& other) { return !(*this == other); }
+
+            guess_t& operator=(const guess_t& other) {
+                if (*this != other) {
+                    this->chunk1 = other.chunk1;
+                    this->chunk2 = other.chunk2;
+                    this->chunk3 = other.chunk3;
+                    this->chunk4 = other.chunk4;
+                    this->chunk5 = other.chunk5;
+                    this->chunk6 = other.chunk6;
+                    this->chunk7 = other.chunk7;
+                    this->carry_bits = other.carry_bits;
+                }
+                return *this;
+            }
+
+            /* In stage1, a guess compares equal if the stage1 chunks and stage1
+             * carry bits are equal.
+             */
+            bool stage1_compare(const guess_t& other) const {
+                return (this->chunk1 == other.chunk1 &&
+                        this->chunk2 == other.chunk2 &&
+                        this->chunk3 == other.chunk3 &&
+                        this->chunk4 == other.chunk4 &&
+                        this->carry_bits[0][0] == other.carry_bits[0][0] &&
+                        this->carry_bits[0][1] == other.carry_bits[0][1]);
+            }
+
+            /* In stage2, a guess compares equal if they're equal in stage1 and the
+             * stage2 chunks and carry bits are equal.
+             */
+            bool stage2_compare(const guess_t& other) const {
+                return (this->stage1_compare(other) &&
+                        this->chunk5 == other.chunk5 &&
+                        this->chunk6 == other.chunk6 &&
+                        this->chunk7 == other.chunk7 &&
+                        this->carry_bits[1][0] == other.carry_bits[1][0] &&
+                        this->carry_bits[1][1] == other.carry_bits[1][1]);
+            }
+
+            // Prefix increment.
+            guess_t& operator++() {
+                // TODO(leaf): Handle iterating over carry bits.
+                if (UINT16_MAX != chunk1) { ++(this->chunk1); return *this; }
+
+                // chunk1 was MAX, so it's carrying. Set to 0 and continue.
+                this->chunk1 = 0;
+
+                if (UINT8_MAX != chunk2) {
+                    // chunk2 doesn't carry. 
+                    ++(this->chunk2);
+                    return *this;
+                }
+
+                this->chunk2 = 0;
+                if (UINT8_MAX != chunk3) {
+                    // chunks1 and 2 carry, but not 3.
+                    ++(this->chunk3);
+                    return *this;
+                }
+
+                this->chunk3 = 0;
+                if (UINT8_MAX != chunk4) {
+                    ++(this->chunk4);
+                    return *this;
+                }
+
+                this->chunk4 = 0;
+                if (UINT8_MAX != chunk5) {
+                    ++(this->chunk5);
+                    return *this;
+                }
+
+                this->chunk5 = 0;
+                if (UINT8_MAX != chunk6) {
+                    ++(this->chunk6);
+                    return *this;
+                }
+
+                this->chunk6 = 0;
+                if (UINT8_MAX != chunk7) {
+                    ++(this->chunk7);
+                    return *this;
+                }
+
+                // everything carries, roll over to 0 but mark the carry bit.
+                this->chunk7 = 0;
+                this->internal_carry_bit_ = 1;
+                return *this;
+            }
+
+        private:
+            uint8_t internal_carry_bit_;
+    };
+
 
     /* Structure for containing the global state of the cracking job on this
      * thread.
@@ -39,12 +171,12 @@ namespace breakzip {
         pid_t pid;
         time_t time;
         unsigned int seed;
-        uint32_t keys[3];
+        std::array<uint32_t, 3> keys;
         // TODO(leaf): Because the specific target archive for which we're
         // writing this crack has only two files, we hard-coded that number
         // here. To make this attack generally useful, we would need a vector
         // here instead.
-        zip_cryptfile_t files[2];
+        std::array<zip_cryptfile_t, 2> files;
     } zip_crack_t;
 
     typedef struct crack {
@@ -63,6 +195,48 @@ namespace breakzip {
 
     /* Helper functions for testing stage2. */
     uint32_t stage2_correct_guess(const crack_t crack_test);
+
+    class stage1_iterator {
+        public:
+            stage1_iterator(guess_t value): guess_(value){};
+
+            bool operator!=(stage1_iterator const& other) const {
+                const guess_t other_guess = other.guess_;
+                return other_guess.stage1_compare(this->guess_);
+            }
+
+            guess_t const& operator*() const { return guess_; }
+
+            stage1_iterator& operator++() {
+                ++guess_;
+                return *this;
+            }
+
+        private:
+            guess_t guess_;
+    };
+
+    class stage1_range {
+        public:
+            explicit stage1_range(crack_t state) : state_(state) {};
+
+            stage1_iterator begin() {
+                return stage1_iterator(start_, end_, carry_);
+            }
+
+            stage1_iterator end() {
+                return stage1_iterator(start_, end_, carry_);
+            }
+
+        private:
+            crack_t state_;
+            uint64_t start_;
+            uint64_t end_;
+            bool carry_;
+    }
+
+
+
 
     // Notation:
     // 
