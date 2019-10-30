@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <cstdint>
+#include <tuple>
 
 #pragma pack(1)
 
@@ -12,12 +13,271 @@ namespace breakzip {
 
     using namespace std;
 
-    typedef struct guess {
-        uint64_t stage1_bits : 44;
-        uint32_t stage2_bits : 26;
-        uint32_t stage3_bits : 18;
-        uint32_t stage4_bits : 18;
-    } guess_t;
+    /* There are 4 stages with 2 carry bits per stage, one for each file. */
+    typedef std::array<std::array<std::array<bool, 2>, 2>, 4> carrybits_t;
+
+
+    class guess_t {
+        public:
+            uint16_t chunk1;
+            uint8_t chunk2;
+            uint8_t chunk3;
+            uint8_t chunk4;
+            uint8_t chunk5;
+            uint8_t chunk6;
+            uint8_t chunk7;
+            carrybits_t carry_bits;
+
+            explicit guess_t() :
+                chunk1(0), chunk2(0), chunk3(0), chunk4(0), chunk5(0),
+                chunk6(0), chunk7(0), carry_bits({{{0,0},{0,0},{0,0},{0,0}}}),
+                internal_carry_bit_(0) {};
+
+            guess_t(int chunk1) : 
+                chunk1(chunk1), chunk2(0), chunk3(0), chunk4(0), chunk5(0),
+                chunk6(0), chunk7(0), carry_bits({{{0,0},{0,0},{0,0},{0,0}}}),
+                internal_carry_bit_(0) {};
+
+            guess_t(uint16_t c1, uint8_t c2, uint8_t c3,
+                    uint8_t c4, carrybits_t carry_bits) :
+                chunk1(c1), chunk2(c2), chunk3(c3), chunk4(c4),
+                chunk5(0), chunk6(0), chunk7(0), carry_bits(carry_bits) {};
+
+            guess_t(const guess_t& other) :
+                chunk1(other.chunk1), chunk2(other.chunk2),
+                chunk3(other.chunk3), chunk4(other.chunk4),
+                chunk5(other.chunk5), chunk6(other.chunk6),
+                chunk7(other.chunk7), carry_bits(other.carry_bits) {}
+
+            std::string str() {
+                char cstr[64];
+                snprintf(cstr, 64, "%d-%d-%d-%d-%d-%d-%d", chunk7, chunk6,
+                        chunk5, chunk4, chunk3, chunk2, chunk1);
+
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            std::string hex() const {
+                char cstr[64];
+                snprintf(cstr, 64, "0x%08x%04x%04x%04x%04x%04x%04x",
+                        chunk7, chunk6, chunk5, chunk4, chunk3, chunk2, chunk1);
+
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            bool operator==(const guess_t& other) const {
+                return (this->chunk1 == other.chunk1 &&
+                        this->chunk2 == other.chunk2 &&
+                        this->chunk3 == other.chunk3 &&
+                        this->chunk4 == other.chunk4 &&
+                        this->chunk5 == other.chunk5 &&
+                        this->chunk6 == other.chunk6 &&
+                        this->chunk7 == other.chunk7 &&
+                        this->carry_bits == other.carry_bits);
+            }
+
+            bool operator!=(const guess_t& other) { return !(*this == other); }
+
+            guess_t& operator=(const guess_t& other) {
+                if (*this != other) {
+                    this->chunk1 = other.chunk1;
+                    this->chunk2 = other.chunk2;
+                    this->chunk3 = other.chunk3;
+                    this->chunk4 = other.chunk4;
+                    this->chunk5 = other.chunk5;
+                    this->chunk6 = other.chunk6;
+                    this->chunk7 = other.chunk7;
+                    this->carry_bits = other.carry_bits;
+                }
+                return *this;
+            }
+
+            // This operator defines the ordering of elements. I.e., which 
+            // chunks have significance. Carry bits are the least
+            // significant.
+            friend bool operator<(const guess_t& left, const guess_t& right) {
+                return
+                    std::tie(left.chunk7, left.chunk5, left.chunk4,
+                            left.chunk3, left.chunk2, left.chunk1,
+                            left.carry_bits[0][0], left.carry_bits[0][1],
+                            left.carry_bits[1][0], left.carry_bits[1][1],
+                            left.carry_bits[2][0], left.carry_bits[2][1],
+                            left.carry_bits[3][0], left.carry_bits[3][1]) <
+                    std::tie(right.chunk7, right.chunk5, right.chunk4,
+                            right.chunk3, right.chunk2, right.chunk1,
+                            right.carry_bits[0][0], right.carry_bits[0][1],
+                            right.carry_bits[1][0], right.carry_bits[1][1],
+                            right.carry_bits[2][0], right.carry_bits[2][1],
+                            right.carry_bits[3][0], right.carry_bits[3][1]);
+
+            }
+
+            friend bool operator>(const guess_t& left, const guess_t& right) {
+                return right < left;
+            }
+
+            friend bool operator<=(const guess_t& left, const guess_t& right) {
+                return !(left > right);
+            }
+
+            friend bool operator>=(const guess_t& left, const guess_t& right) {
+                return !(left < right);
+            }
+
+            guess_t& operator*() { return *this; }
+
+            bool compare(const guess_t& other) const {
+                return (this->chunk1 == other.chunk1 &&
+                        this->chunk2 == other.chunk2 &&
+                        this->chunk3 == other.chunk3 &&
+                        this->chunk4 == other.chunk4 &&
+                        this->chunk5 == other.chunk5 &&
+                        this->chunk6 == other.chunk6 &&
+                        this->chunk7 == other.chunk7 &&
+                        this->carry_bits[0][0] == other.carry_bits[0][0] &&
+                        this->carry_bits[0][1] == other.carry_bits[0][1] &&
+                        this->carry_bits[1][0] == other.carry_bits[1][0] &&
+                        this->carry_bits[1][1] == other.carry_bits[1][1] &&
+                        this->carry_bits[2][0] == other.carry_bits[2][0] &&
+                        this->carry_bits[2][1] == other.carry_bits[2][1] &&
+                        this->carry_bits[3][0] == other.carry_bits[3][0] &&
+                        this->carry_bits[3][1] == other.carry_bits[3][1]);
+            }
+
+            /* In stage1, a guess compares equal if the stage1 chunks and stage1
+             * carry bits are equal.
+             */
+            bool stage1_compare(const guess_t& other) const {
+                return (this->chunk1 == other.chunk1 &&
+                        this->chunk2 == other.chunk2 &&
+                        this->chunk3 == other.chunk3 &&
+                        this->chunk4 == other.chunk4 &&
+                        this->carry_bits[0][0] == other.carry_bits[0][0] &&
+                        this->carry_bits[0][1] == other.carry_bits[0][1]);
+            }
+
+            /* In stage2, a guess compares equal if they're equal in stage1 and the
+             * stage2 chunks and carry bits are equal.
+             */
+            bool stage2_compare(const guess_t& other) const {
+                return (this->stage1_compare(other) &&
+                        this->chunk5 == other.chunk5 &&
+                        this->chunk6 == other.chunk6 &&
+                        this->chunk7 == other.chunk7 &&
+                        this->carry_bits[1][0] == other.carry_bits[1][0] &&
+                        this->carry_bits[1][1] == other.carry_bits[1][1]);
+            }
+
+            // Prefix increment.
+            guess_t& operator++() {
+                // The lowest order bits are the 4 stage1 carry bits.
+                if (!carry_bits[0][0][0]) {
+                    carry_bits[0][0][0] = true;
+                    return *this;
+                }
+                carry_bits[0][0][0] = false;
+
+                if (!carry_bits[0][0][1]) {
+                    carry_bits[0][0][1] = true;
+                    return *this;
+                }
+                carry_bits[0][0][1] = false;
+
+                if (!carry_bits[0][1][0]) {
+                    carry_bits[0][1][0] = true;
+                    return *this;
+                }
+                carry_bits[0][1][0] = false;
+
+                if (!carry_bits[0][1][1]) {
+                    carry_bits[0][1][1] = true;
+                    return *this;
+                }
+                carry_bits[0][1][1] = false;
+
+                if (UINT16_MAX != chunk1) { ++(chunk1); return *this; }
+                // chunk1 was MAX, so it's carrying. Set to 0 and continue.
+                chunk1 = 0;
+
+                if (UINT8_MAX != chunk2) {
+                    // chunk2 doesn't carry. 
+                    ++(chunk2);
+                    return *this;
+                }
+
+                chunk2 = 0;
+                if (UINT8_MAX != chunk3) {
+                    // chunks1 and 2 carry, but not 3.
+                    ++(chunk3);
+                    return *this;
+                }
+
+                chunk3 = 0;
+                if (UINT8_MAX != chunk4) {
+                    ++(chunk4);
+                    return *this;
+                }
+
+                chunk4 = 0;
+                if (UINT8_MAX != chunk5) {
+                    ++(chunk5);
+                    return *this;
+                }
+
+                // Lowest order bits for stage2 iteration are the stage2 carry
+                // bits.
+                if (!carry_bits[1][0][0]) {
+                    carry_bits[1][0][0] = true;
+                    return *this;
+                }
+                carry_bits[1][0][0] = false;
+
+                if (!carry_bits[1][0][1]) {
+                    carry_bits[1][0][1] = true;
+                    return *this;
+                }
+                carry_bits[1][0][1] = false;
+
+                if (!carry_bits[1][1][0]) {
+                    carry_bits[1][1][0] = true;
+                    return *this;
+                }
+                carry_bits[1][1][0] = false;
+
+                if (!carry_bits[1][1][1]) {
+                    carry_bits[1][1][1] = true;
+                    return *this;
+                }
+                carry_bits[1][1][1] = false;
+
+                chunk5 = 0;
+                if (UINT8_MAX != chunk6) {
+                    ++(chunk6);
+                    return *this;
+                }
+
+                chunk6 = 0;
+                if (UINT8_MAX != chunk7) {
+                    ++(chunk7);
+                    return *this;
+                }
+
+                // everything carries, roll over to 0 but mark the carry bit.
+                chunk7 = 0;
+
+                // TODO(stay): When do I iterate over stage3 and stage4 carry
+                // bits?
+
+                internal_carry_bit_ = 1;
+                return *this;
+            }
+
+        private:
+            uint8_t internal_carry_bit_;
+    };
+
 
     /* Structure for containing the global state of the cracking job on this
      * thread.
@@ -32,30 +292,66 @@ namespace breakzip {
         pid_t pid;
         time_t time;
         unsigned int seed;
-        uint32_t keys[3];
+        std::array<uint32_t, 3> keys;
         // TODO(leaf): Because the specific target archive for which we're
         // writing this crack has only two files, we hard-coded that number
         // here. To make this attack generally useful, we would need a vector
         // here instead.
-        zip_cryptfile_t files[2];
+        std::array<zip_cryptfile_t, 2> files;
     } zip_crack_t;
 
     typedef struct crack {
-        uint64_t stage1_start;
-        uint64_t stage1_end;
+        guess_t stage1_start;
+        guess_t stage1_end;
 
-        uint32_t stage2_start;
-        uint32_t stage2_end;
+        guess_t stage2_start;
+        guess_t stage2_end;
+
         zip_crack_t zip;
     } crack_t;
 
     /* Helper functions for testing stage1. */
-    uint64_t stage1_correct_guess(crack_t crypt_test);
-    uint64_t stage1_correct_guess_start(uint64_t correct_guess);
-    uint64_t stage1_correct_guess_end(uint64_t correct_guess);
+    guess_t stage1_correct_guess(crack_t crypt_test);
+    guess_t stage1_correct_guess_start(guess_t correct_guess);
+    guess_t stage1_correct_guess_end(guess_t correct_guess);
 
     /* Helper functions for testing stage2. */
-    uint32_t stage2_correct_guess(const crack_t crack_test);
+    guess_t stage2_correct_guess(const crack_t crack_test);
+
+
+    class stage1_range {
+        // Iteration for stage1 is over chunks 1-4 with 4 carry bits. We
+        // pack those into 64-bits to implement the iterator as follows:
+        //
+        //   carry1y: bool    (0)
+        //   carry1x: bool    (1)
+        //   carry0y: bool    (2)
+        //   carry0x: bool    (3)
+        //   chunk4: uint8_t  (4-11)
+        //   chunk3: uint8_t  (12-19)
+        //   chunk2: uint8_t  (20-27)
+        //   chunk1: uint16_t (28-43)
+        //
+        // The iterator always starts with carry bits 0, you can't specify
+        // a start/end for carry bits as part of the iterator.
+
+        public:
+            explicit stage1_range(const crack_t& state) : state_(state) {};
+
+            guess_t begin() {
+                return guess_t(state_.stage1_start);
+            }
+
+            guess_t end() {
+                return guess_t(state_.stage1_end);
+            }
+
+        private:
+            const crack_t& state_;
+    };
+
+
+
 
     // Notation:
     // 
@@ -126,7 +422,7 @@ namespace breakzip {
      */
 
     int stage1(const crack_t* state, vector<guess_t>& out,
-            uint64_t correct_guess=0, uint16_t expected_s0=0);
+            const guess_t& correct_guess=0, uint16_t expected_s0=0);
 
     // stage 2:
 
