@@ -172,52 +172,97 @@ namespace breakzip {
 
             // Prefix increment.
             guess_t& operator++() {
-                // TODO(leaf): Handle iterating over carry bits.
-                if (UINT16_MAX != chunk1) { ++(this->chunk1); return *this; }
+                // The lowest order bits are the 4 stage1 carry bits.
+                if (!carry_bits[0][0][0]) {
+                    carry_bits[0][0][0] = true;
+                }
+                carry_bits[0][0][0] = false;
 
+                if (!carry_bits[0][0][1]) {
+                    carry_bits[0][0][1] = true;
+                }
+                carry_bits[0][0][1] = false;
+
+                if (!carry_bits[0][1][0]) {
+                    carry_bits[0][1][0] = true;
+                }
+                carry_bits[0][1][0] = false;
+
+                if (!carry_bits[0][1][1]) {
+                    carry_bits[0][1][1] = true;
+                }
+                carry_bits[0][1][1] = false;
+
+                if (UINT16_MAX != chunk1) { ++(chunk1); return *this; }
                 // chunk1 was MAX, so it's carrying. Set to 0 and continue.
-                this->chunk1 = 0;
+                chunk1 = 0;
 
                 if (UINT8_MAX != chunk2) {
                     // chunk2 doesn't carry. 
-                    ++(this->chunk2);
+                    ++(chunk2);
                     return *this;
                 }
 
-                this->chunk2 = 0;
+                chunk2 = 0;
                 if (UINT8_MAX != chunk3) {
                     // chunks1 and 2 carry, but not 3.
-                    ++(this->chunk3);
+                    ++(chunk3);
                     return *this;
                 }
 
-                this->chunk3 = 0;
+                chunk3 = 0;
                 if (UINT8_MAX != chunk4) {
-                    ++(this->chunk4);
+                    ++(chunk4);
                     return *this;
                 }
 
-                this->chunk4 = 0;
+                chunk4 = 0;
                 if (UINT8_MAX != chunk5) {
-                    ++(this->chunk5);
+                    ++(chunk5);
                     return *this;
                 }
 
-                this->chunk5 = 0;
+                // Lowest order bits for stage2 iteration are the stage2 carry
+                // bits.
+                if (!carry_bits[1][0][0]) {
+                    carry_bits[1][0][0] = true;
+                }
+                carry_bits[1][0][0] = false;
+
+                if (!carry_bits[1][0][1]) {
+                    carry_bits[1][0][1] = true;
+                }
+                carry_bits[1][0][1] = false;
+
+                if (!carry_bits[1][1][0]) {
+                    carry_bits[1][1][0] = true;
+                }
+                carry_bits[1][1][0] = false;
+
+                if (!carry_bits[1][1][1]) {
+                    carry_bits[1][1][1] = true;
+                }
+                carry_bits[1][1][1] = false;
+
+                chunk5 = 0;
                 if (UINT8_MAX != chunk6) {
-                    ++(this->chunk6);
+                    ++(chunk6);
                     return *this;
                 }
 
-                this->chunk6 = 0;
+                chunk6 = 0;
                 if (UINT8_MAX != chunk7) {
-                    ++(this->chunk7);
+                    ++(chunk7);
                     return *this;
                 }
 
                 // everything carries, roll over to 0 but mark the carry bit.
-                this->chunk7 = 0;
-                this->internal_carry_bit_ = 1;
+                chunk7 = 0;
+
+                // TODO(stay): When do I iterate over stage3 and stage4 carry
+                // bits?
+
+                internal_carry_bit_ = 1;
                 return *this;
             }
 
