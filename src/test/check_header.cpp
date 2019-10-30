@@ -156,8 +156,8 @@ END_TEST
 START_TEST(test_stage1_iterator) {
 
     const uint16_t END_CHUNK1 = 0x0005;
-    const guess_t start = {0x0000, 0, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
-    const guess_t end   = {END_CHUNK1, 0, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
+    const stage1_guess_t start = {0x0000, 0, 0, 0, {{{0,0}, {0,0}}}};
+    const stage1_guess_t end   = {END_CHUNK1, 0, 0, 0, {{{0,0}, {0,0}}}};
 
     // NB(leaf): I'm really not sure this is right.
     const int num_between_expected = (END_CHUNK1 * 16) - 1;
@@ -237,11 +237,9 @@ START_TEST(test_crypt) {
                 "Correct: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
                 "Stage End: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
                 correct_guess.chunk1, correct_guess.chunk2, correct_guess.chunk3,
-                correct_guess.chunk4, correct_guess.chunk5, correct_guess.chunk6,
-                correct_guess.chunk7,
+                correct_guess.chunk4, 
                 stage1_end.chunk1, stage1_end.chunk2, stage1_end.chunk3,
-                stage1_end.chunk4, stage1_end.chunk5, stage1_end.chunk6,
-                stage1_end.chunk7);
+                stage1_end.chunk4);
 
         ck_assert_msg(stage1_start != stage1_end,
                 "Expect start != end, got: 0x%08lx == 0x%08lx",
@@ -250,7 +248,7 @@ START_TEST(test_crypt) {
         crack_test.stage1_start = stage1_start;
         crack_test.stage1_end = stage1_end;
 
-        vector<guess_t> out;
+        vector<stage1_guess_t> out;
 
         uint16_t expected_s0_arg = 0x100;
         expected_s0_arg |= (uint16_t)expected_s0s[0];
@@ -268,8 +266,8 @@ START_TEST(test_crypt) {
             fprintf(stderr, "stage1 guess: chunk1(0x%x) | chunk2(0x%x) | "
                     "chunk3(0x%x) | chunk4(0x%x) | carry(%x%x%x%x)\n",
                     i.chunk1, i.chunk2, i.chunk3, i.chunk4,
-                    i.carry_bits[0][0][0], i.carry_bits[0][0][1],
-                    i.carry_bits[0][1][0], i.carry_bits[0][1][1]);
+                    i.carry_bits[0][0], i.carry_bits[0][1],
+                    i.carry_bits[1][0], i.carry_bits[1][1]);
             if (correct_guess == i) {
                 ++num_correct;
             }

@@ -114,25 +114,18 @@ namespace breakzip {
         return chunk7;
     }
 
-    void mutable_carry_bits_from_guess(guess_t& guess, carrybits_t& out) {
-        out = {
-            guess.carry_bits[0][0],
-            guess.carry_bits[0][1],
-            guess.carry_bits[1][0],
-            guess.carry_bits[1][1],
-            guess.carry_bits[2][0],
-            guess.carry_bits[2][1],
-            guess.carry_bits[3][0],
-            guess.carry_bits[3][1], };
-        return;
-    }
-
-    void mutable_guess_chunks_from_keys(const std::array<uint32_t, 3> &k,
-            guess_t& out) {
+    void mutable_stage1_guess_chunks_from_keys(const std::array<uint32_t, 3> &k,
+            stage1_guess_t& out) {
         out.chunk1 = chunk1_from_keys(k);
         out.chunk2 = chunk2_from_keys(k);
         out.chunk3 = chunk3_from_keys(k);
         out.chunk4 = chunk4_from_keys(k);
+        return;
+    }
+
+    void mutable_stage2_guess_chunks_from_keys(const std::array<uint32_t, 3> &k,
+            stage2_guess_t& out) {
+        mutable_stage1_guess_chunks_from_keys(k, out.stage1_guess);
         out.chunk5 = chunk5_from_keys(k);
         out.chunk6 = chunk6_from_keys(k);
         out.chunk7 = chunk7_from_keys(k);
@@ -145,12 +138,12 @@ namespace breakzip {
         return s0;
     }
 
-    uint16_t get_s0(const guess_t& guess) {
+    uint16_t get_s0(const stage1_guess_t& guess) {
         return get_s0(guess.chunk1);
     }
 
 
-    guess_t stage1_correct_guess(const crack_t crypt_test) {
+    stage1_guess_t stage1_correct_guess(const crack_t crypt_test) {
         const uint32_t k00 = crypt_test.zip.keys[0];
         const uint32_t k10 = crypt_test.zip.keys[1];
         const uint32_t k20 = crypt_test.zip.keys[2];
@@ -171,7 +164,7 @@ namespace breakzip {
             const uint32_t crcx0   = crc32tab[x0];
             const uint8_t  lsbk01x = (chunk2 ^ crcx0) & 0xff;
             const uint32_t low24x  = (lsbk01x * CRYPTCONST + 1) & 0x00ffffff;
-            carry_bits[0][fileidx][0] =
+            carry_bits[fileidx][0] =
                 (low24x + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             const uint16_t temp1x  = (k20 | 3) & 0xffff;
@@ -180,56 +173,50 @@ namespace breakzip {
             const uint32_t crcy0   = crc32tab[y0];
             const uint8_t  lsbk01y = (chunk2 ^ crcy0) & 0xff;
             const uint32_t low24y  = (lsbk01y * CRYPTCONST + 1) & 0x00ffffff;
-            carry_bits[0][fileidx][1] =
+            carry_bits[fileidx][1] =
                 (low24y + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             ++fileidx;
         }
 
-        guess_t rval(chunk1, chunk2, chunk3, chunk4, carry_bits);
+        stage1_guess_t rval(chunk1, chunk2, chunk3, chunk4, carry_bits);
         return rval;
     }
 
-    guess_t stage1_correct_guess_start(guess_t correct_guess) {
-        guess_t mine = correct_guess;
+    stage1_guess_t stage1_correct_guess_start(stage1_guess_t correct_guess) {
+        stage1_guess_t mine = correct_guess;
         mine.chunk1 = 0;
         if (DEBUG) {
             fprintf(stderr,
                     "stage1_correct_guess_start: correct: "
-                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
+                    "0x%04x|%02x|%02x|%02x\n"
                     "stage1_correct_guess_start: mine:    "
-                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
+                    "0x%04x|%02x|%02x|%02x\n",
                     correct_guess.chunk1, correct_guess.chunk2,
                     correct_guess.chunk3, correct_guess.chunk4,
-                    correct_guess.chunk5, correct_guess.chunk6,
-                    correct_guess.chunk7,
-                    mine.chunk1, mine.chunk2, mine.chunk3,
-                    mine.chunk4, mine.chunk5, mine.chunk6, mine.chunk7);
+                    mine.chunk1, mine.chunk2, mine.chunk3, mine.chunk4);
         }
         return std::move(mine);
     }
 
-    guess_t stage1_correct_guess_end(guess_t correct_guess) {
-        guess_t mine = correct_guess;
+    stage1_guess_t stage1_correct_guess_end(stage1_guess_t correct_guess) {
+        stage1_guess_t mine = correct_guess;
         mine.chunk1 = 0;
         mine.chunk2 += 1;
         if (DEBUG) {
             fprintf(stderr,
                     "stage1_correct_guess_end: correct: "
-                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
+                    "0x%04x|%02x|%02x|%02x\n"
                     "stage1_correct_guess_end: mine:    "
-                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
+                    "0x%04x|%02x|%02x|%02x\n",
                     correct_guess.chunk1, correct_guess.chunk2,
                     correct_guess.chunk3, correct_guess.chunk4,
-                    correct_guess.chunk5, correct_guess.chunk6,
-                    correct_guess.chunk7,
-                    mine.chunk1, mine.chunk2, mine.chunk3,
-                    mine.chunk4, mine.chunk5, mine.chunk6, mine.chunk7);
+                    mine.chunk1, mine.chunk2, mine.chunk3, mine.chunk4);
         }
         return std::move(mine);
     }
 
-    guess_t stage2_correct_guess(const crack_t crypt_test) {
+    stage2_guess_t stage2_correct_guess(const crack_t crypt_test) {
         /*
            const uint32_t k00 = crypt_test.zip.keys[0];
            const uint32_t k10 = crypt_test.zip.keys[1];
@@ -340,8 +327,8 @@ namespace breakzip {
         return 0;
     }
 
-    int stage1(const crack_t* state, vector<guess_t>& out,
-            const guess_t& correct_guess, uint16_t expected_s0) {
+    int stage1(const crack_t* state, vector<stage1_guess_t>& out,
+            const stage1_guess_t& correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
         // used to figure out where it's being ignored, if at all.
         if (nullptr == state) {
@@ -374,8 +361,8 @@ namespace breakzip {
                 auto h_array = file.header_second;
 
                 // Carry bits for stage1 (idx 0) w/file index fileidx.
-                uint8_t carry_for_x = guess.carry_bits[0][fileidx][0];
-                uint8_t carry_for_y = guess.carry_bits[0][fileidx][1];
+                uint8_t carry_for_x = guess.carry_bits[fileidx][0];
+                uint8_t carry_for_y = guess.carry_bits[fileidx][1];
 
                 uint32_t temp = crc32tab[x_array[0]] & 0xff;
                 temp ^= guess.chunk2;
@@ -430,7 +417,7 @@ namespace breakzip {
 
             if (!wrong) {
                 // Guess passed all files, add to output list.
-                guess_t ok = guess;
+                auto ok = guess;
                 out.push_back(ok);
             }
         }
@@ -438,8 +425,8 @@ namespace breakzip {
         return 1;
     }
 
-    int stage2(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out, uint64_t correct_guess,
+    int stage2(const crack_t* state, const vector<stage1_guess_t> in,
+            vector<stage2_guess_t>& out, uint64_t correct_guess,
             uint16_t expected_s0) {
 
         // For testing, we accept a correct_guess parameter that can be
@@ -589,23 +576,28 @@ namespace breakzip {
         return 1;
     }
 
-    int stage3(const crack_t* state, const vector<guess_t> in, vector<guess_t> out) {
+    int stage3(const crack_t* state, const vector<stage2_guess_t> in,
+            vector<stage3_guess_t> out) {
         return 1;
     }
 
-    int stage4(const crack_t* state, const vector<guess_t> in, vector<guess_t> out) {
+    int stage4(const crack_t* state, const vector<stage3_guess_t> in,
+            vector<stage4_guess_t> out) {
         return 1;
     }
 
-    int stage5(const crack_t* state, const vector<guess_t> in, vector<guess_t> out) {
+    int stage5(const crack_t* state, const vector<stage4_guess_t> in,
+            vector<stage5_guess_t> out) {
         return 1;
     }
 
-    int stage6(const crack_t* state, const vector<guess_t> in, vector<guess_t> out) {
+    int stage6(const crack_t* state, const vector<stage5_guess_t> in,
+            vector<stage6_guess_t> out) {
         return 1;
     }
 
-    int stage7(const crack_t* state, const vector<guess_t> in, vector<guess_t> out) {
+    int stage7(const crack_t* state, const vector<stage6_guess_t> in,
+            vector<stage7_guess_t> out) {
         return 1;
     }
 
