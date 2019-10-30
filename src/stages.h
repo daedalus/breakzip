@@ -50,18 +50,38 @@ namespace breakzip {
                 chunk7(other.chunk7), carry_bits(other.carry_bits) {}
 
             std::string str() {
-                char cstr[64];
-                snprintf(cstr, 64, "%d-%d-%d-%d-%d-%d-%d", chunk7, chunk6,
-                        chunk5, chunk4, chunk3, chunk2, chunk1);
+                char cstr[256];
+                snprintf(cstr, 256, "%d-%d-%d-%d-%d-%d-%d"
+                        ":[%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d]",
+                        chunk7, chunk6,
+                        chunk5, chunk4, chunk3, chunk2, chunk1,
+                        carry_bits[0][0][0], carry_bits[0][0][1],
+                        carry_bits[0][1][0], carry_bits[0][1][1],
+                        carry_bits[1][0][0], carry_bits[1][0][1],
+                        carry_bits[1][1][0], carry_bits[1][1][1],
+                        carry_bits[2][0][0], carry_bits[2][0][1],
+                        carry_bits[2][1][0], carry_bits[2][1][1],
+                        carry_bits[3][0][0], carry_bits[3][0][1],
+                        carry_bits[3][1][0], carry_bits[3][1][1]);
 
                 std::string ret(cstr);
                 return std::move(ret);
             }
 
             std::string hex() const {
-                char cstr[64];
-                snprintf(cstr, 64, "0x%08x%04x%04x%04x%04x%04x%04x",
-                        chunk7, chunk6, chunk5, chunk4, chunk3, chunk2, chunk1);
+                char cstr[256];
+                snprintf(cstr, 256,
+                        "0x%08x%04x%04x%04x%04x%04x%04x"
+                        ":[%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d]",
+                        chunk7, chunk6, chunk5, chunk4, chunk3, chunk2, chunk1,
+                        carry_bits[0][0][0], carry_bits[0][0][1],
+                        carry_bits[0][1][0], carry_bits[0][1][1],
+                        carry_bits[1][0][0], carry_bits[1][0][1],
+                        carry_bits[1][1][0], carry_bits[1][1][1],
+                        carry_bits[2][0][0], carry_bits[2][0][1],
+                        carry_bits[2][1][0], carry_bits[2][1][1],
+                        carry_bits[3][0][0], carry_bits[3][0][1],
+                        carry_bits[3][1][0], carry_bits[3][1][1]);
 
                 std::string ret(cstr);
                 return std::move(ret);
@@ -168,6 +188,17 @@ namespace breakzip {
                         this->chunk7 == other.chunk7 &&
                         this->carry_bits[1][0] == other.carry_bits[1][0] &&
                         this->carry_bits[1][1] == other.carry_bits[1][1]);
+            }
+
+            guess_t& operator+(int i) const {
+                guess_t* mine = new guess_t(*this);
+                // This implementation is terrible and just here to enable
+                // you to write things like guess + 1. Definitely don't use
+                // to add large values.
+                for (int x = 0; x < i; ++x) {
+                    ++mine;
+                }
+                return *mine;
             }
 
             // Prefix increment.

@@ -155,8 +155,12 @@ END_TEST
 
 START_TEST(test_stage1_iterator) {
 
-    const guess_t start = {0, 0, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
-    const guess_t end   = {0, 1, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
+    const uint16_t END_CHUNK1 = 0x0005;
+    const guess_t start = {0x0000, 0, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
+    const guess_t end   = {END_CHUNK1, 0, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
+
+    // NB(leaf): I'm really not sure this is right.
+    const int num_between_expected = (END_CHUNK1 * 16) - 1;
 
     crack_t crack = {start, end, {0}, {0}, {}};
 
@@ -164,6 +168,11 @@ START_TEST(test_stage1_iterator) {
     int num_between = 0;
     int start_guesses = 0;
     bool end_was_included = false;
+
+    fprintf(stderr, "stage1_iterator: start is %s\n",
+            crack.stage1_start.hex().c_str());
+    fprintf(stderr, "stage1_iterator:   end is %s\n",
+            crack.stage1_end.hex().c_str());
 
     for (auto guess: stage1_range(crack)) {
         ck_assert(end >= guess);
@@ -175,19 +184,25 @@ START_TEST(test_stage1_iterator) {
             ++num_between;
         }
 
+        fprintf(stderr, "stage1_iterator: guess is %s\n", guess.hex().c_str());
+
         // Make sure we try all the carry bits.
         if (0 == guess.chunk1 && 0 == guess.chunk2 &&
                 0 == guess.chunk3 && 0 == guess.chunk4) {
             start_guesses += 1;
         }
-
-        ck_assert_msg(4 == start_guesses,
-                "Expected 4 guesses where chunks1-4 are zero, "
-                "got %d instead.", start_guesses);
     }
 
+    ck_assert_msg(16 == start_guesses,
+            "Expected 4 guesses where chunks1-4 are zero, "
+            "got %d instead.", start_guesses);
+
+    ck_assert_msg(num_between_expected == num_between,
+            "stage1_iterator: expected %d between start and end, got %d",
+            num_between_expected, num_between);
+
     ck_assert_msg(start_was_included && !end_was_included && (0 < num_between),
-            "start_was_included: %s\nend_was_included: %s\nnum_between: %d\n",
+            "start_was_included: %s\nend_was_included: %s\nnum_between: %d",
             start_was_included ? "yes" : "no",
             end_was_included ? "yes" : "no",
             num_between);
