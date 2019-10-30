@@ -19,6 +19,14 @@ namespace breakzip {
 
     class guess_t {
         public:
+            uint16_t chunk1;
+            uint8_t chunk2;
+            uint8_t chunk3;
+            uint8_t chunk4;
+            uint8_t chunk5;
+            uint8_t chunk6;
+            uint8_t chunk7;
+            carrybits_t carry_bits;
 
             explicit guess_t() :
                 chunk1(0), chunk2(0), chunk3(0), chunk4(0), chunk5(0),
@@ -30,21 +38,16 @@ namespace breakzip {
                 chunk6(0), chunk7(0), carry_bits({{{0,0},{0,0},{0,0},{0,0}}}),
                 internal_carry_bit_(0) {};
 
+            guess_t(uint16_t c1, uint8_t c2, uint8_t c3,
+                    uint8_t c4, carrybits_t carry_bits) :
+                chunk1(c1), chunk2(c2), chunk3(c3), chunk4(c4),
+                chunk5(0), chunk6(0), chunk7(0), carry_bits(carry_bits) {};
+
             guess_t(const guess_t& other) :
                 chunk1(other.chunk1), chunk2(other.chunk2),
                 chunk3(other.chunk3), chunk4(other.chunk4),
                 chunk5(other.chunk5), chunk6(other.chunk6),
                 chunk7(other.chunk7), carry_bits(other.carry_bits) {}
-
-            uint16_t chunk1;
-            uint8_t chunk2;
-            uint8_t chunk3;
-            uint8_t chunk4;
-            uint8_t chunk5;
-            uint8_t chunk6;
-            uint8_t chunk7;
-
-            carrybits_t carry_bits;
 
             std::string str() {
                 char cstr[64];
@@ -64,7 +67,7 @@ namespace breakzip {
                 return std::move(ret);
             }
 
-            bool operator==(const guess_t& other) {
+            bool operator==(const guess_t& other) const {
                 return (this->chunk1 == other.chunk1 &&
                         this->chunk2 == other.chunk2 &&
                         this->chunk3 == other.chunk3 &&

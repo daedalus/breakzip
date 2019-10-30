@@ -153,6 +153,36 @@ START_TEST(test_always_pass) {
 }
 END_TEST
 
+START_TEST(test_stage1_iterator) {
+
+    const guess_t start = {0, 0, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
+    const guess_t end   = {0, 1, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
+
+    crack_t crack = {start, end, {0}, {0}, {}};
+
+    bool start_was_included = false;
+    int num_between = 0;
+    bool end_was_included = false;
+
+    for (auto guess: stage1_range(crack)) {
+        ck_assert(end >= guess);
+        if (start == guess) {
+            start_was_included = true;
+        } else if (end == guess) {
+            end_was_included = true;
+        } else {
+            ++num_between;
+        }
+    }
+
+    ck_assert_msg(start_was_included && !end_was_included && (0 < num_between),
+            "start_was_included: %s\nend_was_included: %s\nnum_between: %d\n",
+            start_was_included ? "yes" : "no",
+            end_was_included ? "yes" : "no",
+            num_between);
+}
+END_TEST
+
 START_TEST(test_crypt) {
 
     for (auto crack_test: crypt_tests) {
@@ -177,7 +207,15 @@ START_TEST(test_crypt) {
         auto stage1_end = stage1_correct_guess_end(correct_guess);
 
         ck_assert(correct_guess >= stage1_start);
-        ck_assert(correct_guess < stage1_end);
+        ck_assert_msg(correct_guess < stage1_end,
+            "Correct: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
+            "Stage End: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
+            correct_guess.chunk1, correct_guess.chunk2, correct_guess.chunk3,
+            correct_guess.chunk4, correct_guess.chunk5, correct_guess.chunk6,
+            correct_guess.chunk7,
+            stage1_end.chunk1, stage1_end.chunk2, stage1_end.chunk3,
+            stage1_end.chunk4, stage1_end.chunk5, stage1_end.chunk6,
+            stage1_end.chunk7);
 
         ck_assert_msg(stage1_start != stage1_end,
                 "Expect start != end, got: 0x%08lx == 0x%08lx",
@@ -225,6 +263,7 @@ Suite* make_suite(const std::string name) {
     /* Add every test case that you write below here. */
     tcase_add_test(tc_core, test_always_pass);
     tcase_add_test(tc_core, test_crypt);
+    tcase_add_test(tc_core, test_stage1_iterator);
 
     suite_add_tcase(s, tc_core);
     return s;

@@ -89,8 +89,8 @@ namespace breakzip {
         return chunk2;
     }
 
-    uint16_t chunk3_from_keys(const std::array<uint32_t, 3> &k) {
-        const uint16_t chunk3  = (k[1] * CRYPTCONST) >> 24;
+    uint8_t chunk3_from_keys(const std::array<uint32_t, 3> &k) {
+        const uint8_t chunk3  = (k[1] * CRYPTCONST) >> 24;
         return chunk3;
     }
 
@@ -151,7 +151,6 @@ namespace breakzip {
 
 
     guess_t stage1_correct_guess(const crack_t crypt_test) {
-        /*
         const uint32_t k00 = crypt_test.zip.keys[0];
         const uint32_t k10 = crypt_test.zip.keys[1];
         const uint32_t k20 = crypt_test.zip.keys[2];
@@ -187,141 +186,158 @@ namespace breakzip {
             ++fileidx;
         }
 
-        uint64_t rval = 0;
-        rval |= (uint64_t)chunk1;
-        rval |= (uint64_t)chunk2 << 16;
-        rval |= (uint64_t)chunk3 << 24;
-        rval |= (uint64_t)chunk4 << 32;
-        rval |= (uint64_t)(carry_bits[0][0]) << 40;
-        rval |= (uint64_t)(carry_bits[0][1]) << 41;
-        rval |= (uint64_t)(carry_bits[1][0]) << 42;
-        rval |= (uint64_t)(carry_bits[1][1]) << 43;
+        guess_t rval(chunk1, chunk2, chunk3, chunk4, carry_bits);
         return rval;
-        */
-        return 0;
     }
 
     guess_t stage1_correct_guess_start(guess_t correct_guess) {
         guess_t mine = correct_guess;
-        mine.chunk1 &= ~0xffff;
+        mine.chunk1 = 0;
+        if (DEBUG) {
+            fprintf(stderr,
+                    "stage1_correct_guess_start: correct: "
+                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
+                    "stage1_correct_guess_start: mine:    "
+                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
+                    correct_guess.chunk1, correct_guess.chunk2,
+                    correct_guess.chunk3, correct_guess.chunk4,
+                    correct_guess.chunk5, correct_guess.chunk6,
+                    correct_guess.chunk7,
+                    mine.chunk1, mine.chunk2, mine.chunk3,
+                    mine.chunk4, mine.chunk5, mine.chunk6, mine.chunk7);
+        }
         return std::move(mine);
     }
 
     guess_t stage1_correct_guess_end(guess_t correct_guess) {
         guess_t mine = correct_guess;
-        mine.chunk1 &= 0xffff;
-        return std::move(correct_guess);
+        mine.chunk1 = 0;
+        mine.chunk2 += 1;
+        if (DEBUG) {
+            fprintf(stderr,
+                    "stage1_correct_guess_end: correct: "
+                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
+                    "stage1_correct_guess_end: mine:    "
+                    "0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
+                    correct_guess.chunk1, correct_guess.chunk2,
+                    correct_guess.chunk3, correct_guess.chunk4,
+                    correct_guess.chunk5, correct_guess.chunk6,
+                    correct_guess.chunk7,
+                    mine.chunk1, mine.chunk2, mine.chunk3,
+                    mine.chunk4, mine.chunk5, mine.chunk6, mine.chunk7);
+        }
+        return std::move(mine);
     }
 
     guess_t stage2_correct_guess(const crack_t crypt_test) {
         /*
-        const uint32_t k00 = crypt_test.zip.keys[0];
-        const uint32_t k10 = crypt_test.zip.keys[1];
-        const uint32_t k20 = crypt_test.zip.keys[2];
-        DPRINT("Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
+           const uint32_t k00 = crypt_test.zip.keys[0];
+           const uint32_t k10 = crypt_test.zip.keys[1];
+           const uint32_t k20 = crypt_test.zip.keys[2];
+           DPRINT("Keys: 0x%x 0x%x 0x%x\n", k00, k10, k20);
 
-        const uint16_t chunk1  = k20 & 0xffff;
-        const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
-        const uint16_t chunk3  = (k10 * CRYPTCONST) >> 24;
-        const uint8_t chunk4 = (k20 >> 16) & 0xff;
-        const uint8_t chunk5 = (k20 >> 24) & 0xff;
-        const uint8_t chunk6 = (crc32(k00, 0) >> 8) & 0xff;
-        const uint8_t maybe_chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
+           const uint16_t chunk1  = k20 & 0xffff;
+           const uint8_t  chunk2  = ((k00 >> 8) ^ crc32tab[k00 & 0xff]) & 0xff;
+           const uint16_t chunk3  = (k10 * CRYPTCONST) >> 24;
+           const uint8_t chunk4 = (k20 >> 16) & 0xff;
+           const uint8_t chunk5 = (k20 >> 24) & 0xff;
+           const uint8_t chunk6 = (crc32(k00, 0) >> 8) & 0xff;
+           const uint8_t maybe_chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
 
-        uint8_t carry_bits[2][2];
-        uint8_t stage1_carry_bits[2][2];
-        const auto zip = crypt_test.zip;
-        int fileidx = 0;
+           uint8_t carry_bits[2][2];
+           uint8_t stage1_carry_bits[2][2];
+           const auto zip = crypt_test.zip;
+           int fileidx = 0;
 
-        uint8_t chunk7 = 0;
-        for (auto file: zip.files) {
-            const uint8_t x0 = file.random_bytes[0];
-            const uint8_t x1 = file.random_bytes[1];
+           uint8_t chunk7 = 0;
+           for (auto file: zip.files) {
+           const uint8_t x0 = file.random_bytes[0];
+           const uint8_t x1 = file.random_bytes[1];
 
-            const uint16_t temp1x  = (k20 | 3) & 0xffff;
-            const uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
-            const uint8_t  y0      = x0 ^ s0;
+           const uint16_t temp1x  = (k20 | 3) & 0xffff;
+           const uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
+           const uint8_t  y0      = x0 ^ s0;
 
-            // TODO(stay): Mike, how do I compute key01y and key02y?
-            const uint8_t key01x = crc32(k00, x0);
-            const uint8_t key11x = (k10 + (key01x & 0xff)) * CRYPTCONST + 1;
-            const uint32_t key02x = crc32(key01x, x1);
+        // TODO(stay): Mike, how do I compute key01y and key02y?
+        const uint8_t key01x = crc32(k00, x0);
+        const uint8_t key11x = (k10 + (key01x & 0xff)) * CRYPTCONST + 1;
+        const uint32_t key02x = crc32(key01x, x1);
 
-            const uint8_t key01y = crc32(k00, y0);
+        const uint8_t key01y = crc32(k00, y0);
 
-            if (0 == fileidx) {
-                chunk7 = maybe_chunk7;
-            } else if (chunk7 != maybe_chunk7) {
-                fprintf(stderr, "FATAL ERROR: chunk7 calculation failed, got different "
-                        "results from each file: %d != %d\n",
-                        chunk7, maybe_chunk7);
-                abort();
-            }
-
-            const uint8_t key12x = (k10 * CRYPTCONST_POW2) +
-                (LSB(key01x) * CRYPTCONST_POW2 + CRYPTCONST +
-                 (LSB(key02x) * CRYPTCONST) + 1);
-
-            uint32_t low24_key10cc2 = (k10 * CRYPTCONST_POW2) & 0xffffff;
-
-            // Compute carry bit for x.
-            uint32_t low24_lsb_key01xcc2 =
-                (LSB(key01x) * CRYPTCONST_POW2) & 0xffffff;
-            uint32_t carry_bit_xtemp = low24_key10cc2 + low24_lsb_key01xcc2 +
-                CRYPTCONST + (LSB(key02x) * CRYPTCONST) + 1;
-            bool has_x_carry_bit = false;
-            if (carry_bit_xtemp > (1L << 24)) {
-                has_x_carry_bit = true;
-            }
-
-            uint32_t temp = crc32tab[x0] & 0xff;
-            temp ^= chunk2;
-            temp *= CRYPTCONST;
-            temp = (temp + 1) >> 24;
-
-            uint8_t msb_key11x = temp + chunk3 +
-                (uint8_t)(has_x_carry_bit ? 1 : 0);
-            const uint32_t key21x = crc32(k20, msb_key11x);
-            const uint32_t s1x_temp = (key21x | 3) & 0xffff;
-            const uint8_t s1x =
-                ((s1x_temp * (s1x_temp ^ 1)) >> 8) & 0xff;
-
-            uint32_t tt = crc32tab[y0] & 0xff;
-            tt ^= chunk2;
-            tt *= CRYPTCONST;
-            tt = (tt + 1) >> 24;
-
-            uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
-            uint32_t key21y_low24bits = crc32(key20_low24bits, msb_key11y);
-            uint32_t ttt = key21y_low24bits | 3;
-            uint8_t s1y = ((ttt * (ttt ^ 1)) >> 8) & 0xff;
-            const uint8_t y1 = x1 ^ s1y;
-            const uint8_t key02y = crc32(key01y, y1);
-
-            // Compute carry bit for y.
-            uint32_t low24_lsb_key01ycc2 =
-                (LSB(key01y) * CRYPTCONST_POW2) & 0xffffff;
-            uint32_t carry_bit_ytemp = low24_key10cc2 + low24_lsb_key01ycc2 +
-                CRYPTCONST + (LSB(key02y) * CRYPTCONST) + 1;
-            bool has_y_carry_bit = false;
-            if (carry_bit_ytemp > (1L << 24)) {
-                has_y_carry_bit = true;
-            }
-
-            ++fileidx;
+        if (0 == fileidx) {
+        chunk7 = maybe_chunk7;
+        } else if (chunk7 != maybe_chunk7) {
+        fprintf(stderr, "FATAL ERROR: chunk7 calculation failed, got different "
+        "results from each file: %d != %d\n",
+        chunk7, maybe_chunk7);
+        abort();
         }
 
-        uint32_t rval = 0;
-        rval |= (uint64_t)chunk5;
-        rval |= (uint64_t)chunk6 << 8;
-        rval |= (uint64_t)chunk7 << 16;
-        rval |= (uint64_t)(carry_bits[0][0]) << 24;
-        rval |= (uint64_t)(carry_bits[0][1]) << 25;
-        rval |= (uint64_t)(carry_bits[1][0]) << 26;
-        rval |= (uint64_t)(carry_bits[1][1]) << 27;
-        return rval;
-        */
-            return 0;
+        const uint8_t key12x = (k10 * CRYPTCONST_POW2) +
+        (LSB(key01x) * CRYPTCONST_POW2 + CRYPTCONST +
+        (LSB(key02x) * CRYPTCONST) + 1);
+
+        uint32_t low24_key10cc2 = (k10 * CRYPTCONST_POW2) & 0xffffff;
+
+        // Compute carry bit for x.
+        uint32_t low24_lsb_key01xcc2 =
+        (LSB(key01x) * CRYPTCONST_POW2) & 0xffffff;
+        uint32_t carry_bit_xtemp = low24_key10cc2 + low24_lsb_key01xcc2 +
+        CRYPTCONST + (LSB(key02x) * CRYPTCONST) + 1;
+        bool has_x_carry_bit = false;
+        if (carry_bit_xtemp > (1L << 24)) {
+        has_x_carry_bit = true;
+        }
+
+        uint32_t temp = crc32tab[x0] & 0xff;
+        temp ^= chunk2;
+        temp *= CRYPTCONST;
+        temp = (temp + 1) >> 24;
+
+        uint8_t msb_key11x = temp + chunk3 +
+        (uint8_t)(has_x_carry_bit ? 1 : 0);
+        const uint32_t key21x = crc32(k20, msb_key11x);
+        const uint32_t s1x_temp = (key21x | 3) & 0xffff;
+        const uint8_t s1x =
+        ((s1x_temp * (s1x_temp ^ 1)) >> 8) & 0xff;
+
+        uint32_t tt = crc32tab[y0] & 0xff;
+        tt ^= chunk2;
+        tt *= CRYPTCONST;
+        tt = (tt + 1) >> 24;
+
+        uint8_t msb_key11y = (uint8_t) (tt + chunk3 + carry_for_y);
+        uint32_t key21y_low24bits = crc32(key20_low24bits, msb_key11y);
+        uint32_t ttt = key21y_low24bits | 3;
+        uint8_t s1y = ((ttt * (ttt ^ 1)) >> 8) & 0xff;
+        const uint8_t y1 = x1 ^ s1y;
+        const uint8_t key02y = crc32(key01y, y1);
+
+        // Compute carry bit for y.
+        uint32_t low24_lsb_key01ycc2 =
+            (LSB(key01y) * CRYPTCONST_POW2) & 0xffffff;
+        uint32_t carry_bit_ytemp = low24_key10cc2 + low24_lsb_key01ycc2 +
+            CRYPTCONST + (LSB(key02y) * CRYPTCONST) + 1;
+        bool has_y_carry_bit = false;
+        if (carry_bit_ytemp > (1L << 24)) {
+            has_y_carry_bit = true;
+        }
+
+        ++fileidx;
+    }
+
+    uint32_t rval = 0;
+    rval |= (uint64_t)chunk5;
+    rval |= (uint64_t)chunk6 << 8;
+    rval |= (uint64_t)chunk7 << 16;
+    rval |= (uint64_t)(carry_bits[0][0]) << 24;
+    rval |= (uint64_t)(carry_bits[0][1]) << 25;
+    rval |= (uint64_t)(carry_bits[1][0]) << 26;
+    rval |= (uint64_t)(carry_bits[1][1]) << 27;
+    return rval;
+    */
+        return 0;
     }
 
     int stage1(const crack_t* state, vector<guess_t>& out,
@@ -334,8 +350,6 @@ namespace breakzip {
         }
 
         for (auto guess: stage1_range(*state)) {
-            uint32_t upper = 0x00ffffff;
-            uint32_t lower = 0;
             uint16_t s0(get_s0(guess.chunk1));
 
             if (guess.stage1_compare(correct_guess)) {
@@ -369,7 +383,8 @@ namespace breakzip {
 
                 uint8_t msb_key11x = temp + guess.chunk3 + carry_for_x;
                 const uint32_t key20_low24bits = (guess.chunk4 << 16) | guess.chunk1;
-                uint32_t key21x_low24bits = crc32(key20_low24bits, msb_key11x);
+                uint32_t key21x_low24bits =
+                    crc32(key20_low24bits, msb_key11x) & 0x00ffffff;
                 uint32_t t = key21x_low24bits | 3;
                 uint8_t s1x = ((t * (t ^ 1)) >> 8) & 0xff;
                 if (guess.stage1_compare(correct_guess)) {
