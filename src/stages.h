@@ -43,6 +43,12 @@ namespace breakzip {
                 chunk1(c1), chunk2(c2), chunk3(c3), chunk4(c4),
                 chunk5(0), chunk6(0), chunk7(0), carry_bits(carry_bits) {};
 
+            guess_t(uint16_t c1, uint8_t c2, uint8_t c3,
+                    uint8_t c4, uint8_t c5, uint8_t c6, uint8_t c7, 
+                    carrybits_t cbits) :
+                chunk1(c1), chunk2(c2), chunk3(c3), chunk4(c4),
+                chunk5(c5), chunk6(c6), chunk7(c7), carry_bits(cbits) {};
+
             guess_t(const guess_t& other) :
                 chunk1(other.chunk1), chunk2(other.chunk2),
                 chunk3(other.chunk3), chunk4(other.chunk4),
@@ -297,6 +303,27 @@ namespace breakzip {
             const crack_t& state_;
     };
 
+    class stage2_range {
+        // Iteration for stage2 is over chunks 4-7 with 4 carry bits.
+        public:
+            explicit stage2_range(const crack_t& state,
+                    const guess_t& stage1_guess) :
+                state_(state), stage1_guess_(stage1_guess) {};
+
+            guess_t begin() {
+                guess_t guess(stage1_guess_);
+                return std::move(guess);
+            }
+
+            guess_t end() {
+                guess_t guess(stage1_guess_);
+                return std::move(guess);
+            }
+
+        private:
+            const crack_t& state_;
+            const guess_t& stage1_guess_;
+    };
 
 
 
