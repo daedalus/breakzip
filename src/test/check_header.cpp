@@ -162,6 +162,7 @@ START_TEST(test_stage1_iterator) {
 
     bool start_was_included = false;
     int num_between = 0;
+    int start_guesses = 0;
     bool end_was_included = false;
 
     for (auto guess: stage1_range(crack)) {
@@ -173,6 +174,16 @@ START_TEST(test_stage1_iterator) {
         } else {
             ++num_between;
         }
+
+        // Make sure we try all the carry bits.
+        if (0 == guess.chunk1 && 0 == guess.chunk2 &&
+                0 == guess.chunk3 && 0 == guess.chunk4) {
+            start_guesses += 1;
+        }
+
+        ck_assert_msg(4 == start_guesses,
+                "Expected 4 guesses where chunks1-4 are zero, "
+                "got %d instead.", start_guesses);
     }
 
     ck_assert_msg(start_was_included && !end_was_included && (0 < num_between),
@@ -208,14 +219,14 @@ START_TEST(test_crypt) {
 
         ck_assert(correct_guess >= stage1_start);
         ck_assert_msg(correct_guess < stage1_end,
-            "Correct: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
-            "Stage End: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
-            correct_guess.chunk1, correct_guess.chunk2, correct_guess.chunk3,
-            correct_guess.chunk4, correct_guess.chunk5, correct_guess.chunk6,
-            correct_guess.chunk7,
-            stage1_end.chunk1, stage1_end.chunk2, stage1_end.chunk3,
-            stage1_end.chunk4, stage1_end.chunk5, stage1_end.chunk6,
-            stage1_end.chunk7);
+                "Correct: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
+                "Stage End: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
+                correct_guess.chunk1, correct_guess.chunk2, correct_guess.chunk3,
+                correct_guess.chunk4, correct_guess.chunk5, correct_guess.chunk6,
+                correct_guess.chunk7,
+                stage1_end.chunk1, stage1_end.chunk2, stage1_end.chunk3,
+                stage1_end.chunk4, stage1_end.chunk5, stage1_end.chunk6,
+                stage1_end.chunk7);
 
         ck_assert_msg(stage1_start != stage1_end,
                 "Expect start != end, got: 0x%08lx == 0x%08lx",
@@ -242,8 +253,8 @@ START_TEST(test_crypt) {
             fprintf(stderr, "stage1 guess: chunk1(0x%x) | chunk2(0x%x) | "
                     "chunk3(0x%x) | chunk4(0x%x) | carry(%x%x%x%x)\n",
                     i.chunk1, i.chunk2, i.chunk3, i.chunk4,
-                    i.carry_bits[0][0], i.carry_bits[0][1],
-                    i.carry_bits[0][2], i.carry_bits[0][3]);
+                    i.carry_bits[0][0][0], i.carry_bits[0][0][1],
+                    i.carry_bits[0][1][0], i.carry_bits[0][1][1]);
             if (correct_guess == i) {
                 ++num_correct;
             }

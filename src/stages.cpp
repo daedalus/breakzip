@@ -171,7 +171,7 @@ namespace breakzip {
             const uint32_t crcx0   = crc32tab[x0];
             const uint8_t  lsbk01x = (chunk2 ^ crcx0) & 0xff;
             const uint32_t low24x  = (lsbk01x * CRYPTCONST + 1) & 0x00ffffff;
-            carry_bits[fileidx][0] =
+            carry_bits[0][fileidx][0] =
                 (low24x + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             const uint16_t temp1x  = (k20 | 3) & 0xffff;
@@ -180,7 +180,7 @@ namespace breakzip {
             const uint32_t crcy0   = crc32tab[y0];
             const uint8_t  lsbk01y = (chunk2 ^ crcy0) & 0xff;
             const uint32_t low24y  = (lsbk01y * CRYPTCONST + 1) & 0x00ffffff;
-            carry_bits[fileidx][1] =
+            carry_bits[0][fileidx][1] =
                 (low24y + ((k10 * CRYPTCONST) & 0x00ffffff)) >= (1 << 24);
 
             ++fileidx;
@@ -373,8 +373,9 @@ namespace breakzip {
                 auto x_array = file.random_bytes;
                 auto h_array = file.header_second;
 
-                uint8_t carry_for_x = guess.carry_bits[0][fileidx];
-                uint8_t carry_for_y = guess.carry_bits[0][fileidx];
+                // Carry bits for stage1 (idx 0) w/file index fileidx.
+                uint8_t carry_for_x = guess.carry_bits[0][fileidx][0];
+                uint8_t carry_for_y = guess.carry_bits[0][fileidx][1];
 
                 uint32_t temp = crc32tab[x_array[0]] & 0xff;
                 temp ^= guess.chunk2;

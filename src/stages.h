@@ -14,7 +14,7 @@ namespace breakzip {
     using namespace std;
 
     /* There are 4 stages with 2 carry bits per stage, one for each file. */
-    typedef std::array<std::array<bool, 2>, 4> carrybits_t;
+    typedef std::array<std::array<std::array<bool, 2>, 2>, 4> carrybits_t;
 
 
     class guess_t {
