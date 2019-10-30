@@ -150,7 +150,7 @@ namespace breakzip {
     }
 
 
-    uint64_t stage1_correct_guess(const crack_t crypt_test) {
+    guess_t stage1_correct_guess(const crack_t crypt_test) {
         /*
         const uint32_t k00 = crypt_test.zip.keys[0];
         const uint32_t k10 = crypt_test.zip.keys[1];
@@ -201,15 +201,19 @@ namespace breakzip {
         return 0;
     }
 
-    uint64_t stage1_correct_guess_start(uint64_t correct_guess) {
-        return correct_guess & ~ 0xffff;
+    guess_t stage1_correct_guess_start(guess_t correct_guess) {
+        guess_t mine = correct_guess;
+        mine.chunk1 &= ~0xffff;
+        return std::move(mine);
     }
 
-    uint64_t stage1_correct_guess_end(uint64_t correct_guess) {
-        return correct_guess | 0xffff;
+    guess_t stage1_correct_guess_end(guess_t correct_guess) {
+        guess_t mine = correct_guess;
+        mine.chunk1 &= 0xffff;
+        return std::move(correct_guess);
     }
 
-    uint32_t stage2_correct_guess(const crack_t crypt_test) {
+    guess_t stage2_correct_guess(const crack_t crypt_test) {
         /*
         const uint32_t k00 = crypt_test.zip.keys[0];
         const uint32_t k10 = crypt_test.zip.keys[1];
@@ -321,7 +325,7 @@ namespace breakzip {
     }
 
     int stage1(const crack_t* state, vector<guess_t>& out,
-            guess_t& correct_guess, uint16_t expected_s0) {
+            const guess_t& correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
         // used to figure out where it's being ignored, if at all.
         if (nullptr == state) {
@@ -329,7 +333,7 @@ namespace breakzip {
             abort();
         }
 
-        for (auto guess: stage1_range(state)) {
+        for (auto guess: stage1_range(*state)) {
             uint32_t upper = 0x00ffffff;
             uint32_t lower = 0;
             uint16_t s0(get_s0(guess.chunk1));
