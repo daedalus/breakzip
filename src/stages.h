@@ -175,21 +175,25 @@ namespace breakzip {
                 // The lowest order bits are the 4 stage1 carry bits.
                 if (!carry_bits[0][0][0]) {
                     carry_bits[0][0][0] = true;
+                    return *this;
                 }
                 carry_bits[0][0][0] = false;
 
                 if (!carry_bits[0][0][1]) {
                     carry_bits[0][0][1] = true;
+                    return *this;
                 }
                 carry_bits[0][0][1] = false;
 
                 if (!carry_bits[0][1][0]) {
                     carry_bits[0][1][0] = true;
+                    return *this;
                 }
                 carry_bits[0][1][0] = false;
 
                 if (!carry_bits[0][1][1]) {
                     carry_bits[0][1][1] = true;
+                    return *this;
                 }
                 carry_bits[0][1][1] = false;
 
@@ -226,21 +230,25 @@ namespace breakzip {
                 // bits.
                 if (!carry_bits[1][0][0]) {
                     carry_bits[1][0][0] = true;
+                    return *this;
                 }
                 carry_bits[1][0][0] = false;
 
                 if (!carry_bits[1][0][1]) {
                     carry_bits[1][0][1] = true;
+                    return *this;
                 }
                 carry_bits[1][0][1] = false;
 
                 if (!carry_bits[1][1][0]) {
                     carry_bits[1][1][0] = true;
+                    return *this;
                 }
                 carry_bits[1][1][0] = false;
 
                 if (!carry_bits[1][1][1]) {
                     carry_bits[1][1][1] = true;
+                    return *this;
                 }
                 carry_bits[1][1][1] = false;
 
