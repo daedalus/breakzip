@@ -44,7 +44,7 @@ namespace breakzip {
                 chunk3(other.chunk3), chunk4(other.chunk4),
                 carry_bits(other.carry_bits) {}
 
-            std::string str() {
+            std::string str() const {
                 char cstr[256];
                 snprintf(cstr, 256, "%d-%d-%d-%d:[%d%d%d%d]",
                         chunk4, chunk3, chunk2, chunk1,
@@ -73,7 +73,10 @@ namespace breakzip {
                         this->carry_bits == other.carry_bits);
             }
 
-            bool operator!=(const stage1_guess_t& other) { return !(*this == other); }
+            friend bool operator!=(const stage1_guess_t& left,
+                    const stage1_guess_t& right) {
+                return !(left == right);
+            }
 
             stage1_guess_t& operator=(const stage1_guess_t& other) {
                 if (*this != other) {
@@ -201,7 +204,7 @@ namespace breakzip {
 
             stage2_guess_t(uint8_t c5, uint8_t c6, uint8_t c7,
                     carrybits_t carry_bits) :
-                stage1_guess(0), chunk5(c5), chunk6(c6), chunk7(),
+                stage1_guess(0), chunk5(c5), chunk6(c6), chunk7(c7),
                 carry_bits(carry_bits) {};
 
             stage2_guess_t(const stage1_guess_t& other) :
@@ -213,7 +216,12 @@ namespace breakzip {
                 chunk5(other.chunk5), chunk6(other.chunk6),
                 chunk7(other.chunk7), carry_bits(other.carry_bits) {}
 
-            std::string str() {
+            stage2_guess_t(const stage1_guess_t& s1g, uint8_t c5, uint8_t c6,
+                    uint8_t c7, carrybits_t carry_bits) :
+                stage1_guess(s1g), chunk5(c5), chunk6(c6), chunk7(c7),
+                carry_bits(carry_bits) {};
+
+            std::string str() const {
                 char cstr[256];
                 snprintf(cstr, 256, "s1[%s]:%d-%d-%d:[%d%d%d%d]",
                         stage1_guess.str().c_str(),
@@ -245,10 +253,6 @@ namespace breakzip {
                         this->carry_bits == other.carry_bits);
             }
 
-            bool operator!=(const stage2_guess_t& other) {
-                return !(*this == other);
-            }
-
             stage2_guess_t& operator=(const stage1_guess_t& other) {
                 if (*this != other) {
                     this->stage1_guess = other;
@@ -263,15 +267,9 @@ namespace breakzip {
                 return *this;
             }
 
-            // This operator defines the ordering of elements. I.e., which 
-            // chunks have significance. Carry bits are the least
-            // significant.
-            friend bool operator<(const stage2_guess_t& left, const stage1_guess_t& right) {
-                if (0 == left.chunk7 && 0 == left.chunk6 && 0 == left.chunk5) {
-                    return left.stage1_guess < right;
-                } else {
-                    return false;
-                }
+            friend bool operator!=(const stage2_guess_t& left,
+                    const stage2_guess_t& right) {
+                return !(left == right);
             }
 
             friend bool operator<(const stage2_guess_t& left, const stage2_guess_t& right) {
@@ -282,16 +280,18 @@ namespace breakzip {
                             right.stage1_guess, right.carry_bits);
             }
 
-
-            friend bool operator>(const stage2_guess_t& left, const stage1_guess_t& right) {
+            friend bool operator>(const stage2_guess_t& left,
+                    const stage2_guess_t& right) {
                 return right < left;
             }
 
-            friend bool operator<=(const stage2_guess_t& left, const stage1_guess_t& right) {
+            friend bool operator<=(const stage2_guess_t& left,
+                    const stage2_guess_t& right) {
                 return !(left > right);
             }
 
-            friend bool operator>=(const stage2_guess_t& left, const stage1_guess_t& right) {
+            friend bool operator>=(const stage2_guess_t& left,
+                    const stage2_guess_t& right) {
                 return !(left < right);
             }
 

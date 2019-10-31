@@ -153,6 +153,130 @@ START_TEST(test_always_pass) {
 }
 END_TEST
 
+START_TEST(test_stage1_operators) {
+    const stage1_guess_t guess = {0x00ff, 0xaa, 0xbb, 0xcc, {{{0,0}, {0,0}}}};
+    const stage1_guess_t guess_plus_one = {0x0100, 0xaa, 0xbb, 0xcc,
+        {{{0,0}, {0,0}}}};
+    auto other_guess(guess);
+
+    ck_assert_msg(!(guess == guess_plus_one),
+            "Expect !(guess == guess_plus_one)\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert_msg(guess != guess_plus_one,
+            "Expect guess != guess_plus_one\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert(other_guess == guess);
+
+    // There are sixteen 
+    for (int i = 0; i < 15; ++i, ++other_guess) {
+        if (0 < i) {
+            ck_assert_msg(other_guess != guess && other_guess != guess_plus_one,
+                "Expected three different guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+        }
+        ck_assert_msg(guess <= other_guess && other_guess < guess_plus_one,
+                "Expected ordered guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+    }
+
+    ++other_guess;
+    ck_assert(other_guess == guess_plus_one);
+
+
+    ck_assert(other_guess > guess);
+    ck_assert(guess < other_guess && guess < guess_plus_one);
+}
+END_TEST
+
+START_TEST(test_stage1_ctor) {
+    const stage1_guess_t s1_guess = {0x1122, 0x33, 0x44, 0x55, {{{1,0}, {0,1}}}};
+    ck_assert(s1_guess.chunk1 == 0x1122);
+    ck_assert(s1_guess.chunk2 == 0x33);
+    ck_assert(s1_guess.chunk3 == 0x44);
+    ck_assert(s1_guess.chunk4 == 0x55);
+    ck_assert(s1_guess.carry_bits[0][0] == true);
+    ck_assert(s1_guess.carry_bits[0][1] == false);
+    ck_assert(s1_guess.carry_bits[1][0] == false);
+    ck_assert(s1_guess.carry_bits[1][1] == true);
+}
+END_TEST
+
+START_TEST(test_stage2_operators) {
+    const stage1_guess_t s1_guess = {0x00ff, 0xaa, 0xbb, 0xcc, {{{0,0}, {0,0}}}};
+    const stage2_guess_t guess = {s1_guess, 0x01, 0x11, 0x22, {{{0,0}, {0,0}}}};
+    const stage2_guess_t guess_plus_one = {s1_guess, 0x02, 0x11, 0x22, {{{0,0}, {0,0}}}};
+    auto other_guess(guess);
+
+    ck_assert_msg(!(guess == guess_plus_one),
+            "Expect !(guess == guess_plus_one)\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert_msg(guess != guess_plus_one,
+            "Expect guess != guess_plus_one\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert(other_guess == guess);
+
+    // There are sixteen 
+    for (int i = 0; i < 15; ++i, ++other_guess) {
+        if (0 < i) {
+            ck_assert_msg(other_guess != guess && other_guess != guess_plus_one,
+                "Expected three different guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+        }
+        ck_assert_msg(guess <= other_guess && other_guess < guess_plus_one,
+                "Expected ordered guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+    }
+
+    ++other_guess;
+    ck_assert(other_guess == guess_plus_one);
+
+
+    ck_assert(other_guess > guess);
+    ck_assert(guess < other_guess && guess < guess_plus_one);
+}
+END_TEST
+
+START_TEST(test_stage2_ctor) {
+    const stage2_guess_t zero_guess;
+    ck_assert(zero_guess.chunk5 == 0x00);
+    ck_assert(zero_guess.chunk6 == 0x00);
+    ck_assert(zero_guess.chunk7 == 0x00);
+    ck_assert(zero_guess.carry_bits[0][0] == false);
+    ck_assert(zero_guess.carry_bits[0][1] == false);
+    ck_assert(zero_guess.carry_bits[1][0] == false);
+    ck_assert(zero_guess.carry_bits[1][1] == false);
+
+    const stage2_guess_t guess = {0x11, 0x22, 0x33, {{{1,0}, {0,1}}}};
+    ck_assert(guess.chunk5 == 0x11);
+    ck_assert(guess.chunk6 == 0x22);
+    ck_assert(guess.chunk7 == 0x33);
+    ck_assert(guess.carry_bits[0][0] == true);
+    ck_assert(guess.carry_bits[0][1] == false);
+    ck_assert(guess.carry_bits[1][0] == false);
+    ck_assert(guess.carry_bits[1][1] == true);
+}
+END_TEST
+
 START_TEST(test_stage1_iterator) {
 
     const uint16_t END_CHUNK1 = 0x0005;
@@ -288,6 +412,10 @@ Suite* make_suite(const std::string name) {
     tcase_add_test(tc_core, test_always_pass);
     tcase_add_test(tc_core, test_crypt);
     tcase_add_test(tc_core, test_stage1_iterator);
+    tcase_add_test(tc_core, test_stage1_operators);
+    tcase_add_test(tc_core, test_stage1_ctor);
+    tcase_add_test(tc_core, test_stage2_operators);
+    tcase_add_test(tc_core, test_stage2_ctor);
 
     suite_add_tcase(s, tc_core);
     return s;
