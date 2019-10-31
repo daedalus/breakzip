@@ -223,12 +223,11 @@ namespace breakzip {
             const uint8_t  s0      = ((temp1x * (temp1x ^ 1)) >> 8) & 0xff;
             const uint8_t  y0      = x0 ^ s0;
 
-            // TODO(stay): Mike, how do I compute key01y and key02y?
             const uint8_t key01x = crc32(k00, x0);
+            const uint8_t key01y = crc32(k00, y0);
             const uint8_t key11x = (k10 + (key01x & 0xff)) * CRYPTCONST + 1;
             const uint32_t key02x = crc32(key01x, x1);
 
-            const uint8_t key01y = crc32(k00, y0);
             const uint8_t key12x = (k10 * CRYPTCONST_POW2) +
                 (LSB(key01x) * CRYPTCONST_POW2 + CRYPTCONST +
                  (LSB(key02x) * CRYPTCONST) + 1);
@@ -240,9 +239,8 @@ namespace breakzip {
                 (LSB(key01x) * CRYPTCONST_POW2) & 0xffffff;
             uint32_t carry_bit_xtemp = low24_key10cc2 + low24_lsb_key01xcc2 +
                 CRYPTCONST + (LSB(key02x) * CRYPTCONST) + 1;
-            bool has_x_carry_bit = false;
             if (carry_bit_xtemp > (1L << 24)) {
-                has_x_carry_bit = true;
+                carry_bits[fileidx][0] = true;
             }
 
             uint32_t temp = crc32tab[x0] & 0xff;
@@ -251,7 +249,7 @@ namespace breakzip {
             temp = (temp + 1) >> 24;
 
             uint8_t msb_key11x = temp + stage1_correct.chunk3 +
-                (uint8_t)(has_x_carry_bit ? 1 : 0);
+                (uint8_t)(carry_bits[fileidx][0] ? 1 : 0);
             const uint32_t key21x = crc32(k20, msb_key11x);
             const uint32_t s1x_temp = (key21x | 3) & 0xffff;
             const uint8_t s1x =
@@ -262,10 +260,9 @@ namespace breakzip {
             tt *= CRYPTCONST;
             tt = (tt + 1) >> 24;
 
-            // Is carry_for_y supposed to be a stage1 or 2 carry bit?
-            uint8_t msb_key11y = (uint8_t) (tt + stage1_correct.chunk3 + carry_for_y);
-            // What is the definition for key20_low24bits?
-            uint32_t key21y_low24bits = crc32(key20_low24bits, msb_key11y);
+            uint8_t msb_key11y =
+                (uint8_t) (tt + stage1_correct.chunk3 + carry_bits[fileidx][1]);
+            uint32_t key21y_low24bits = crc32(k20 & 0x00ffffff, msb_key11y);
             uint32_t ttt = key21y_low24bits | 3;
             uint8_t s1y = ((ttt * (ttt ^ 1)) >> 8) & 0xff;
             const uint8_t y1 = x1 ^ s1y;
@@ -276,10 +273,10 @@ namespace breakzip {
                 (LSB(key01y) * CRYPTCONST_POW2) & 0xffffff;
             uint32_t carry_bit_ytemp = low24_key10cc2 + low24_lsb_key01ycc2 +
                 CRYPTCONST + (LSB(key02y) * CRYPTCONST) + 1;
-            bool has_y_carry_bit = false;
             if (carry_bit_ytemp > (1L << 24)) {
-                has_y_carry_bit = true;
+                carry_bits[fileidx][1] = true;
             }
+
 
             ++fileidx;
         }
