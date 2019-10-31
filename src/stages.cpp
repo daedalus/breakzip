@@ -114,24 +114,6 @@ namespace breakzip {
         return chunk7;
     }
 
-    void mutable_stage1_guess_chunks_from_keys(const std::array<uint32_t, 3> &k,
-            stage1_guess_t& out) {
-        out.chunk1 = chunk1_from_keys(k);
-        out.chunk2 = chunk2_from_keys(k);
-        out.chunk3 = chunk3_from_keys(k);
-        out.chunk4 = chunk4_from_keys(k);
-        return;
-    }
-
-    void mutable_stage2_guess_chunks_from_keys(const std::array<uint32_t, 3> &k,
-            stage2_guess_t& out) {
-        mutable_stage1_guess_chunks_from_keys(k, out.stage1_guess);
-        out.chunk5 = chunk5_from_keys(k);
-        out.chunk6 = chunk6_from_keys(k);
-        out.chunk7 = chunk7_from_keys(k);
-        return;
-    }
-
     uint16_t get_s0(const uint16_t chunk1) {
         const uint16_t tmp = chunk1 | 3;
         const uint16_t s0 = ((tmp * (tmp ^ 1)) >> 8) & 0xff;

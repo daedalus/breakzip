@@ -355,8 +355,291 @@ namespace breakzip {
             uint8_t internal_carry_bit_;
     };
 
-    class stage3_guess_t {};
-    class stage4_guess_t {};
+    class stage3_guess_t {
+        public:
+            stage2_guess_t stage2_guess;
+            uint8_t chunk8;
+            uint8_t chunk9;
+            carrybits_t carry_bits;
+
+            explicit stage3_guess_t() :
+                stage2_guess(0), chunk8(0), chunk9(0),
+                carry_bits(), internal_carry_bit_(0) {};
+
+            stage3_guess_t(int chunk8) : 
+                stage2_guess(0), chunk8(0), carry_bits(), internal_carry_bit_(0) {};
+
+            stage3_guess_t(uint8_t c8, uint8_t c9, carrybits_t carry_bits) :
+                stage2_guess(0), chunk8(c8), chunk9(c9), carry_bits(carry_bits) {};
+
+            stage3_guess_t(const stage2_guess_t& other) :
+                stage2_guess(other), chunk8(0), chunk9(0),
+                carry_bits(other.carry_bits) {}
+
+            stage3_guess_t(const stage3_guess_t& other) :
+                stage2_guess(other.stage2_guess),
+                chunk8(other.chunk8), chunk9(other.chunk9),
+                carry_bits(other.carry_bits) {}
+
+            stage3_guess_t(const stage2_guess_t& s2g, uint8_t c8, uint8_t c9,
+                    carrybits_t carry_bits) :
+                stage2_guess(s2g), chunk8(c8), chunk9(c9),
+                carry_bits(carry_bits) {};
+
+            std::string str() const {
+                char cstr[256];
+                snprintf(cstr, 256, "s2[%s]:%d-%d:[%d%d%d%d]",
+                        stage2_guess.str().c_str(),
+                        chunk9, chunk8,
+                        carry_bits[0][0], carry_bits[0][1],
+                        carry_bits[1][0], carry_bits[1][1]);
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            std::string hex() const {
+                char cstr[256];
+                snprintf(cstr, 256,
+                        "s2[%s]:0x%04x%04x:[%d%d%d%d]",
+                        stage2_guess.hex().c_str(),
+                        chunk9, chunk8, 
+                        carry_bits[0][0], carry_bits[0][1],
+                        carry_bits[1][0], carry_bits[1][1]);
+
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            bool operator==(const stage3_guess_t& other) const {
+                return (this->stage2_guess == other.stage2_guess &&
+                        this->chunk8 == other.chunk8 &&
+                        this->chunk9 == other.chunk9 &&
+                        this->carry_bits == other.carry_bits);
+            }
+
+            friend bool operator!=(const stage3_guess_t& left,
+                    const stage3_guess_t& right) {
+                return !(left == right);
+            }
+
+            friend bool operator<(const stage3_guess_t& left, const stage3_guess_t& right) {
+                return std::tie(left.chunk8, left.chunk9,
+                        left.stage2_guess, left.carry_bits) <
+                    std::tie(right.chunk8, right.chunk9,
+                            right.stage2_guess, right.carry_bits);
+            }
+
+            friend bool operator>(const stage3_guess_t& left,
+                    const stage3_guess_t& right) {
+                return right < left;
+            }
+
+            friend bool operator<=(const stage3_guess_t& left,
+                    const stage3_guess_t& right) {
+                return !(left > right);
+            }
+
+            friend bool operator>=(const stage3_guess_t& left,
+                    const stage3_guess_t& right) {
+                return !(left < right);
+            }
+
+            stage3_guess_t& operator*() { return *this; }
+
+            bool compare(const stage3_guess_t& other) const {
+                return *this == other;
+            }
+
+            // Prefix increment.
+            stage3_guess_t& operator++() {
+                // The lowest order bits are the 4 stage2 carry bits.
+                if (!carry_bits[0][0]) {
+                    carry_bits[0][0] = true;
+                    return *this;
+                }
+                carry_bits[0][0] = false;
+
+                if (!carry_bits[0][1]) {
+                    carry_bits[0][1] = true;
+                    return *this;
+                }
+                carry_bits[0][1] = false;
+
+                if (!carry_bits[1][0]) {
+                    carry_bits[1][0] = true;
+                    return *this;
+                }
+                carry_bits[1][0] = false;
+
+                if (!carry_bits[1][1]) {
+                    carry_bits[1][1] = true;
+                    return *this;
+                }
+                carry_bits[1][1] = false;
+
+                if (UINT8_MAX != chunk8) {
+                    ++(chunk8);
+                    return *this;
+                }
+
+                chunk8 = 0;
+                if (UINT8_MAX != chunk9) {
+                    ++(chunk9);
+                    return *this;
+                }
+
+                // everything carries, roll over to 0 but mark the carry bit.
+                chunk9 = 0;
+                internal_carry_bit_ = 1;
+                return *this;
+            }
+
+        private:
+            uint8_t internal_carry_bit_;
+    };
+
+    class stage4_guess_t {
+        public:
+            stage3_guess_t stage3_guess;
+            uint8_t chunk10;
+            uint8_t chunk11;
+            carrybits_t carry_bits;
+
+            explicit stage4_guess_t() :
+                stage3_guess(0), chunk10(0), chunk11(0),
+                carry_bits(), internal_carry_bit_(0) {};
+
+            stage4_guess_t(int chunk10) : 
+                stage3_guess(0), chunk10(0), carry_bits(), internal_carry_bit_(0) {};
+
+            stage4_guess_t(uint8_t c8, uint8_t c9, carrybits_t carry_bits) :
+                stage3_guess(0), chunk10(c8), chunk11(c9), carry_bits(carry_bits) {};
+
+            stage4_guess_t(const stage3_guess_t& other) :
+                stage3_guess(other), chunk10(0), chunk11(0),
+                carry_bits(other.carry_bits) {}
+
+            stage4_guess_t(const stage4_guess_t& other) :
+                stage3_guess(other.stage3_guess),
+                chunk10(other.chunk10), chunk11(other.chunk11),
+                carry_bits(other.carry_bits) {}
+
+            stage4_guess_t(const stage3_guess_t& s2g, uint8_t c8, uint8_t c9,
+                    carrybits_t carry_bits) :
+                stage3_guess(s2g), chunk10(c8), chunk11(c9),
+                carry_bits(carry_bits) {};
+
+            std::string str() const {
+                char cstr[256];
+                snprintf(cstr, 256, "s3[%s]:%d-%d:[%d%d%d%d]",
+                        stage3_guess.str().c_str(),
+                        chunk11, chunk10,
+                        carry_bits[0][0], carry_bits[0][1],
+                        carry_bits[1][0], carry_bits[1][1]);
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            std::string hex() const {
+                char cstr[256];
+                snprintf(cstr, 256,
+                        "s3[%s]:0x%04x%04x:[%d%d%d%d]",
+                        stage3_guess.hex().c_str(),
+                        chunk11, chunk10, 
+                        carry_bits[0][0], carry_bits[0][1],
+                        carry_bits[1][0], carry_bits[1][1]);
+
+                std::string ret(cstr);
+                return std::move(ret);
+            }
+
+            bool operator==(const stage4_guess_t& other) const {
+                return (this->stage3_guess == other.stage3_guess &&
+                        this->chunk10 == other.chunk10 &&
+                        this->chunk11 == other.chunk11 &&
+                        this->carry_bits == other.carry_bits);
+            }
+
+            friend bool operator!=(const stage4_guess_t& left,
+                    const stage4_guess_t& right) {
+                return !(left == right);
+            }
+
+            friend bool operator<(const stage4_guess_t& left, const stage4_guess_t& right) {
+                return std::tie(left.chunk10, left.chunk11,
+                        left.stage3_guess, left.carry_bits) <
+                    std::tie(right.chunk10, right.chunk11,
+                            right.stage3_guess, right.carry_bits);
+            }
+
+            friend bool operator>(const stage4_guess_t& left,
+                    const stage4_guess_t& right) {
+                return right < left;
+            }
+
+            friend bool operator<=(const stage4_guess_t& left,
+                    const stage4_guess_t& right) {
+                return !(left > right);
+            }
+
+            friend bool operator>=(const stage4_guess_t& left,
+                    const stage4_guess_t& right) {
+                return !(left < right);
+            }
+
+            stage4_guess_t& operator*() { return *this; }
+
+            bool compare(const stage4_guess_t& other) const {
+                return *this == other;
+            }
+
+            // Prefix increment.
+            stage4_guess_t& operator++() {
+                // The lowest order bits are the 4 stage3 carry bits.
+                if (!carry_bits[0][0]) {
+                    carry_bits[0][0] = true;
+                    return *this;
+                }
+                carry_bits[0][0] = false;
+
+                if (!carry_bits[0][1]) {
+                    carry_bits[0][1] = true;
+                    return *this;
+                }
+                carry_bits[0][1] = false;
+
+                if (!carry_bits[1][0]) {
+                    carry_bits[1][0] = true;
+                    return *this;
+                }
+                carry_bits[1][0] = false;
+
+                if (!carry_bits[1][1]) {
+                    carry_bits[1][1] = true;
+                    return *this;
+                }
+                carry_bits[1][1] = false;
+
+                if (UINT8_MAX != chunk10) {
+                    ++(chunk10);
+                    return *this;
+                }
+
+                chunk10 = 0;
+                if (UINT8_MAX != chunk11) {
+                    ++(chunk11);
+                    return *this;
+                }
+
+                // everything carries, roll over to 0 but mark the carry bit.
+                chunk11 = 0;
+                internal_carry_bit_ = 1;
+                return *this;
+            }
+
+        private:
+            uint8_t internal_carry_bit_;
+    };
     class stage5_guess_t {};
     class stage6_guess_t {};
     class stage7_guess_t {};
@@ -389,6 +672,12 @@ namespace breakzip {
         stage2_guess_t stage2_start;
         stage2_guess_t stage2_end;
 
+        stage3_guess_t stage3_start;
+        stage3_guess_t stage3_end;
+
+        stage4_guess_t stage4_start;
+        stage4_guess_t stage4_end;
+
         zip_crack_t zip;
     } crack_t;
 
@@ -401,30 +690,41 @@ namespace breakzip {
     stage2_guess_t stage2_correct_guess(const crack_t crack_test);
 
     class stage1_range {
-        // Iteration for stage1 is over chunks 1-4 with 4 carry bits.
-
         public:
             explicit stage1_range(const crack_t& state) : state_(state) {};
-
-            stage1_guess_t begin() {
-                return stage1_guess_t(state_.stage1_start);
-            }
-
-            stage1_guess_t end() {
-                return stage1_guess_t(state_.stage1_end);
-            }
+            stage1_guess_t begin() { return stage1_guess_t(state_.stage1_start); }
+            stage1_guess_t end() { return stage1_guess_t(state_.stage1_end); }
 
         private:
             const crack_t& state_;
     };
 
     class stage2_range {
-        // Iteration for stage2 is over chunks 5-7 with 4 carry bits.
         public:
             explicit stage2_range(const crack_t& state): state_(state) {};
             explicit stage2_range(const crack_t*& state): state_(*state) {};
             stage2_guess_t begin() { return stage2_guess_t(state_.stage2_start); }
             stage2_guess_t end() { return stage2_guess_t(state_.stage2_end); }
+        private:
+            const crack_t& state_;
+    };
+
+    class stage3_range {
+        public:
+            explicit stage3_range(const crack_t& state): state_(state) {};
+            explicit stage3_range(const crack_t*& state): state_(*state) {};
+            stage3_guess_t begin() { return stage3_guess_t(state_.stage3_start); }
+            stage3_guess_t end() { return stage3_guess_t(state_.stage3_end); }
+        private:
+            const crack_t& state_;
+    };
+
+    class stage4_range {
+        public:
+            explicit stage4_range(const crack_t& state): state_(state) {};
+            explicit stage4_range(const crack_t*& state): state_(*state) {};
+            stage4_guess_t begin() { return stage4_guess_t(state_.stage4_start); }
+            stage4_guess_t end() { return stage4_guess_t(state_.stage4_end); }
         private:
             const crack_t& state_;
     };
