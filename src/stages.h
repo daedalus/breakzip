@@ -400,22 +400,8 @@ namespace breakzip {
     /* Helper functions for testing stage2. */
     stage2_guess_t stage2_correct_guess(const crack_t crack_test);
 
-
     class stage1_range {
-        // Iteration for stage1 is over chunks 1-4 with 4 carry bits. We
-        // pack those into 64-bits to implement the iterator as follows:
-        //
-        //   carry1y: bool    (0)
-        //   carry1x: bool    (1)
-        //   carry0y: bool    (2)
-        //   carry0x: bool    (3)
-        //   chunk4: uint8_t  (4-11)
-        //   chunk3: uint8_t  (12-19)
-        //   chunk2: uint8_t  (20-27)
-        //   chunk1: uint16_t (28-43)
-        //
-        // The iterator always starts with carry bits 0, you can't specify
-        // a start/end for carry bits as part of the iterator.
+        // Iteration for stage1 is over chunks 1-4 with 4 carry bits.
 
         public:
             explicit stage1_range(const crack_t& state) : state_(state) {};
@@ -432,8 +418,16 @@ namespace breakzip {
             const crack_t& state_;
     };
 
-
-
+    class stage2_range {
+        // Iteration for stage2 is over chunks 5-7 with 4 carry bits.
+        public:
+            explicit stage2_range(const crack_t& state): state_(state) {};
+            explicit stage2_range(const crack_t*& state): state_(*state) {};
+            stage2_guess_t begin() { return stage2_guess_t(state_.stage2_start); }
+            stage2_guess_t end() { return stage2_guess_t(state_.stage2_end); }
+        private:
+            const crack_t& state_;
+    };
 
     // Notation:
     // 
