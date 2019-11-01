@@ -28,7 +28,7 @@ using namespace std;
  * crypto state data.
  */
 std::array<crack_t, 10> crypt_tests = {{
-    { 0, 0, 0, 0,
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 13426, 1570546266, 1570543144, {{ 0xe4858bae, 0xa8254576, 0x3743e7bb }},
             {{{ // 1st file
                   { 0x0d, 0x33, 0xb6, 0x64, 0x5e, 0x66, 0xc0, 0x02, 0xfe, 0x13 }, // rand
@@ -40,7 +40,7 @@ std::array<crack_t, 10> crypt_tests = {{
                 { 0x54, 0x34, 0xf2, 0x0b, 0x6b, 0x08, 0x3d, 0x17, 0xb2, 0xbf }, // 1st
                 { 0x4e, 0xc3, 0x69, 0xf4, 0x97, 0x6e, 0x5a, 0x66, 0x77, 0xcb }, // 2nd
             }}}}},
-    { 0, 0, 0, 0,
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 13428, 1570546267, 1570543151, {{ 0x1e096225, 0xcb831619, 0x296e7f2b }},
             {{{ // 1st file
                   { 0x20, 0x95, 0x07, 0xa5, 0xb9, 0x4c, 0x99, 0xcc, 0xe7, 0x4a }, // rand
@@ -51,7 +51,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   { 0x0f, 0xe4, 0xa7, 0x4a, 0x4d, 0x82, 0x82, 0x1e, 0xc9, 0x57 }, // 1st
                   { 0x3d, 0x4c, 0xed, 0x9f, 0x49, 0xf9, 0x78, 0x53, 0xee, 0x14 }, // 2nd
               }}}}},
-    { 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 13429, 1570546269, 1570543144, {{ 0x10d2ea17, 0x5b0bddd3, 0xd961ec6f }},
             {{{ // 1st file
                   { 0x0d, 0x33, 0xb6, 0x64, 0x5e, 0x66, 0xc0, 0x02, 0xfe, 0x13 }, // rand
@@ -62,7 +62,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   { 0xa5, 0x74, 0x9c, 0x7d, 0x0d, 0xd4, 0xc2, 0x91, 0x55, 0xda }, // 1st
                   { 0x4e, 0x79, 0x47, 0x98, 0x38, 0x78, 0x26, 0x57, 0x49, 0x9a }, // 2nd
               }}}}},
-    { 0, 0, 0, 0,
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 13430, 1570546271, 1570543145, {{ 0x7d9315a2, 0xfa9f7fba, 0x15be19ef }},
             {{{ // 1st file
                   { 0x56, 0x28, 0xf7, 0x7d, 0xf8, 0x4e, 0x9a, 0x32, 0x38, 0x8b }, // rand
@@ -74,7 +74,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   { 0x9a, 0x6a, 0xed, 0xae, 0x4d, 0x27, 0x0a, 0x16, 0xe8, 0x45 }, // 2nd
               }}}}},
     // passwd: wobble
-    { 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 9029, 1570650276, 1570642913, {{ 0x407b7258, 0xdd852762, 0x7dd9ef3f }},
             {{{ // 1st file
                   //init_keys[0]: 0: 0x3ff57daf 1: 0xc4ca8c56 2: 0x2a12f27b
@@ -89,7 +89,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   //init_keys[0]: 0: 0xd99621ae 1: 0xbcc20851 2: 0x74cc0b75
                   { 0x73, 0x78, 0x52, 0x60, 0x3a, 0x6b, 0x83, 0x06, 0x97, 0x48 }, // 2nd
               }}}}},
-    { 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 13431, 1570546274, 1570543125, {{ 0x31dc1008, 0x64feafb1, 0x2f4333bb }},
             {{{ // 1st file
                   { 0xc0, 0xa5, 0x7e, 0x9b, 0x5f, 0xb4, 0x19, 0x01, 0xe4, 0xc1 }, // rand
@@ -100,7 +100,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   { 0xd5, 0xa4, 0x97, 0x37, 0x1c, 0x69, 0x28, 0xfd, 0x8d, 0xda }, // 1st
                   { 0x03, 0xcb, 0xca, 0xf1, 0xba, 0x52, 0xff, 0x94, 0xd6, 0x26 }, // 2nd
               }}}}},
-    { 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 12431, 1570651783, 1570639368, {{ 0x348e6771, 0xcecf3c76, 0x51a09805 }},
             {{{ // 1st file
                   { 0x3d, 0xa4, 0x0d, 0xb5, 0x8b, 0xfe, 0xde, 0xb6, 0x08, 0x50, }, // rand
@@ -111,7 +111,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   { 0x60, 0x91, 0x49, 0x1b, 0x0d, 0xd2, 0xba, 0x04, 0x15, 0x94, }, // 1st
                   { 0xd8, 0x0b, 0x6c, 0xe7, 0x77, 0x1c, 0x21, 0x1f, 0x90, 0x45, }, // 2nd
               }}}}},
-    { 0, 0, 0, 0,
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 13715, 1570652412, 1570665839, {{ 0x36718a59, 0x8f33c8ee, 0xdea1bb9d }},
             {{{ // 1st file
                   { 0x23, 0xa5, 0x24, 0x39, 0xab, 0xd9, 0xa6, 0xbe, 0x51, 0xf2, }, // rand
@@ -122,7 +122,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   { 0xb5, 0xeb, 0xdd, 0x66, 0x29, 0x29, 0x26, 0xfa, 0xfd, 0x5f, }, // 1st
                   { 0x44, 0x2e, 0x1a, 0x0c, 0x2a, 0x03, 0x6c, 0xbf, 0xb9, 0x3a, }, // 2nd
               }}}}},
-    { 0, 0, 0, 0,
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 13974, 1570652566, 1570666240, {{ 0x1fbf04f9, 0x755b317c, 0x2a7b0b67 }},
             {{{ // 1st file
                   { 0xb6, 0xdf, 0x87, 0x85, 0x26, 0x3e, 0xa9, 0x64, 0xd3, 0xa3, }, // rand
@@ -133,7 +133,7 @@ std::array<crack_t, 10> crypt_tests = {{
                   { 0xe0, 0xa1, 0x0f, 0x7b, 0x75, 0x98, 0xe5, 0x47, 0xb7, 0xc7, }, // 1st
                   { 0x18, 0xa9, 0xa0, 0xeb, 0x0d, 0x5a, 0x05, 0xe1, 0xff, 0x09, }, // 2nd
               }}}}},
-    { 0, 0, 0, 0,
+    { 0, 0, 0, 0, 0, 0, 0, 0,
         { 14164, 1570652674, 1570665814, {{ 0x76cf6e60, 0x55abd9be, 0x02f6bd0a }},
             {{{ // 1st file
                   { 0x0f, 0x7d, 0xf2, 0x99, 0x0c, 0xdc, 0x36, 0x7f, 0xef, 0xcd, }, // rand
@@ -153,17 +153,150 @@ START_TEST(test_always_pass) {
 }
 END_TEST
 
+START_TEST(test_stage1_operators) {
+    const stage1_guess_t guess = {0x00ff, 0xaa, 0xbb, 0xcc, {{{0,0}, {0,0}}}};
+    const stage1_guess_t guess_plus_one = {0x0100, 0xaa, 0xbb, 0xcc,
+        {{{0,0}, {0,0}}}};
+    auto other_guess(guess);
+
+    ck_assert_msg(!(guess == guess_plus_one),
+            "Expect !(guess == guess_plus_one)\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert_msg(guess != guess_plus_one,
+            "Expect guess != guess_plus_one\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert(other_guess == guess);
+
+    // There are sixteen 
+    for (int i = 0; i < 15; ++i, ++other_guess) {
+        if (0 < i) {
+            ck_assert_msg(other_guess != guess && other_guess != guess_plus_one,
+                "Expected three different guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+        }
+        ck_assert_msg(guess <= other_guess && other_guess < guess_plus_one,
+                "Expected ordered guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+    }
+
+    ++other_guess;
+    ck_assert(other_guess == guess_plus_one);
+
+
+    ck_assert(other_guess > guess);
+    ck_assert(guess < other_guess && guess < guess_plus_one);
+}
+END_TEST
+
+START_TEST(test_stage1_ctor) {
+    const stage1_guess_t s1_guess = {0x1122, 0x33, 0x44, 0x55, {{{1,0}, {0,1}}}};
+    ck_assert(s1_guess.chunk1 == 0x1122);
+    ck_assert(s1_guess.chunk2 == 0x33);
+    ck_assert(s1_guess.chunk3 == 0x44);
+    ck_assert(s1_guess.chunk4 == 0x55);
+    ck_assert(s1_guess.carry_bits[0][0] == true);
+    ck_assert(s1_guess.carry_bits[0][1] == false);
+    ck_assert(s1_guess.carry_bits[1][0] == false);
+    ck_assert(s1_guess.carry_bits[1][1] == true);
+}
+END_TEST
+
+START_TEST(test_stage2_operators) {
+    const stage1_guess_t s1_guess = {0x00ff, 0xaa, 0xbb, 0xcc, {{{0,0}, {0,0}}}};
+    const stage2_guess_t guess = {s1_guess, 0x01, 0x11, 0x22, {{{0,0}, {0,0}}}};
+    const stage2_guess_t guess_plus_one = {s1_guess, 0x02, 0x11, 0x22, {{{0,0}, {0,0}}}};
+    auto other_guess(guess);
+
+    ck_assert_msg(!(guess == guess_plus_one),
+            "Expect !(guess == guess_plus_one)\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert_msg(guess != guess_plus_one,
+            "Expect guess != guess_plus_one\n"
+            "    guess: %s\n  guess+1: %s\n",
+            guess.str().c_str(), guess_plus_one.str().c_str());
+    ck_assert(other_guess == guess);
+
+    // There are sixteen 
+    for (int i = 0; i < 15; ++i, ++other_guess) {
+        if (0 < i) {
+            ck_assert_msg(other_guess != guess && other_guess != guess_plus_one,
+                "Expected three different guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+        }
+        ck_assert_msg(guess <= other_guess && other_guess < guess_plus_one,
+                "Expected ordered guesses, got:\n"
+                " guess_plus_one: %s\n"
+                "    other_guess: %s\n"
+                "          guess: %s\n",
+                guess_plus_one.str().c_str(),
+                other_guess.str().c_str(), guess.str().c_str());
+    }
+
+    ++other_guess;
+    ck_assert(other_guess == guess_plus_one);
+
+
+    ck_assert(other_guess > guess);
+    ck_assert(guess < other_guess && guess < guess_plus_one);
+}
+END_TEST
+
+START_TEST(test_stage2_ctor) {
+    const stage2_guess_t zero_guess;
+    ck_assert(zero_guess.chunk5 == 0x00);
+    ck_assert(zero_guess.chunk6 == 0x00);
+    ck_assert(zero_guess.chunk7 == 0x00);
+    ck_assert(zero_guess.carry_bits[0][0] == false);
+    ck_assert(zero_guess.carry_bits[0][1] == false);
+    ck_assert(zero_guess.carry_bits[1][0] == false);
+    ck_assert(zero_guess.carry_bits[1][1] == false);
+
+    const stage2_guess_t guess = {0x11, 0x22, 0x33, {{{1,0}, {0,1}}}};
+    ck_assert(guess.chunk5 == 0x11);
+    ck_assert(guess.chunk6 == 0x22);
+    ck_assert(guess.chunk7 == 0x33);
+    ck_assert(guess.carry_bits[0][0] == true);
+    ck_assert(guess.carry_bits[0][1] == false);
+    ck_assert(guess.carry_bits[1][0] == false);
+    ck_assert(guess.carry_bits[1][1] == true);
+}
+END_TEST
+
 START_TEST(test_stage1_iterator) {
 
-    const guess_t start = {0, 0, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
-    const guess_t end   = {0, 1, 0, 0, {{{0,0},{0,0},{0,0},{0,0}}}};
+    const uint16_t END_CHUNK1 = 0x0005;
+    const stage1_guess_t start = {0x0000, 0, 0, 0, {{{0,0}, {0,0}}}};
+    const stage1_guess_t end   = {END_CHUNK1, 0, 0, 0, {{{0,0}, {0,0}}}};
 
-    crack_t crack = {start, end, {0}, {0}, {}};
+    // NB(leaf): I'm really not sure this is right.
+    const int num_between_expected = (END_CHUNK1 * 16) - 1;
+
+    crack_t crack = {start, end, 0, 0, 0, 0, 0, 0, {}};
 
     bool start_was_included = false;
     int num_between = 0;
     int start_guesses = 0;
     bool end_was_included = false;
+
+    fprintf(stderr, "stage1_iterator: start is %s\n",
+            crack.stage1_start.hex().c_str());
+    fprintf(stderr, "stage1_iterator:   end is %s\n",
+            crack.stage1_end.hex().c_str());
 
     for (auto guess: stage1_range(crack)) {
         ck_assert(end >= guess);
@@ -175,19 +308,25 @@ START_TEST(test_stage1_iterator) {
             ++num_between;
         }
 
+        fprintf(stderr, "stage1_iterator: guess is %s\n", guess.hex().c_str());
+
         // Make sure we try all the carry bits.
         if (0 == guess.chunk1 && 0 == guess.chunk2 &&
                 0 == guess.chunk3 && 0 == guess.chunk4) {
             start_guesses += 1;
         }
-
-        ck_assert_msg(4 == start_guesses,
-                "Expected 4 guesses where chunks1-4 are zero, "
-                "got %d instead.", start_guesses);
     }
 
+    ck_assert_msg(16 == start_guesses,
+            "Expected 4 guesses where chunks1-4 are zero, "
+            "got %d instead.", start_guesses);
+
+    ck_assert_msg(num_between_expected == num_between,
+            "stage1_iterator: expected %d between start and end, got %d",
+            num_between_expected, num_between);
+
     ck_assert_msg(start_was_included && !end_was_included && (0 < num_between),
-            "start_was_included: %s\nend_was_included: %s\nnum_between: %d\n",
+            "start_was_included: %s\nend_was_included: %s\nnum_between: %d",
             start_was_included ? "yes" : "no",
             end_was_included ? "yes" : "no",
             num_between);
@@ -222,11 +361,9 @@ START_TEST(test_crypt) {
                 "Correct: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
                 "Stage End: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
                 correct_guess.chunk1, correct_guess.chunk2, correct_guess.chunk3,
-                correct_guess.chunk4, correct_guess.chunk5, correct_guess.chunk6,
-                correct_guess.chunk7,
+                correct_guess.chunk4, 
                 stage1_end.chunk1, stage1_end.chunk2, stage1_end.chunk3,
-                stage1_end.chunk4, stage1_end.chunk5, stage1_end.chunk6,
-                stage1_end.chunk7);
+                stage1_end.chunk4);
 
         ck_assert_msg(stage1_start != stage1_end,
                 "Expect start != end, got: 0x%08lx == 0x%08lx",
@@ -235,7 +372,7 @@ START_TEST(test_crypt) {
         crack_test.stage1_start = stage1_start;
         crack_test.stage1_end = stage1_end;
 
-        vector<guess_t> out;
+        vector<stage1_guess_t> out;
 
         uint16_t expected_s0_arg = 0x100;
         expected_s0_arg |= (uint16_t)expected_s0s[0];
@@ -253,8 +390,8 @@ START_TEST(test_crypt) {
             fprintf(stderr, "stage1 guess: chunk1(0x%x) | chunk2(0x%x) | "
                     "chunk3(0x%x) | chunk4(0x%x) | carry(%x%x%x%x)\n",
                     i.chunk1, i.chunk2, i.chunk3, i.chunk4,
-                    i.carry_bits[0][0][0], i.carry_bits[0][0][1],
-                    i.carry_bits[0][1][0], i.carry_bits[0][1][1]);
+                    i.carry_bits[0][0], i.carry_bits[0][1],
+                    i.carry_bits[1][0], i.carry_bits[1][1]);
             if (correct_guess == i) {
                 ++num_correct;
             }
@@ -275,6 +412,10 @@ Suite* make_suite(const std::string name) {
     tcase_add_test(tc_core, test_always_pass);
     tcase_add_test(tc_core, test_crypt);
     tcase_add_test(tc_core, test_stage1_iterator);
+    tcase_add_test(tc_core, test_stage1_operators);
+    tcase_add_test(tc_core, test_stage1_ctor);
+    tcase_add_test(tc_core, test_stage2_operators);
+    tcase_add_test(tc_core, test_stage2_ctor);
 
     suite_add_tcase(s, tc_core);
     return s;
