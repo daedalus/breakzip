@@ -688,6 +688,8 @@ namespace breakzip {
 
     /* Helper functions for testing stage2. */
     stage2_guess_t stage2_correct_guess(const crack_t crack_test);
+    stage2_guess_t stage2_correct_guess_start(stage2_guess_t correct_guess);
+    stage2_guess_t stage2_correct_guess_end(stage2_guess_t correct_guess);
 
     class stage1_range {
         public:
@@ -823,7 +825,7 @@ namespace breakzip {
 
     int stage2(const crack_t* state, const vector<stage1_guess_t> in,
             vector<stage2_guess_t>& out,
-            uint64_t correct_guess=0, uint16_t expected_s0=0);
+            const stage2_guess_t& correct_guess=0, uint16_t expected_s0=0);
 
     // stage 3:
     // We guess [chunk8 = bits 24..32 of key00 (8 bits)]

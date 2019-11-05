@@ -285,6 +285,39 @@ namespace breakzip {
         return std::move(rval);
     }
 
+    stage2_guess_t stage2_correct_guess_start(stage2_guess_t correct_guess) {
+        stage2_guess_t mine = correct_guess;
+        mine.chunk5 = 0;
+        if (DEBUG) {
+            fprintf(stderr,
+                    "stage1_correct_guess_start: correct: "
+                    "0x%02x|%02x|%02x\n"
+                    "stage1_correct_guess_start: mine:    "
+                    "0x%02x|%02x|%02x\n",
+                    correct_guess.chunk5, correct_guess.chunk6,
+                    correct_guess.chunk7, mine.chunk5, mine.chunk6,
+                    mine.chunk7);
+        }
+        return std::move(mine);
+    }
+
+    stage2_guess_t stage2_correct_guess_end(stage2_guess_t correct_guess) {
+        stage2_guess_t mine = correct_guess;
+        mine.chunk5 = 0;
+        mine.chunk6 += 1;
+        if (DEBUG) {
+            fprintf(stderr,
+                    "stage2_correct_guess_end: correct: "
+                    "0x%02x|%02x|%02x\n"
+                    "stage2_correct_guess_end: mine:    "
+                    "0x%02x|%02x|%02x\n",
+                    correct_guess.chunk5, correct_guess.chunk6,
+                    correct_guess.chunk7, mine.chunk5, mine.chunk6,
+                    mine.chunk7);
+        }
+        return std::move(mine);
+    }
+
     int stage1(const crack_t* state, vector<stage1_guess_t>& out,
             const stage1_guess_t& correct_guess, uint16_t expected_s0) {
         // For testing, we accept a correct_guess parameter that can be
