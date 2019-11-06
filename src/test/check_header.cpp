@@ -154,9 +154,9 @@ START_TEST(test_always_pass) {
 END_TEST
 
 START_TEST(test_stage1_operators) {
-    const stage1_guess_t guess = {0x00ff, 0xaa, 0xbb, 0xcc, {{{0,0}, {0,0}}}};
-    const stage1_guess_t guess_plus_one = {0x0100, 0xaa, 0xbb, 0xcc,
-        {{{0,0}, {0,0}}}};
+    const stage1_guess_t guess = {0x00ff, 0xaa, 0xbb, 0xcc, {0, 0, 0, 0}};
+    const stage1_guess_t guess_plus_one = {0x0100, 0xaa, 0xbb, 0xcc, 
+        {0, 0, 0, 0}};
     auto other_guess(guess);
 
     ck_assert_msg(!(guess == guess_plus_one),
@@ -199,22 +199,22 @@ START_TEST(test_stage1_operators) {
 END_TEST
 
 START_TEST(test_stage1_ctor) {
-    const stage1_guess_t s1_guess = {0x1122, 0x33, 0x44, 0x55, {{{1,0}, {0,1}}}};
+    const stage1_guess_t s1_guess = {0x1122, 0x33, 0x44, 0x55, {1, 0, 0, 1}};
     ck_assert(s1_guess.chunk1 == 0x1122);
     ck_assert(s1_guess.chunk2 == 0x33);
     ck_assert(s1_guess.chunk3 == 0x44);
     ck_assert(s1_guess.chunk4 == 0x55);
-    ck_assert(s1_guess.carry_bits[0][0] == true);
-    ck_assert(s1_guess.carry_bits[0][1] == false);
-    ck_assert(s1_guess.carry_bits[1][0] == false);
-    ck_assert(s1_guess.carry_bits[1][1] == true);
+    ck_assert(s1_guess.carry_bits.get(0, 0) == true);
+    ck_assert(s1_guess.carry_bits.get(0, 1) == false);
+    ck_assert(s1_guess.carry_bits.get(1, 0) == false);
+    ck_assert(s1_guess.carry_bits.get(1, 1) == true);
 }
 END_TEST
 
 START_TEST(test_stage2_operators) {
-    const stage1_guess_t s1_guess = {0x00ff, 0xaa, 0xbb, 0xcc, {{{0,0}, {0,0}}}};
-    const stage2_guess_t guess = {s1_guess, 0x01, 0x11, 0x22, {{{0,0}, {0,0}}}};
-    const stage2_guess_t guess_plus_one = {s1_guess, 0x02, 0x11, 0x22, {{{0,0}, {0,0}}}};
+    const stage1_guess_t s1_guess = {0x00ff, 0xaa, 0xbb, 0xcc, {0, 0, 0, 0}};
+    const stage2_guess_t guess = {s1_guess, 0x01, 0x11, 0x22, {0, 0, 0, 0}};
+    const stage2_guess_t guess_plus_one = {s1_guess, 0x02, 0x11, 0x22, {0, 0, 0, 0}};
     auto other_guess(guess);
 
     ck_assert_msg(!(guess == guess_plus_one),
@@ -261,27 +261,27 @@ START_TEST(test_stage2_ctor) {
     ck_assert(zero_guess.chunk5 == 0x00);
     ck_assert(zero_guess.chunk6 == 0x00);
     ck_assert(zero_guess.chunk7 == 0x00);
-    ck_assert(zero_guess.carry_bits[0][0] == false);
-    ck_assert(zero_guess.carry_bits[0][1] == false);
-    ck_assert(zero_guess.carry_bits[1][0] == false);
-    ck_assert(zero_guess.carry_bits[1][1] == false);
+    ck_assert(zero_guess.carry_bits.get(0, 0) == false);
+    ck_assert(zero_guess.carry_bits.get(0, 1) == false);
+    ck_assert(zero_guess.carry_bits.get(1, 0) == false);
+    ck_assert(zero_guess.carry_bits.get(1, 1) == false);
 
-    const stage2_guess_t guess = {0x11, 0x22, 0x33, {{{1,0}, {0,1}}}};
+    const stage2_guess_t guess = {0x11, 0x22, 0x33, {1, 0, 0, 1}};
     ck_assert(guess.chunk5 == 0x11);
     ck_assert(guess.chunk6 == 0x22);
     ck_assert(guess.chunk7 == 0x33);
-    ck_assert(guess.carry_bits[0][0] == true);
-    ck_assert(guess.carry_bits[0][1] == false);
-    ck_assert(guess.carry_bits[1][0] == false);
-    ck_assert(guess.carry_bits[1][1] == true);
+    ck_assert(guess.carry_bits.get(0, 0) == true);
+    ck_assert(guess.carry_bits.get(0, 1) == false);
+    ck_assert(guess.carry_bits.get(1, 0) == false);
+    ck_assert(guess.carry_bits.get(1, 1) == true);
 }
 END_TEST
 
 START_TEST(test_stage1_iterator) {
 
     const uint16_t END_CHUNK1 = 0x0005;
-    const stage1_guess_t start = {0x0000, 0, 0, 0, {{{0,0}, {0,0}}}};
-    const stage1_guess_t end   = {END_CHUNK1, 0, 0, 0, {{{0,0}, {0,0}}}};
+    const stage1_guess_t start = {0x0000, 0, 0, 0, {0, 0, 0, 0}};
+    const stage1_guess_t end   = {END_CHUNK1, 0, 0, 0, {0, 0, 0, 0}};
 
     // NB(leaf): I'm really not sure this is right.
     const int num_between_expected = (END_CHUNK1 * 16) - 1;
@@ -293,10 +293,10 @@ START_TEST(test_stage1_iterator) {
     int start_guesses = 0;
     bool end_was_included = false;
 
-    fprintf(stderr, "stage1_iterator: start is %s\n",
-            crack.stage1_start.hex().c_str());
-    fprintf(stderr, "stage1_iterator:   end is %s\n",
-            crack.stage1_end.hex().c_str());
+    //fprintf(stderr, "stage1_iterator: start is %s\n",
+    //        crack.stage1_start.hex().c_str());
+    //fprintf(stderr, "stage1_iterator:   end is %s\n",
+    //        crack.stage1_end.hex().c_str());
 
     for (auto guess: stage1_range(crack)) {
         ck_assert(end >= guess);
@@ -308,7 +308,7 @@ START_TEST(test_stage1_iterator) {
             ++num_between;
         }
 
-        fprintf(stderr, "stage1_iterator: guess is %s\n", guess.hex().c_str());
+        //fprintf(stderr, "stage1_iterator: guess is %s\n", guess.hex().c_str());
 
         // Make sure we try all the carry bits.
         if (0 == guess.chunk1 && 0 == guess.chunk2 &&
@@ -388,10 +388,9 @@ START_TEST(test_crypt_stage1) {
         int num_correct = 0;
         for (auto i: out) {
             fprintf(stderr, "stage1 guess: chunk1(0x%x) | chunk2(0x%x) | "
-                    "chunk3(0x%x) | chunk4(0x%x) | carry(%x%x%x%x)\n",
+                    "chunk3(0x%x) | chunk4(0x%x) | carry%s\n",
                     i.chunk1, i.chunk2, i.chunk3, i.chunk4,
-                    i.carry_bits[0][0], i.carry_bits[0][1],
-                    i.carry_bits[1][0], i.carry_bits[1][1]);
+                    i.carry_bits.str().c_str());
             if (correct_guess == i) {
                 ++num_correct;
             }
@@ -405,7 +404,14 @@ END_TEST
 START_TEST(test_crypt_stage2) {
 
     for (auto crack_test: crypt_tests) {
+
         auto zip = crack_test.zip;
+
+        fprintf(stderr, "test_crypt_stage2:\n"
+                "    key00: %x\n"
+                "    key10: %x\n"
+                "    key20: %x\n",
+                zip.keys[0], zip.keys[1], zip.keys[2]);
 
         uint8_t expected_s0s[2];
 
@@ -425,6 +431,13 @@ START_TEST(test_crypt_stage2) {
         auto stage2_start = stage2_correct_guess_start(correct_guess);
         auto stage2_end = stage2_correct_guess_end(correct_guess);
 
+        fprintf(stderr, "test_crypt_stage2:\n"
+                "   correct_guess: %s\n"
+                "    stage2_start: %s\n"
+                "      stage2_end: %s\n",
+                correct_guess.hex().c_str(),
+                stage2_start.hex().c_str(),
+                stage2_end.str().c_str());
         ck_assert(correct_guess >= stage2_start);
         ck_assert_msg(correct_guess < stage2_end,
                 "Correct: %s\nStage End: %s\n",

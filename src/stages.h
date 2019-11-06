@@ -14,7 +14,96 @@ namespace breakzip {
     using namespace std;
 
     /* There are 4 carry bits per stage. 2 for each of 2 files. */
-    typedef std::array<std::array<bool, 2>, 2> carrybits_t;
+    typedef struct carrybits {
+        uint8_t file1x:1;
+        uint8_t file1y:1;
+        uint8_t file2x:1;
+        uint8_t file2y:1;
+        uint8_t unused:4;
+
+        carrybits() : file1x(0), file1y(0), file2x(0), file2y(0) {}
+        carrybits(uint8_t f1x, uint8_t f1y, uint8_t f2x, uint8_t f2y) :
+            file1x(f1x), file1y(f1y), file2x(f2x), file2y(f2y) {}
+
+        friend bool operator==(const struct carrybits& left,
+                const struct carrybits& right) {
+            const uint8_t l = 0 & (left.file1x << 3) & (left.file1y << 2) &
+                (left.file2x << 1) & left.file2y;
+            const uint8_t r = 0 & (right.file1x << 3) & (right.file1y << 2) &
+                (right.file2x << 1) & right.file2y;
+            return l == r;
+        }
+
+        friend bool operator!=(const struct carrybits& left,
+                const struct carrybits& right) {
+            return !(left == right);
+        }
+
+        friend bool operator<(const struct carrybits& left,
+                const struct carrybits& right) {
+            const uint8_t l = 0 & (left.file1x << 3) & (left.file1y << 2) &
+                (left.file2x << 1) & left.file2y;
+            const uint8_t r = 0 & (right.file1x << 3) & (right.file1y << 2) &
+                (right.file2x << 1) & right.file2y;
+            return l < r;
+        }
+
+        friend bool operator>(const struct carrybits& l,
+                const struct carrybits& r) {
+            return r < l;
+        }
+
+        friend bool operator<=(const struct carrybits& l,
+                const struct carrybits& r) {
+            return !(r > l);
+        }
+
+        friend bool operator>=(const struct carrybits& l,
+                const struct carrybits& r) {
+            return !(l < r);
+        }
+
+        bool get(uint8_t file, uint8_t var) const {
+            if (0 == file) {
+                if (0 == var) {
+                    return this->file1x;
+                }
+                return this->file1y;
+            }
+
+            if (0 == var) {
+                return this->file2x;
+            }
+
+            return this->file2y;
+        }
+
+        bool set(uint8_t file, uint8_t var, bool val) {
+            if (0 == file) {
+                if (0 == var) {
+                    this->file1x = val;
+                    return this->file1x;
+                }
+                this->file1y = val;
+                return this->file1y;
+            }
+
+            if (0 == var) {
+                this->file2x = val;
+                return this->file2x;
+            }
+
+            this->file2y = val;
+            return this->file2y;
+        }
+
+        const std::string& str() const {
+            char buf[16];
+            snprintf(buf, 16, "(%d|%d|%d|%d)", file1x, file1y, file2x, file2y);
+            std::string rval(buf);
+            return std::move(rval);
+        }
+    } carrybits_t;
 
     class guess_t {};
 
@@ -32,7 +121,7 @@ namespace breakzip {
 
             stage1_guess_t(int chunk1) : 
                 chunk1(chunk1), chunk2(0), chunk3(0), chunk4(0),
-                carry_bits({{{0,0},{0,0}}}), internal_carry_bit_(0) {};
+                carry_bits(), internal_carry_bit_(0) {};
 
             stage1_guess_t(uint16_t c1, uint8_t c2, uint8_t c3,
                     uint8_t c4, carrybits_t carry_bits) :
@@ -46,10 +135,9 @@ namespace breakzip {
 
             std::string str() const {
                 char cstr[256];
-                snprintf(cstr, 256, "%d-%d-%d-%d:[%d%d%d%d]",
+                snprintf(cstr, 256, "%d-%d-%d-%d:%s",
                         chunk4, chunk3, chunk2, chunk1,
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
                 std::string ret(cstr);
                 return std::move(ret);
             }
@@ -57,10 +145,9 @@ namespace breakzip {
             std::string hex() const {
                 char cstr[256];
                 snprintf(cstr, 256,
-                        "0x%08x%04x%04x%04x:[%d%d%d%d]",
+                        "0x%08x%04x%04x%04x:%s",
                         chunk4, chunk3, chunk2, chunk1,
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
                 std::string ret(cstr);
                 return std::move(ret);
             }
@@ -129,29 +216,29 @@ namespace breakzip {
             // Prefix increment.
             stage1_guess_t& operator++() {
                 // The lowest order bits are the 4 stage1 carry bits.
-                if (!carry_bits[0][0]) {
-                    carry_bits[0][0] = true;
+                if (!carry_bits.get(0, 0)) {
+                    carry_bits.set(0, 0, true);
                     return *this;
                 }
-                carry_bits[0][0] = false;
+                carry_bits.set(0, 0, false);
 
-                if (!carry_bits[0][1]) {
-                    carry_bits[0][1] = true;
+                if (!carry_bits.get(0, 1)) {
+                    carry_bits.set(0, 1, true);
                     return *this;
                 }
-                carry_bits[0][1] = false;
+                carry_bits.set(0, 1, false);
 
-                if (!carry_bits[1][0]) {
-                    carry_bits[1][0] = true;
+                if (!carry_bits.get(1, 0)) {
+                    carry_bits.set(1, 0, true);
                     return *this;
                 }
-                carry_bits[1][0] = false;
+                carry_bits.set(1, 0, false);
 
-                if (!carry_bits[1][1]) {
-                    carry_bits[1][1] = true;
+                if (!carry_bits.get(1, 1)) {
+                    carry_bits.set(1, 1, true);
                     return *this;
                 }
-                carry_bits[1][1] = false;
+                carry_bits.set(1, 1, false);
 
                 if (UINT16_MAX != chunk1) { ++(chunk1); return *this; }
                 // chunk1 was MAX, so it's carrying. Set to 0 and continue.
@@ -223,11 +310,10 @@ namespace breakzip {
 
             std::string str() const {
                 char cstr[256];
-                snprintf(cstr, 256, "s1[%s]:%d-%d-%d:[%d%d%d%d]",
+                snprintf(cstr, 256, "s1[%s]:%d-%d-%d:%s",
                         stage1_guess.str().c_str(),
                         chunk7, chunk6, chunk5, 
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
                 std::string ret(cstr);
                 return std::move(ret);
             }
@@ -235,11 +321,10 @@ namespace breakzip {
             std::string hex() const {
                 char cstr[256];
                 snprintf(cstr, 256,
-                        "s1[%s]:0x%04x%04x%04x:[%d%d%d%d]",
+                        "s1[%s]:0x%04x%04x%04x:%s",
                         stage1_guess.hex().c_str(),
                         chunk7, chunk6, chunk5,
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
 
                 std::string ret(cstr);
                 return std::move(ret);
@@ -259,10 +344,10 @@ namespace breakzip {
                     this->chunk5 = 0;
                     this->chunk6 = 0;
                     this->chunk7 = 0;
-                    this->carry_bits[0][0] = false;
-                    this->carry_bits[0][1] = false;
-                    this->carry_bits[1][0] = false;
-                    this->carry_bits[1][1] = false;
+                    this->carry_bits.set(0, 0, false);
+                    this->carry_bits.set(0, 1, false);
+                    this->carry_bits.set(1, 0, false);
+                    this->carry_bits.set(1, 1, false);
                 }
                 return *this;
             }
@@ -304,29 +389,29 @@ namespace breakzip {
             // Prefix increment.
             stage2_guess_t& operator++() {
                 // The lowest order bits are the 4 stage2 carry bits.
-                if (!carry_bits[0][0]) {
-                    carry_bits[0][0] = true;
+                if (!carry_bits.get(0, 0)) {
+                    carry_bits.set(0, 0, true);
                     return *this;
                 }
-                carry_bits[0][0] = false;
+                carry_bits.set(0, 0, false);
 
-                if (!carry_bits[0][1]) {
-                    carry_bits[0][1] = true;
+                if (!carry_bits.get(0, 1)) {
+                    carry_bits.set(0, 1, true);
                     return *this;
                 }
-                carry_bits[0][1] = false;
+                carry_bits.set(0, 1, false);
 
-                if (!carry_bits[1][0]) {
-                    carry_bits[1][0] = true;
+                if (!carry_bits.get(1, 0)) {
+                    carry_bits.set(1, 0, true);
                     return *this;
                 }
-                carry_bits[1][0] = false;
+                carry_bits.set(1, 0, false);
 
-                if (!carry_bits[1][1]) {
-                    carry_bits[1][1] = true;
+                if (!carry_bits.get(1, 1)) {
+                    carry_bits.set(1, 1, true);
                     return *this;
                 }
-                carry_bits[1][1] = false;
+                carry_bits.set(1, 1, false);
 
                 if (UINT8_MAX != chunk5) {
                     ++(chunk5);
@@ -388,11 +473,10 @@ namespace breakzip {
 
             std::string str() const {
                 char cstr[256];
-                snprintf(cstr, 256, "s2[%s]:%d-%d:[%d%d%d%d]",
+                snprintf(cstr, 256, "s2[%s]:%d-%d:%s",
                         stage2_guess.str().c_str(),
                         chunk9, chunk8,
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
                 std::string ret(cstr);
                 return std::move(ret);
             }
@@ -400,11 +484,10 @@ namespace breakzip {
             std::string hex() const {
                 char cstr[256];
                 snprintf(cstr, 256,
-                        "s2[%s]:0x%04x%04x:[%d%d%d%d]",
+                        "s2[%s]:0x%04x%04x:%s",
                         stage2_guess.hex().c_str(),
                         chunk9, chunk8, 
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
 
                 std::string ret(cstr);
                 return std::move(ret);
@@ -453,29 +536,29 @@ namespace breakzip {
             // Prefix increment.
             stage3_guess_t& operator++() {
                 // The lowest order bits are the 4 stage2 carry bits.
-                if (!carry_bits[0][0]) {
-                    carry_bits[0][0] = true;
+                if (!carry_bits.get(0, 0)) {
+                    carry_bits.set(0, 0, true);
                     return *this;
                 }
-                carry_bits[0][0] = false;
+                carry_bits.set(0, 0, false);
 
-                if (!carry_bits[0][1]) {
-                    carry_bits[0][1] = true;
+                if (!carry_bits.get(0, 1)) {
+                    carry_bits.set(0, 1, true);
                     return *this;
                 }
-                carry_bits[0][1] = false;
+                carry_bits.set(0, 1, false);
 
-                if (!carry_bits[1][0]) {
-                    carry_bits[1][0] = true;
+                if (!carry_bits.get(1, 0)) {
+                    carry_bits.set(1, 0, true);
                     return *this;
                 }
-                carry_bits[1][0] = false;
+                carry_bits.set(1, 0, false);
 
-                if (!carry_bits[1][1]) {
-                    carry_bits[1][1] = true;
+                if (!carry_bits.get(1, 1)) {
+                    carry_bits.set(1, 1, true);
                     return *this;
                 }
-                carry_bits[1][1] = false;
+                carry_bits.set(1, 1, false);
 
                 if (UINT8_MAX != chunk8) {
                     ++(chunk8);
@@ -531,11 +614,10 @@ namespace breakzip {
 
             std::string str() const {
                 char cstr[256];
-                snprintf(cstr, 256, "s3[%s]:%d-%d:[%d%d%d%d]",
+                snprintf(cstr, 256, "s3[%s]:%d-%d:%s",
                         stage3_guess.str().c_str(),
                         chunk11, chunk10,
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
                 std::string ret(cstr);
                 return std::move(ret);
             }
@@ -543,11 +625,10 @@ namespace breakzip {
             std::string hex() const {
                 char cstr[256];
                 snprintf(cstr, 256,
-                        "s3[%s]:0x%04x%04x:[%d%d%d%d]",
+                        "s3[%s]:0x%04x%04x:%s",
                         stage3_guess.hex().c_str(),
                         chunk11, chunk10, 
-                        carry_bits[0][0], carry_bits[0][1],
-                        carry_bits[1][0], carry_bits[1][1]);
+                        carry_bits.str().c_str());
 
                 std::string ret(cstr);
                 return std::move(ret);
@@ -596,29 +677,29 @@ namespace breakzip {
             // Prefix increment.
             stage4_guess_t& operator++() {
                 // The lowest order bits are the 4 stage3 carry bits.
-                if (!carry_bits[0][0]) {
-                    carry_bits[0][0] = true;
+                if (!carry_bits.get(0, 0)) {
+                    carry_bits.set(0, 0, true);
                     return *this;
                 }
-                carry_bits[0][0] = false;
+                carry_bits.set(0, 0, false);
 
-                if (!carry_bits[0][1]) {
-                    carry_bits[0][1] = true;
+                if (!carry_bits.get(0, 1)) {
+                    carry_bits.set(0, 1, true);
                     return *this;
                 }
-                carry_bits[0][1] = false;
+                carry_bits.set(0, 1, false);
 
-                if (!carry_bits[1][0]) {
-                    carry_bits[1][0] = true;
+                if (!carry_bits.get(1, 0)) {
+                    carry_bits.set(1, 0, true);
                     return *this;
                 }
-                carry_bits[1][0] = false;
+                carry_bits.set(1, 0, false);
 
-                if (!carry_bits[1][1]) {
-                    carry_bits[1][1] = true;
+                if (!carry_bits.get(1, 1)) {
+                    carry_bits.set(1, 1, true);
                     return *this;
                 }
-                carry_bits[1][1] = false;
+                carry_bits.set(1, 1, false);
 
                 if (UINT8_MAX != chunk10) {
                     ++(chunk10);
