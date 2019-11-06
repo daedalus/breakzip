@@ -446,7 +446,6 @@ namespace breakzip {
 
                     const uint16_t s0 = get_s0(chunk1);
                     const uint8_t y0 = x0 ^ s0;
-                    const uint32_t key20 = chunk1 | (chunk4 << 16) | (guess.chunk5 << 24);
                     const uint32_t key01x = (chunk2 | (guess.chunk6 << 8)) ^ crc32tab[x0];
                     const uint8_t lsbkey01x = key01x & 0xff;
 
@@ -520,6 +519,265 @@ namespace breakzip {
 
     int stage3(const crack_t* state, const vector<stage2_guess_t> in,
             vector<stage3_guess_t> out) {
+        return 1;
+    }
+    
+    uint8_t step(
+            bool do_crc,
+            uint8_t k1chunk,
+            uint8_t byte,
+            uint8_t carry_bit,
+            uint8_t fileidx,
+            // if !do_crc, this is really crc(k0, 0)
+            /* out */ uint32_t &k0,
+            // bound from the last stage or 0 if on stage 1
+            /* out */ uint32_t &bound
+            /* out */ uint32_t &k2
+    ) {
+        k0 = do_crc ? crc32(k0, byte) : k0 ^ crc32tab[byte];
+        const uint8_t lsbkey0n = k0 & 0xff;
+        bound = bound * CRYPTCONST + lsbkey0n * CRYPTCONST + 1;
+        const uint8_t msb_key1n =
+            k1chunk + (bound >> 24) + carry_bit;
+        const uint32_t k2 = crc32(k2, msb_key1n);
+        const uint32_t s1n_temp = (k2 | 3) & 0xffff;
+        const uint8_t s1n =
+            ((s1n_temp * (s1n_temp ^ 1)) >> 8) & 0xff;
+        return s1n;
+    }
+
+    int next(int stage, const crack_t* state, const vector<guess_t> in,
+            vector<guess_t> out) {
+
+        for (auto candidate: in) {
+            uint16_t chunk1 = 0;
+            uint8_t  chunk2 = 0;
+            uint8_t  chunk3 = 0;
+            uint8_t  chunk4 = 0;
+            uint8_t  chunk5 = 0;
+            uint8_t  chunk6 = 0;
+            uint8_t  chunk7 = 0;
+            uint8_t  chunk8 = 0;
+            uint8_t  chunk9 = 0;
+            uint8_t  chunk10 = 0;
+            uint8_t  chunk11 = 0;
+
+            switch (stage) {
+                // Fall-throughs are on purpose
+                case 7:
+                case 6:
+                case 5:
+                    chunk11 = candidate.stage4.chunk11;
+                    chunk10 = candidate.stage4.chunk10;
+                case 4:
+                    chunk9 = candidate.stage3.chunk9;
+                    chunk8 = candidate.stage3.chunk8;
+                case 3:
+                    chunk7 = candidate.stage2.chunk7;
+                    chunk6 = candidate.stage2.chunk6;
+                    chunk5 = candidate.stage2.chunk5;
+                case 2:
+                    chunk4 = candidate.stage1.chunk4;
+                    chunk3 = candidate.stage1.chunk3;
+                    chunk2 = candidate.stage1.chunk2;
+                    chunk1 = candidate.stage1.chunk1;
+                case 1:
+                    break;
+            }
+
+            for (auto guess: stage_range(stage, state)) {
+                switch (stage) {
+                    // Fall-throughs are on purpose
+                    case 7:
+                    case 6:
+                    case 5:
+                    case 4:
+                        chunk11 = guess.stage4.chunk11;
+                        chunk10 = guess.stage4.chunk10;
+                    case 3:
+                        chunk9 = guess.stage3.chunk9;
+                        chunk8 = guess.stage3.chunk8;
+                    case 2:
+                        chunk7 = guess.stage2.chunk7;
+                        chunk6 = guess.stage2.chunk6;
+                        chunk5 = guess.stage2.chunk5;
+                    case 1:
+                        chunk4 = guess.stage1.chunk4;
+                        chunk3 = guess.stage1.chunk3;
+                        chunk2 = guess.stage1.chunk2;
+                        chunk1 = guess.stage1.chunk1;
+                        break;
+                }
+
+                bool wrong = false;
+                auto zip = state->zip;
+                int fileidx = 0;
+
+                for (auto file: zip.files) {
+                    auto x_array = file.random_bytes;
+                    auto h_array = file.header_second;
+                    const uint8_t x0 = x_array[0];
+                    const uint8_t x1 = x_array[1];
+                    const uint8_t x2 = x_array[2];
+                    const uint8_t x3 = x_array[3];
+                    const uint8_t x4 = x_array[4];
+                    const uint8_t x5 = x_array[5];
+                    const uint8_t x6 = x_array[6];
+                    const uint8_t x7 = x_array[7];
+
+                    const uint16_t s0 = get_s0(chunk1);
+                    const uint8_t y0 = x0 ^ s0;
+                    
+                    // At this point, it's really crc(k00, 0) 
+                    // but gets updated to the real k0 value
+                    // in step().
+                    uint32_t k0 = 
+                        chunk2 | (chunk6 << 8) | (chunk8 << 16) |
+                        (chunk10 << 24);
+
+                    uint32_t bound = 0;
+
+                    uint32_t k2 = 
+                        chunk1 | (chunk4 << 16) | (chunk5 << 24);
+                
+                    uint8_t s1x = step(
+                        false,
+                        chunk3,
+                        x0,
+                        guess.stage1.carry_bits[fileidx][0],
+                        k0,
+                        bound,
+                        k2);
+
+                    if (is_correct_guess) {
+                        if (x1 ^ s1x != file.header_first[1]) {
+                            // throw a fit
+                        }
+                    }
+                    if (stage == 1) goto y;
+
+                    uint8_t s2x = step(
+                        true,
+                        chunk7,
+                        x1,
+                        guess.stage2.carry_bits[fileidx][0],
+                        k0,
+                        bound,
+                        k2);
+                    if (is_correct_guess) {
+                        if (x2 ^ s2x != file.header_first[2]) {
+                            // throw a fit
+                        }
+                    }
+                    if (stage == 2) goto y;
+
+                    uint8_t s3x = step(
+                        true,
+                        chunk9,
+                        x2,
+                        guess.stage3.carry_bits[fileidx][0],
+                        k0,
+                        bound,
+                        k2);
+                    if (is_correct_guess) {
+                        if (x3 ^ s3x != file.header_first[3]) {
+                            // throw a fit
+                        }
+                    }
+                    if (stage == 3) goto y;
+
+                    uint8_t s4x = step(
+                        true,
+                        chunk11,
+                        x3,
+                        guess.stage4.carry_bits[fileidx][0],
+                        k0,
+                        bound,
+                        k2);
+                    if (is_correct_guess) {
+                        if (x4 ^ s4x != file.header_first[4]) {
+                            // throw a fit
+                        }
+                    }
+                    if (stage == 4) goto y;
+                    
+                    // more stages here
+                y:
+                    k0 = chunk2 | (chunk6 << 8) | (chunk8 << 16) |
+                        (chunk10 << 24);
+
+                    bound = 0;
+                    k2 = chunk1 | (chunk4 << 16) | (chunk5 << 24);
+           
+                    uint8_t s1y = step(
+                        false,
+                        chunk3,
+                        y0,
+                        guess.stage1.carry_bits[fileidx][1],
+                        k0,
+                        bound,
+                        k2);
+                    uint8_t y1 = x1 ^ s1x;
+                    if (y1 ^ s1y != file.header_second[1]) {
+                        wrong = true;
+                        break;
+                    }
+                    if (stage == 1) goto done;
+
+                    uint8_t s2y = step(
+                        true,
+                        chunk7,
+                        y1,
+                        guess.stage2.carry_bits[fileidx][1],
+                        k0,
+                        bound,
+                        k2);
+                    uint8_t y2 = x2 ^ s2x;
+                    if (y2 ^ s2y != file.header_second[2]) {
+                        wrong = true;
+                        break;
+                    }
+                    if (stage == 2) goto done;
+
+                    uint8_t s3x = step(
+                        true,
+                        chunk9,
+                        y2,
+                        guess.stage3.carry_bits[fileidx][1],
+                        k0,
+                        bound,
+                        k2);
+                    uint8_t y3 = x3 ^ s3x;
+                    if (y3 ^ s3y != file.header_second[3]) {
+                        wrong = true;
+                        break;
+                    }
+                    if (stage == 3) goto done;
+
+                    uint8_t s4x = step(
+                        true,
+                        chunk11,
+                        y3,
+                        guess.stage4.carry_bits[fileidx][1],
+                        k0,
+                        bound,
+                        k2);
+                    uint8_t y4 = x4 ^ s4x;
+                    if (y4 ^ s4y != file.header_second[4]) {
+                        wrong = true;
+                        break;
+                    }
+                    if (stage == 4) goto done;
+
+                done:
+                    ++fileidx;
+                }
+
+                if (!wrong) {
+                    out.push_back(guess);
+                }
+            } // foreach new stage guess
+        } // foreach old stage guess.
         return 1;
     }
 

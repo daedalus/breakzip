@@ -20,10 +20,10 @@ namespace breakzip {
 
     class stage1_guess_t : guess_t {
         public:
-            uint16_t chunk1;
-            uint8_t chunk2;
-            uint8_t chunk3;
-            uint8_t chunk4;
+            uint16_t chunk1; // low 16 bits of k20
+            uint8_t chunk2;  // low 8 bits of crc32(k00, 0)
+            uint8_t chunk3;  // high 8 bits of k10 * CRYPTCONST
+            uint8_t chunk4;  // bits 16..23 of k20
             carrybits_t carry_bits;
 
             explicit stage1_guess_t() :
@@ -189,9 +189,9 @@ namespace breakzip {
     class stage2_guess_t {
         public:
             stage1_guess_t stage1_guess;
-            uint8_t chunk5;
-            uint8_t chunk6;
-            uint8_t chunk7;
+            uint8_t chunk5; // high 8 bits of k20
+            uint8_t chunk6; // bits 8..15 of crc32(k00, 0)
+            uint8_t chunk7; // high 8 bits of k10 * CRYPTCONST_POW2
             carrybits_t carry_bits;
 
             explicit stage2_guess_t() :
@@ -358,8 +358,8 @@ namespace breakzip {
     class stage3_guess_t {
         public:
             stage2_guess_t stage2_guess;
-            uint8_t chunk8;
-            uint8_t chunk9;
+            uint8_t chunk8; // bits 16..23 of crc32(k00, 0)
+            uint8_t chunk9; // high 8 bits of k10 * CRYPTCONST_POW3
             carrybits_t carry_bits;
 
             explicit stage3_guess_t() :
@@ -501,8 +501,8 @@ namespace breakzip {
     class stage4_guess_t {
         public:
             stage3_guess_t stage3_guess;
-            uint8_t chunk10;
-            uint8_t chunk11;
+            uint8_t chunk10; // high 8 bits of crc32(k00, 0)
+            uint8_t chunk11; // high 8 bits of k10 * CRYPTOCONST_POW4
             carrybits_t carry_bits;
 
             explicit stage4_guess_t() :
@@ -805,7 +805,7 @@ namespace breakzip {
     // stage 2:
 
     // We guess [chunk5 = bits 24..32 of key20 (8 bits)]
-    // We guess [chunk6 = bits 16..23 of key00 (8 bits)]
+    // We guess [chunk6 = bits 8..15 of crc32(key00,0) (8 bits)]
     // We guess [chunk7 = MSB(key10 * 0xD4652819), carry for x,
     // carry for y (10 bits)]
     // (26 bits total)
@@ -828,7 +828,7 @@ namespace breakzip {
             const stage2_guess_t& correct_guess=0, uint16_t expected_s0=0);
 
     // stage 3:
-    // We guess [chunk8 = bits 24..32 of key00 (8 bits)]
+    // We guess [chunk8 = bits 16..23 of crc32(key00,0) (8 bits)]
     // We guess [chunk9 = MSB(key10 * 0x576eac7d), carry for x, carry for y (10
     // bits)]
     // (18 bits total)
@@ -846,7 +846,7 @@ namespace breakzip {
 
 
     // stage 4:
-    // We guess [chunk10 = bits 0..7 of key00 (8 bits)]
+    // We guess [chunk10 = bits 24..31 of crc32(key00,0) (8 bits)]
     // We guess [chunk11 = MSB(key10 * 0x1201d271), carry for x, carry for y (10 bits)]
     // (18 bits total)
 
