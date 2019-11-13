@@ -219,6 +219,12 @@ namespace breakzip {
                     return false;
                 }
 
+                if (left.carry_bits.get(4) < right.carry_bits.get(4)) {
+                    return true;
+                } else if (left.carry_bits.get(4) > right.carry_bits.get(4)) {
+                    return false;
+                }
+
                 if (left.chunk9 < right.chunk9) {
                     return true;
                 } else if (left.chunk9 > right.chunk9) {
@@ -228,6 +234,12 @@ namespace breakzip {
                 if (left.chunk8 < right.chunk8) {
                     return true;
                 } else if (left.chunk8 > right.chunk8) {
+                    return false;
+                }
+
+                if (left.carry_bits.get(3) < right.carry_bits.get(3)) {
+                    return true;
+                } else if (left.carry_bits.get(3) > right.carry_bits.get(3)) {
                     return false;
                 }
 
@@ -246,6 +258,12 @@ namespace breakzip {
                 if (left.chunk5 < right.chunk5) {
                     return true;
                 } else if (left.chunk5 > right.chunk5) {
+                    return false;
+                }
+
+                if (left.carry_bits.get(2) < right.carry_bits.get(2)) {
+                    return true;
+                } else if (left.carry_bits.get(2) > right.carry_bits.get(2)) {
                     return false;
                 }
 
@@ -273,7 +291,7 @@ namespace breakzip {
                     return false;
                 }
 
-                return left.carry_bits < right.carry_bits;
+                return left.carry_bits.get(1) < right.carry_bits.get(1);
             }
 
             friend bool operator>(const guess_t& left, const guess_t& right) {
