@@ -402,7 +402,6 @@ namespace breakzip {
             // moment.
             for (auto guess: stage_range(stage, *state)) {
                 switch (stage) {
-                    // Fall-throughs are on purpose
                     case 7:
                         break;
                     case 6:

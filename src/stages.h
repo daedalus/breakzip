@@ -207,21 +207,73 @@ namespace breakzip {
             // significant.
             friend bool operator<(const guess_t& left,
                     const guess_t& right) {
-                return (
+                if (left.chunk11 < right.chunk11) {
+                    return true;
+                } else if (left.chunk11 > right.chunk11) {
+                    return false;
+                }
 
-                        left.chunk1 < right.chunk1 &&
-                        left.chunk2 < right.chunk2 &&
-                        left.chunk3 < right.chunk3 &&
-                        left.chunk4 < right.chunk4 &&
-                        left.chunk5 < right.chunk5 &&
-                        left.chunk6 < right.chunk6 &&
-                        left.chunk7 < right.chunk7 &&
-                        left.chunk8 < right.chunk8 &&
-                        left.chunk9 < right.chunk9 &&
-                        left.chunk10 < right.chunk10 &&
-                        left.chunk11 < right.chunk11 &&
+                if (left.chunk10 < right.chunk10) {
+                    return true;
+                } else if (left.chunk10 > right.chunk10) {
+                    return false;
+                }
 
-                        left.carry_bits < right.carry_bits);
+                if (left.chunk9 < right.chunk9) {
+                    return true;
+                } else if (left.chunk9 > right.chunk9) {
+                    return false;
+                }
+
+                if (left.chunk8 < right.chunk8) {
+                    return true;
+                } else if (left.chunk8 > right.chunk8) {
+                    return false;
+                }
+
+                if (left.chunk7 < right.chunk7) {
+                    return true;
+                } else if (left.chunk7 > right.chunk7) {
+                    return false;
+                }
+
+                if (left.chunk6 < right.chunk6) {
+                    return true;
+                } else if (left.chunk6 > right.chunk6) {
+                    return false;
+                }
+
+                if (left.chunk5 < right.chunk5) {
+                    return true;
+                } else if (left.chunk5 > right.chunk5) {
+                    return false;
+                }
+
+                if (left.chunk4 < right.chunk4) {
+                    return true;
+                } else if (left.chunk4 > right.chunk4) {
+                    return false;
+                }
+
+                if (left.chunk3 < right.chunk3) {
+                    return true;
+                } else if (left.chunk3 > right.chunk3) {
+                    return false;
+                }
+
+                if (left.chunk2 < right.chunk2) {
+                    return true;
+                } else if (left.chunk2 > right.chunk2) {
+                    return false;
+                }
+
+                if (left.chunk1 < right.chunk1) {
+                    return true;
+                } else if (left.chunk1 > right.chunk1) {
+                    return false;
+                }
+
+                return left.carry_bits < right.carry_bits;
             }
 
             friend bool operator>(const guess_t& left, const guess_t& right) {
@@ -247,7 +299,6 @@ namespace breakzip {
                 switch (stage) {
                     case 1:
                         {
-
                             uint8_t s1bits = carry_bits.get(1);
                             s1bits++;
                             if (0x10 > s1bits) {
