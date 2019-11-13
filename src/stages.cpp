@@ -412,24 +412,33 @@ namespace breakzip {
                     case 4:
                         chunk11 = guess.chunk11;
                         chunk10 = guess.chunk10;
+                        bits.set(4, 0, 0, guess.carry_bits.get(4, 0, 0));
+                        bits.set(4, 0, 0, guess.carry_bits.get(4, 0, 0));
                         break;
                     case 3:
                         chunk9 = guess.chunk9;
                         chunk8 = guess.chunk8;
+                        bits.set(3, 0, 0, guess.carry_bits.get(3, 0, 0));
+                        bits.set(3, 0, 0, guess.carry_bits.get(3, 0, 0));
                         break;
                     case 2:
                         chunk7 = guess.chunk7;
                         chunk6 = guess.chunk6;
                         chunk5 = guess.chunk5;
+                        bits.set(2, 0, 0, guess.carry_bits.get(2, 0, 0));
+                        bits.set(2, 0, 0, guess.carry_bits.get(2, 0, 0));
                         break;
                     case 1:
                         chunk4 = guess.chunk4;
                         chunk3 = guess.chunk3;
                         chunk2 = guess.chunk2;
                         chunk1 = guess.chunk1;
+                        bits.set(1, 0, 0, guess.carry_bits.get(1, 0, 0));
+                        bits.set(1, 0, 0, guess.carry_bits.get(1, 0, 0));
                         break;
                     default:
-                        bits = guess.carry_bits;
+                        fprintf(stderr, "Invalid guess stage!\n");
+                        abort();
                         break;
                 }
 
