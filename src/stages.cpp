@@ -350,11 +350,6 @@ namespace breakzip {
         bound = bound * CRYPTCONST + lsbkey0n * CRYPTCONST + 1;
         const uint8_t msb_key1n =
             k1chunk + (bound >> 24) + carry_bit;
-        // TODO(stay): Is this supposed to be an output or a local variable?
-        // Original code was:
-        //   const uint32_t k2 = crc32(k2, msb_key1n);
-        // Changed to what follows, since it makes the most sense to me, please
-        // confirm your intent:
         k2 = crc32(k2, msb_key1n);
         const uint32_t s1n_temp = (k2 | 3) & 0xffff;
         const uint8_t s1n = ((s1n_temp * (s1n_temp ^ 1)) >> 8) & 0xff;
@@ -376,7 +371,7 @@ namespace breakzip {
             uint8_t  chunk9 = 0;
             uint8_t  chunk10 = 0;
             uint8_t  chunk11 = 0;
-            carrybits_t bits(0);
+            carrybits_t bits(candidate.carry_bits);
 
             switch (stage) {
                 // Fall-throughs are on purpose
@@ -399,7 +394,7 @@ namespace breakzip {
                     chunk1 = candidate.chunk1;
                 case 1:
                 default:
-                    bits = candidate.carry_bits;
+                    break;
             }
 
             // TODO(leaf): We have to combine the candidate and the start/end
@@ -409,23 +404,30 @@ namespace breakzip {
                 switch (stage) {
                     // Fall-throughs are on purpose
                     case 7:
+                        break;
                     case 6:
+                        break;
                     case 5:
+                        break;
                     case 4:
                         chunk11 = guess.chunk11;
                         chunk10 = guess.chunk10;
+                        break;
                     case 3:
                         chunk9 = guess.chunk9;
                         chunk8 = guess.chunk8;
+                        break;
                     case 2:
                         chunk7 = guess.chunk7;
                         chunk6 = guess.chunk6;
                         chunk5 = guess.chunk5;
+                        break;
                     case 1:
                         chunk4 = guess.chunk4;
                         chunk3 = guess.chunk3;
                         chunk2 = guess.chunk2;
                         chunk1 = guess.chunk1;
+                        break;
                     default:
                         bits = guess.carry_bits;
                         break;
@@ -536,8 +538,7 @@ y:
                     }
                     if (stage == 2) goto done;
 
-                    // NB(stay): is this supposed to be s3y?
-                    s3x = step(true, chunk9, y2,
+                    s3y = step(true, chunk9, y2,
                             bits.get(3, fileidx, 1), fileidx,
                             k0, bound, k2);
 
@@ -548,8 +549,7 @@ y:
                     }
                     if (stage == 3) goto done;
 
-                    // NB(stay): s4y?
-                    s4x = step(true, chunk11, y3,
+                    s4y = step(true, chunk11, y3,
                             bits.get(4, fileidx, 1), fileidx,
                             k0, bound, k2);
 

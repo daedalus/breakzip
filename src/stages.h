@@ -13,9 +13,9 @@ namespace breakzip {
 
     using namespace std;
 
-    /* There are 4 carry bits per stage, 2 for each of 2 files.
-     * There are 4 stages, for a total of 16 carry bits. We pack
-     * those into a single word as the low order 16 bits.
+    /* There are 4 carry bits per stage, 2 for each of 2 files.  There are 4
+     * stages in which we guess carrybits, for a total of 16 carry bits. We
+     * pack those into a single word as the low order 16 bits.
      * 
      * Carry bits for stage 1 are the high order 4 bits of the
      * low order 16 bits.
@@ -85,7 +85,7 @@ namespace breakzip {
             uint8_t shift_width = shift_for_stage(stage);
             uint16_t mask = 0x0f << shift_width;
             bits &= ~mask;
-            bits &= (val & 0x0f) << shift_width;
+            bits |= (val & 0x0f) << shift_width;
             return bits;
         }
 
@@ -93,7 +93,7 @@ namespace breakzip {
             uint8_t shift_width = shift_for_stage(stage);
             shift_width += (0 == file) ? 0 : 2;
             shift_width += (0 == var) ? 0 : 1;
-            bits &= (val << shift_width);
+            bits |= (val << shift_width);
             return bits;
         }
 
@@ -207,7 +207,9 @@ namespace breakzip {
             // significant.
             friend bool operator<(const guess_t& left,
                     const guess_t& right) {
-                return (left.chunk1 < right.chunk1 &&
+                return (
+
+                        left.chunk1 < right.chunk1 &&
                         left.chunk2 < right.chunk2 &&
                         left.chunk3 < right.chunk3 &&
                         left.chunk4 < right.chunk4 &&
@@ -218,6 +220,7 @@ namespace breakzip {
                         left.chunk9 < right.chunk9 &&
                         left.chunk10 < right.chunk10 &&
                         left.chunk11 < right.chunk11 &&
+
                         left.carry_bits < right.carry_bits);
             }
 
@@ -252,22 +255,22 @@ namespace breakzip {
                                 return *this;
                             }
 
-                            // carry bits carried. lol
                             carry_bits.set(1, 0);
 
-                            if (UINT16_MAX != chunk1) { ++(chunk1); return *this; }
-                            // chunk1 was MAX, so it's carrying. Set to 0 and continue.
+                            if (UINT16_MAX != chunk1) {
+                                ++(chunk1);
+                                return *this;
+                            }
+
                             chunk1 = 0;
 
                             if (UINT8_MAX != chunk2) {
-                                // chunk2 doesn't carry. 
                                 ++(chunk2);
                                 return *this;
                             }
 
                             chunk2 = 0;
                             if (UINT8_MAX != chunk3) {
-                                // chunks1 and 2 carry, but not 3.
                                 ++(chunk3);
                                 return *this;
                             }
@@ -278,7 +281,6 @@ namespace breakzip {
                                 return *this;
                             }
 
-                            // everything carries, roll over to 0 but mark the carry bit.
                             chunk4 = 0;
                             return *this;
                         }
@@ -291,18 +293,15 @@ namespace breakzip {
                                 return *this;
                             }
 
-                            // carry bits carried. lol
                             carry_bits.set(2, 0);
 
                             if (UINT8_MAX != chunk5) {
-                                // chunk5 doesn't carry. 
                                 ++(chunk5);
                                 return *this;
                             }
 
                             chunk5 = 0;
                             if (UINT8_MAX != chunk6) {
-                                // chunks1 and 2 carry, but not 3.
                                 ++(chunk6);
                                 return *this;
                             }
@@ -313,7 +312,6 @@ namespace breakzip {
                                 return *this;
                             }
 
-                            // everything carries, roll over to 0 but mark the carry bit.
                             chunk7 = 0;
                             return *this;
                         }
@@ -326,23 +324,19 @@ namespace breakzip {
                                 return *this;
                             }
 
-                            // carry bits carried. lol
                             carry_bits.set(3, 0);
 
                             if (UINT8_MAX != chunk8) {
-                                // chunk8 doesn't carry. 
                                 ++(chunk8);
                                 return *this;
                             }
 
                             chunk8 = 0;
                             if (UINT8_MAX != chunk9) {
-                                // chunks1 and 2 carry, but not 3.
                                 ++(chunk9);
                                 return *this;
                             }
 
-                            // everything carries, roll over to 0 but mark the carry bit.
                             chunk9 = 0;
                             return *this;
                         }
@@ -355,23 +349,19 @@ namespace breakzip {
                                 return *this;
                             }
 
-                            // carry bits carried. lol
                             carry_bits.set(4, 0);
 
                             if (UINT8_MAX != chunk10) {
-                                // chunk10 doesn't carry. 
                                 ++(chunk10);
                                 return *this;
                             }
 
                             chunk10 = 0;
                             if (UINT8_MAX != chunk11) {
-                                // chunks1 and 2 carry, but not 3.
                                 ++(chunk11);
                                 return *this;
                             }
 
-                            // everything carries, roll over to 0 but mark the carry bit.
                             chunk11 = 0;
                             return *this;
                         }
