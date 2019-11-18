@@ -369,7 +369,7 @@ namespace breakzip {
         uint16_t bits = 0;
         for (int f = 0; f < 2; ++f) {
             for (int xy = 0; xy < 2; ++xy) {
-                uint8_t *bytes = xy ?
+                const uint8_t *bytes = xy ?
                     crypt_test.zip.files[f].random_bytes :
                     crypt_test.zip.files[f].header_first;
                 uint32_t bound = 0;
