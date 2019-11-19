@@ -124,7 +124,6 @@ namespace breakzip {
         return get_s0(guess.chunk1);
     }
 
-
     guess_t stage1_correct_guess(const crack_t crypt_test) {
         const uint32_t k00 = crypt_test.zip.keys[0];
         const uint32_t k10 = crypt_test.zip.keys[1];
@@ -338,6 +337,56 @@ namespace breakzip {
                     mine.chunk7);
         }
         return std::move(mine);
+    }
+
+    guess_t correct_guess(const crack_t crypt_test) {
+        const uint32_t k00 = crypt_test.zip.keys[0];
+        const uint32_t k10 = crypt_test.zip.keys[1];
+        const uint32_t k20 = crypt_test.zip.keys[2];
+        const uint32_t crc32k00 = crc32(k00, 0);
+
+        guess_t result;
+        result.chunk2  = (crc32k00 >>  0) & 0xff;
+        result.chunk6  = (crc32k00 >>  8) & 0xff;
+        result.chunk8  = (crc32k00 >> 16) & 0xff;
+        result.chunk10 = (crc32k00 >> 24) & 0xff;
+
+        result.chunk1 = (k20 >>  0) & 0xffff;
+        result.chunk4 = (k20 >> 16) & 0xff;
+        result.chunk5 = (k20 >> 24) & 0xff;
+
+        result.chunk3  = (k10 * CRYPTCONST     ) >> 24;
+        result.chunk7  = (k10 * CRYPTCONST_POW2) >> 24;
+        result.chunk9  = (k10 * CRYPTCONST_POW3) >> 24;
+        result.chunk11 = (k10 * CRYPTCONST_POW4) >> 24;
+
+        // xs = crypt_test.zip.files[f].random_bytes[stage]
+        // ys = crypt_test.zip.files[f].header_first[stage]
+        // carry bits:
+        // stage: 1111222233334444
+        // file:  1100110011001100
+        // xy:    1010101010101010
+        uint16_t bits = 0;
+        for (int f = 0; f < 2; ++f) {
+            for (int xy = 0; xy < 2; ++xy) {
+                const uint8_t *bytes = xy ?
+                    crypt_test.zip.files[f].random_bytes :
+                    crypt_test.zip.files[f].header_first;
+                uint32_t bound = 0;
+                uint32_t k0n = k00;
+                uint32_t k1cn = k10;
+                for (int stage = 0; stage < 4; ++stage) {
+                    k0n = crc32(k0n, bytes[stage]);
+                    uint8_t lsbk0n = k0n & 0xff;
+                    bound = (bound + lsbk0n) * CRYPTCONST + 1;
+                    k1cn = k1cn * CRYPTCONST;
+                    uint8_t carry_bit = ((k1cn & 0xffffff) + (bound & 0xffffff)) > 0x01000000;
+                    bits |= carry_bit << (((4 - stage) * 4) + f * 2 + xy);
+                }
+            }
+        }
+        result.carry_bits.bits = bits;
+        return result;
     }
 
     uint8_t step(const bool do_crc, const uint8_t k1chunk, const uint8_t byte,
