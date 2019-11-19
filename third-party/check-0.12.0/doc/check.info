@@ -1,6 +1,6 @@
-This is check.info, produced by makeinfo version 6.1 from check.texi.
+This is check.info, produced by makeinfo version 6.5 from check.texi.
 
-This manual is for Check (version 0.12.0, 20 October 2017), a unit
+This manual is for Check (version 0.12.0, 6 November 2019), a unit
 testing framework for C.
 
    Copyright (C) 2001-2014 Arien Malec, Branden Archer, Chris Pickett,
@@ -23,7 +23,7 @@ File: check.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 Check
 *****
 
-This manual is for Check (version 0.12.0, 20 October 2017), a unit
+This manual is for Check (version 0.12.0, 6 November 2019), a unit
 testing framework for C.
 
    Copyright (C) 2001-2014 Arien Malec, Branden Archer, Chris Pickett,
@@ -43,55 +43,55 @@ if that is not possible something is better than nothing.
 
 * Menu:
 
-* Introduction::                
-* Unit Testing in C::           
-* Tutorial::                    
+* Introduction::
+* Unit Testing in C::
+* Tutorial::
 * Advanced Features::
 * Supported Build Systems::
-* Conclusion and References::   
+* Conclusion and References::
 * Environment Variable Reference::
-* Copying This Manual::         
-* Index::                       
+* Copying This Manual::
+* Index::
 
  -- The Detailed Node Listing --
 
 Unit Testing in C
 
-* Other Frameworks for C::      
+* Other Frameworks for C::
 
 Tutorial: Basic Unit Testing
 
-* How to Write a Test::         
+* How to Write a Test::
 * Setting Up the Money Build Using Autotools::
 * Setting Up the Money Build Using CMake::
-* Test a Little::               
-* Creating a Suite::            
-* SRunner Output::              
+* Test a Little::
+* Creating a Suite::
+* SRunner Output::
 
 Advanced Features
 
-* Convenience Test Functions::  
-* Running Multiple Cases::      
-* No Fork Mode::                
-* Test Fixtures::               
-* Multiple Suites in one SRunner::  
+* Convenience Test Functions::
+* Running Multiple Cases::
+* No Fork Mode::
+* Test Fixtures::
+* Multiple Suites in one SRunner::
 * Selective Running of Tests::
-* Testing Signal Handling and Exit Values::  
-* Looping Tests::               
-* Test Timeouts::               
-* Determining Test Coverage::   
+* Testing Signal Handling and Exit Values::
+* Looping Tests::
+* Test Timeouts::
+* Determining Test Coverage::
 * Finding Memory Leaks::
-* Test Logging::                
-* Subunit Support::             
+* Test Logging::
+* Subunit Support::
 
 Test Fixtures
 
-* Test Fixture Examples::       
-* Checked vs Unchecked Fixtures::  
+* Test Fixture Examples::
+* Checked vs Unchecked Fixtures::
 
 Test Logging
 
-* XML Logging::                 
+* XML Logging::
 * TAP Logging::
 
 Environment Variable Reference
@@ -187,7 +187,7 @@ failed; presumably that also works in VI and IDEs.
 
 * Menu:
 
-* Other Frameworks for C::      
+* Other Frameworks for C::
 
 
 File: check.info,  Node: Other Frameworks for C,  Prev: Unit Testing in C,  Up: Unit Testing in C
@@ -292,12 +292,12 @@ to test our code.
 
 * Menu:
 
-* How to Write a Test::         
+* How to Write a Test::
 * Setting Up the Money Build Using Autotools::
 * Setting Up the Money Build Using CMake::
-* Test a Little::               
-* Creating a Suite::            
-* SRunner Output::              
+* Test a Little::
+* Creating a Suite::
+* SRunner Output::
 
 
 File: check.info,  Node: How to Write a Test,  Next: Setting Up the Money Build Using Autotools,  Prev: Tutorial,  Up: Tutorial
@@ -391,7 +391,7 @@ test 'main()' using Check, rename it to something like
 'tests/Makefile.am':
 
      ## Process this file with automake to produce Makefile.in
-
+     
      TESTS = check_money
      check_PROGRAMS = check_money
      check_money_SOURCES = check_money.c $(top_builddir)/src/money.h
@@ -431,10 +431,10 @@ boilerplate:
       * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
       * MA 02110-1301, USA.
       */
-
+     
      #ifndef MONEY_H
      #define MONEY_H
-
+     
      #endif /* MONEY_H */
 
    'src/money.c' should be empty, and 'tests/check_money.c' should only
@@ -459,7 +459,7 @@ contain an empty 'main()' function:
       * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
       * MA 02110-1301, USA.
       */
-
+     
      int main(void)
      {
          return 0;
@@ -581,10 +581,10 @@ boilerplate:
       * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
       * MA 02110-1301, USA.
       */
-
+     
      #ifndef MONEY_H
      #define MONEY_H
-
+     
      #endif /* MONEY_H */
 
    'src/money.c' should be empty, and 'tests/check_money.c' should only
@@ -609,7 +609,7 @@ contain an empty 'main()' function:
       * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
       * MA 02110-1301, USA.
       */
-
+     
      int main(void)
      {
          return 0;
@@ -651,8 +651,8 @@ approach to software development and OO design).
 
    Here are the changes to 'check_money.c' for our first unit test:
 
-     --- tests/check_money.1.c
-     +++ tests/check_money.2.c
+     --- tests/check_money.1.c	2019-11-06 15:22:39.000000000 +0000
+     +++ tests/check_money.2.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,24 +1,38 @@
       /*
        * Check: a unit test framework for C
@@ -673,7 +673,7 @@ approach to software development and OO design).
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
      +#include <check.h>
      +#include "../src/money.h"
      +
@@ -724,7 +724,7 @@ could be rewritten as:
 within 'ck_assert()', there are the alternate functions 'ck_abort()' and
 'ck_abort_msg()' that unconditionally fail.  The second test inside
 'test_money_create' above could be rewritten as follows:
-     if (strcmp (money_currency (m), "USD") != 0)
+     if (strcmp (money_currency (m), "USD") != 0) 
        {
          ck_abort_msg ("Currency not set correctly on creation");
        }
@@ -753,8 +753,8 @@ tests, so that's what we will now do.
 
    We will patch our header 'money.h' as follows:
 
-     --- src/money.1.h
-     +++ src/money.2.h
+     --- src/money.1.h	2019-11-06 15:22:39.000000000 +0000
+     +++ src/money.2.h	2019-11-06 15:22:39.000000000 +0000
      @@ -1,24 +1,31 @@
       /*
        * Check: a unit test framework for C
@@ -775,10 +775,10 @@ tests, so that's what we will now do.
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
       #ifndef MONEY_H
       #define MONEY_H
-
+      
      +typedef struct Money Money;
      +
      +Money *money_create(int amount, char *currency);
@@ -805,8 +805,8 @@ overhead, but it is mostly one-off.  Here's a diff for the new version
 of 'check_money.c'.  Note that we include stdlib.h to get the
 definitions of 'EXIT_SUCCESS' and 'EXIT_FAILURE'.
 
-     --- tests/check_money.2.c
-     +++ tests/check_money.3.c
+     --- tests/check_money.2.c	2019-11-06 15:22:39.000000000 +0000
+     +++ tests/check_money.3.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,38 +1,65 @@
       /*
        * Check: a unit test framework for C
@@ -827,22 +827,22 @@ definitions of 'EXIT_SUCCESS' and 'EXIT_FAILURE'.
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
      +#include <stdlib.h>
       #include <check.h>
       #include "../src/money.h"
-
+      
       START_TEST(test_money_create)
       {
           Money *m;
-
+      
           m = money_create(5, "USD");
           ck_assert_int_eq(money_amount(m), 5);
           ck_assert_str_eq(money_currency(m), "USD");
           money_free(m);
       }
       END_TEST
-
+      
      +Suite * money_suite(void)
      +{
      +    Suite *s;
@@ -910,8 +910,8 @@ the 'money.h' interface hasn't been created yet.  Let's go with the
 fastest solution possible and implement stubs for each of the functions
 in 'money.c'.  Here is the diff:
 
-     --- src/money.1.c
-     +++ src/money.3.c
+     --- src/money.1.c	2019-11-06 15:22:39.000000000 +0000
+     +++ src/money.3.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,20 +1,42 @@
       /*
        * Check: a unit test framework for C
@@ -932,7 +932,7 @@ in 'money.c'.  Here is the diff:
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
      +#include <stdlib.h>
      +#include "money.h"
      +
@@ -969,7 +969,7 @@ File: check.info,  Node: SRunner Output,  Prev: Creating a Suite,  Up: Tutorial
 
 The functions to run tests in an 'SRunner' are defined as follows:
      void srunner_run_all (SRunner * sr, enum print_output print_mode);
-
+     
      void srunner_run (SRunner *sr, const char *sname, const char *tcname,
                        enum print_output print_mode);
 
@@ -1031,7 +1031,7 @@ parameter 'print_mode' can assume are as follows:
 'make check' now.  The output from the unit test is as follows:
      Running suite(s): Money
      0%: Checks: 1, Failures: 1, Errors: 0
-     check_money.c:9:F:Core:test_money_create:0: Assertion 'money_amount (m)==5' failed:
+     check_money.c:9:F:Core:test_money_create:0: Assertion 'money_amount (m)==5' failed: 
      money_amount (m)==0, 5==5
      FAIL: check_money
      =====================================================
@@ -1058,8 +1058,8 @@ the 'check_money' program failed, and the bug-report address given in
 tests.  We first have to create a Money structure to hold the amount,
 and then implement the function to return the correct amount:
 
-     --- src/money.3.c
-     +++ src/money.4.c
+     --- src/money.3.c	2019-11-06 15:22:39.000000000 +0000
+     +++ src/money.4.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,42 +1,47 @@
       /*
        * Check: a unit test framework for C
@@ -1080,10 +1080,10 @@ and then implement the function to return the correct amount:
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
       #include <stdlib.h>
       #include "money.h"
-
+      
      +struct Money
      +{
      +    int amount;
@@ -1093,18 +1093,18 @@ and then implement the function to return the correct amount:
       {
           return NULL;
       }
-
+      
       int money_amount(Money * m)
       {
      -    return 0;
      +    return m->amount;
       }
-
+      
       char *money_currency(Money * m)
       {
           return NULL;
       }
-
+      
       void money_free(Money * m)
       {
           return;
@@ -1114,7 +1114,7 @@ and then implement the function to return the correct amount:
 as follows:
      Running suite(s): Money
      0%: Checks: 1, Failures: 0, Errors: 1
-     check_money.c:5:E:Core:test_money_create:0: (after this point)
+     check_money.c:5:E:Core:test_money_create:0: (after this point) 
      Received signal 11 (Segmentation fault)
 
    What does this mean?  Note that we now have an error, rather than a
@@ -1137,8 +1137,8 @@ example, if we wrote some test code as follows:
 that, the symmetric 'money_free()', and 'money_currency()' too, in order
 to make our unit test pass again, here is a diff:
 
-     --- src/money.4.c
-     +++ src/money.5.c
+     --- src/money.4.c	2019-11-06 15:22:39.000000000 +0000
+     +++ src/money.5.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,47 +1,58 @@
       /*
        * Check: a unit test framework for C
@@ -1159,16 +1159,16 @@ to make our unit test pass again, here is a diff:
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
       #include <stdlib.h>
       #include "money.h"
-
+      
       struct Money
       {
           int amount;
      +    char *currency;
       };
-
+      
       Money *money_create(int amount, char *currency)
       {
      -    return NULL;
@@ -1183,18 +1183,18 @@ to make our unit test pass again, here is a diff:
      +    m->currency = currency;
      +    return m;
       }
-
+      
       int money_amount(Money * m)
       {
           return m->amount;
       }
-
+      
       char *money_currency(Money * m)
       {
      -    return NULL;
      +    return m->currency;
       }
-
+      
       void money_free(Money * m)
       {
      +    free(m);
@@ -1213,21 +1213,21 @@ easier for the developer to write, run, and analyze tests.
 
 * Menu:
 
-* Convenience Test Functions::  
-* Running Multiple Cases::      
-* No Fork Mode::                
-* Test Fixtures::               
-* Multiple Suites in one SRunner::  
+* Convenience Test Functions::
+* Running Multiple Cases::
+* No Fork Mode::
+* Test Fixtures::
+* Multiple Suites in one SRunner::
 * Selective Running of Tests::
 * Selecting Tests by Suite or Test Case::
 * Selecting Tests Based on Arbitrary Tags::
-* Testing Signal Handling and Exit Values::  
-* Looping Tests::               
-* Test Timeouts::               
-* Determining Test Coverage::   
+* Testing Signal Handling and Exit Values::
+* Looping Tests::
+* Test Timeouts::
+* Determining Test Coverage::
 * Finding Memory Leaks::
-* Test Logging::                
-* Subunit Support::             
+* Test Logging::
+* Subunit Support::
 
 
 File: check.info,  Node: Convenience Test Functions,  Next: Running Multiple Cases,  Prev: Advanced Features,  Up: Advanced Features
@@ -1527,8 +1527,8 @@ limits, we should also test what happens when we create 'Money' where
 'amount == 0'.  Let's put these in a separate test case called "Limits"
 so that 'money_suite' is changed like so:
 
-     --- tests/check_money.3.c
-     +++ tests/check_money.6.c
+     --- tests/check_money.3.c	2019-11-06 15:22:39.000000000 +0000
+     +++ tests/check_money.6.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,65 +1,94 @@
       /*
        * Check: a unit test framework for C
@@ -1549,22 +1549,22 @@ so that 'money_suite' is changed like so:
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
       #include <stdlib.h>
       #include <check.h>
       #include "../src/money.h"
-
+      
       START_TEST(test_money_create)
       {
           Money *m;
-
+      
           m = money_create(5, "USD");
           ck_assert_int_eq(money_amount(m), 5);
           ck_assert_str_eq(money_currency(m), "USD");
           money_free(m);
       }
       END_TEST
-
+      
      +START_TEST(test_money_create_neg)
      +{
      +    Money *m = money_create(-1, "USD");
@@ -1591,15 +1591,15 @@ so that 'money_suite' is changed like so:
           Suite *s;
           TCase *tc_core;
      +    TCase *tc_limits;
-
+      
           s = suite_create("Money");
-
+      
           /* Core test case */
           tc_core = tcase_create("Core");
-
+      
           tcase_add_test(tc_core, test_money_create);
           suite_add_tcase(s, tc_core);
-
+      
      +    /* Limits test case */
      +    tc_limits = tcase_create("Limits");
      +
@@ -1609,16 +1609,16 @@ so that 'money_suite' is changed like so:
      +
           return s;
       }
-
+      
       int main(void)
       {
           int number_failed;
           Suite *s;
           SRunner *sr;
-
+      
           s = money_suite();
           sr = srunner_create(s);
-
+      
           srunner_run_all(sr, CK_NORMAL);
           number_failed = srunner_ntests_failed(sr);
           srunner_free(sr);
@@ -1630,8 +1630,8 @@ in the "Core" test case will be reported as "Core", and errors in the
 "Limits" test case will be reported as "Limits", giving you additional
 information about where things broke.
 
-     --- src/money.5.c
-     +++ src/money.6.c
+     --- src/money.5.c	2019-11-06 15:22:39.000000000 +0000
+     +++ src/money.6.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,58 +1,65 @@
       /*
        * Check: a unit test framework for C
@@ -1652,16 +1652,16 @@ information about where things broke.
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
       #include <stdlib.h>
       #include "money.h"
-
+      
       struct Money
       {
           int amount;
           char *currency;
       };
-
+      
       Money *money_create(int amount, char *currency)
       {
      -    Money *m = malloc(sizeof(Money));
@@ -1673,27 +1673,27 @@ information about where things broke.
      +    }
      +
      +    m = malloc(sizeof(Money));
-
+      
           if (m == NULL)
           {
               return NULL;
           }
-
+      
           m->amount = amount;
           m->currency = currency;
           return m;
       }
-
+      
       int money_amount(Money * m)
       {
           return m->amount;
       }
-
+      
       char *money_currency(Money * m)
       {
           return m->currency;
       }
-
+      
       void money_free(Money * m)
       {
           free(m);
@@ -1780,8 +1780,8 @@ control flow would be:
 
 * Menu:
 
-* Test Fixture Examples::       
-* Checked vs Unchecked Fixtures::  
+* Test Fixture Examples::
+* Checked vs Unchecked Fixtures::
 
 
 File: check.info,  Node: Test Fixture Examples,  Next: Checked vs Unchecked Fixtures,  Prev: Test Fixtures,  Up: Test Fixtures
@@ -1807,8 +1807,8 @@ We create a test fixture in Check as follows:
 named 'setup()' and 'teardown()', but they must take 'void' and return
 'void'.  We'll update 'check_money.c' with the following patch:
 
-     --- tests/check_money.6.c
-     +++ tests/check_money.7.c
+     --- tests/check_money.6.c	2019-11-06 15:22:39.000000000 +0000
+     +++ tests/check_money.7.c	2019-11-06 15:22:39.000000000 +0000
      @@ -1,94 +1,103 @@
       /*
        * Check: a unit test framework for C
@@ -1829,11 +1829,11 @@ named 'setup()' and 'teardown()', but they must take 'void' and return
        * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
        * MA 02110-1301, USA.
        */
-
+      
       #include <stdlib.h>
       #include <check.h>
       #include "../src/money.h"
-
+      
      -START_TEST(test_money_create)
      +Money *five_dollars;
      +
@@ -1847,7 +1847,7 @@ named 'setup()' and 'teardown()', but they must take 'void' and return
      -    Money *m;
      +    money_free(five_dollars);
      +}
-
+      
      -    m = money_create(5, "USD");
      -    ck_assert_int_eq(money_amount(m), 5);
      -    ck_assert_str_eq(money_currency(m), "USD");
@@ -1858,62 +1858,62 @@ named 'setup()' and 'teardown()', but they must take 'void' and return
      +    ck_assert_str_eq(money_currency(five_dollars), "USD");
       }
       END_TEST
-
+      
       START_TEST(test_money_create_neg)
       {
           Money *m = money_create(-1, "USD");
-
+      
           ck_assert_msg(m == NULL,
                         "NULL should be returned on attempt to create with "
                         "a negative amount");
       }
       END_TEST
-
+      
       START_TEST(test_money_create_zero)
       {
           Money *m = money_create(0, "USD");
-
+      
           if (money_amount(m) != 0)
           {
               ck_abort_msg("Zero is a valid amount of money");
           }
       }
       END_TEST
-
+      
       Suite * money_suite(void)
       {
           Suite *s;
           TCase *tc_core;
           TCase *tc_limits;
-
+      
           s = suite_create("Money");
-
+      
           /* Core test case */
           tc_core = tcase_create("Core");
-
+      
      +    tcase_add_checked_fixture(tc_core, setup, teardown);
           tcase_add_test(tc_core, test_money_create);
           suite_add_tcase(s, tc_core);
-
+      
           /* Limits test case */
           tc_limits = tcase_create("Limits");
-
+      
           tcase_add_test(tc_limits, test_money_create_neg);
           tcase_add_test(tc_limits, test_money_create_zero);
           suite_add_tcase(s, tc_limits);
-
+      
           return s;
       }
-
+      
       int main(void)
       {
           int number_failed;
           Suite *s;
           SRunner *sr;
-
+      
           s = money_suite();
           sr = srunner_create(s);
-
+      
           srunner_run_all(sr, CK_NORMAL);
           number_failed = srunner_ntests_failed(sr);
           srunner_free(sr);
@@ -2044,26 +2044,26 @@ or more tags can be assigned to a test case by using the
 tags can be specified by delimiting them with spaces.  For example:
 
          Suite *s;
-
+     
          TCase *red, *blue, *purple, *yellow, *black;
-
+     
          s = suite_create("Check Tag Filtering");
-
+     
          red = tcase_create("Red");
          tcase_set_tags(red, "Red");
          suite_add_tcase (s, red);
          tcase_add_test(red, red_test1);
-
+     
          blue = tcase_create("Blue");
          tcase_set_tags(blue, "Blue");
          suite_add_tcase (s, blue);
          tcase_add_test(blue, blue_test1);
-
+     
          purple = tcase_create("Purple");
          tcase_set_tags(purple, "Red Blue");
          suite_add_tcase (s, purple);
          tcase_add_test(purple, purple_test1);
-
+     
 
    Once test cases are tagged they may be selectively run in one of two
 ways:
@@ -2144,15 +2144,15 @@ pseudo-code to show the concept:
 
    An example of looping test usage follows:
      static const int primes[5] = {2,3,5,7,11};
-
+     
      START_TEST (check_is_prime)
      {
        ck_assert (is_prime (primes[_i]));
      }
      END_TEST
-
+     
      ...
-
+     
      tcase_add_loop_test (tcase, check_is_prime, 0, 5);
 
    Looping tests work in 'CK_NOFORK' mode as well, but without the
@@ -2221,7 +2221,7 @@ readable format you can use the 'gcov' utility:
           -:   43:        /* replaces the current entry */
       #####:   44:        ht->count--;
       #####:   45:        ht->size -= ht->table[p]->size +
-      #####:   46:          sizeof(struct hashtable_entry);
+      #####:   46:          sizeof(struct hashtable_entry);   
 
    As you can see this is an annotated source file with three columns:
 usage information, line numbers, and the original source.  The usage
@@ -2319,7 +2319,7 @@ the following:
      ==4924== HEAP SUMMARY:
      ==4924==     in use at exit: 0 bytes in 0 blocks
      ==4924==   total heap usage: 482 allocs, 482 frees, 122,351 bytes allocated
-     ==4924==
+     ==4924== 
      ==4924== All heap blocks were freed -- no leaks are possible
 
 
@@ -2341,12 +2341,12 @@ log file you wish to create:
 'test.log'.  The 'print_mode' argument to 'srunner_run_all()' is ignored
 during test logging; the log will contain a result entry, organized by
 suite, for every test run.  Here is an example of test log output:
-     Running suite S1
+     Running suite S1 
      ex_log_output.c:8:P:Core:test_pass: Test passed
      ex_log_output.c:14:F:Core:test_fail: Failure
      ex_log_output.c:18:E:Core:test_exit: (after this point) Early exit
      with return value 1
-     Running suite S2
+     Running suite S2 
      ex_log_output.c:26:P:Core:test_pass2: Test passed
      Results for all suites run:
      50%: Checks: 4, Failures: 1, Errors: 1
@@ -2363,7 +2363,7 @@ a file.
 
 * Menu:
 
-* XML Logging::                 
+* XML Logging::
 * TAP Logging::
 
 
@@ -2537,15 +2537,15 @@ srunner.
      srunner_run_all (sr, CK_SUBUNIT);
    2) Setup your main language test runner to run your check based test
 executable.  For instance using python:
-
+     
      import subunit
-
+     
      class ShellTests(subunit.ExecTestCase):
          """Run some tests from the C codebase."""
-
+     
          def test_group_one(self):
              """./foo/check_driver"""
-
+     
          def test_group_two(self):
              """./foo/other_driver"""
 
@@ -3381,43 +3381,43 @@ Index
 
 Tag Table:
 Node: Top781
-Node: Introduction3101
-Node: Unit Testing in C5236
-Node: Other Frameworks for C7110
-Node: Tutorial11040
-Node: How to Write a Test11924
-Node: Setting Up the Money Build Using Autotools12590
-Node: Setting Up the Money Build Using CMake19694
-Node: Test a Little25898
-Node: Creating a Suite32793
-Node: SRunner Output39020
-Node: Advanced Features47559
-Node: Convenience Test Functions48437
-Node: Running Multiple Cases59369
-Node: No Fork Mode64838
-Node: Test Fixtures65853
-Node: Test Fixture Examples68144
-Node: Checked vs Unchecked Fixtures72406
-Node: Multiple Suites in one SRunner74271
-Node: Selective Running of Tests75917
-Node: Selecting Tests by Suite or Test Case76596
-Node: Selecting Tests Based on Arbitrary Tags77184
-Node: Testing Signal Handling and Exit Values79858
-Node: Looping Tests80961
-Node: Test Timeouts82669
-Node: Determining Test Coverage83826
-Node: Finding Memory Leaks86308
-Node: Test Logging90024
-Node: XML Logging91686
-Node: TAP Logging95906
-Node: Subunit Support97469
-Node: Supported Build Systems98938
-Node: Autotools99386
-Node: CMake101708
-Node: Conclusion and References102069
-Node: Environment Variable Reference102875
-Node: Copying This Manual104712
-Node: GNU Free Documentation License104965
-Node: Index127355
+Node: Introduction2832
+Node: Unit Testing in C4967
+Node: Other Frameworks for C6835
+Node: Tutorial10765
+Node: How to Write a Test11599
+Node: Setting Up the Money Build Using Autotools12265
+Node: Setting Up the Money Build Using CMake19389
+Node: Test a Little25608
+Node: Creating a Suite32666
+Node: SRunner Output39067
+Node: Advanced Features47823
+Node: Convenience Test Functions48596
+Node: Running Multiple Cases59528
+Node: No Fork Mode65255
+Node: Test Fixtures66270
+Node: Test Fixture Examples68552
+Node: Checked vs Unchecked Fixtures72988
+Node: Multiple Suites in one SRunner74853
+Node: Selective Running of Tests76499
+Node: Selecting Tests by Suite or Test Case77178
+Node: Selecting Tests Based on Arbitrary Tags77766
+Node: Testing Signal Handling and Exit Values80470
+Node: Looping Tests81573
+Node: Test Timeouts83296
+Node: Determining Test Coverage84453
+Node: Finding Memory Leaks86938
+Node: Test Logging90655
+Node: XML Logging92302
+Node: TAP Logging96522
+Node: Subunit Support98085
+Node: Supported Build Systems99574
+Node: Autotools100022
+Node: CMake102344
+Node: Conclusion and References102705
+Node: Environment Variable Reference103511
+Node: Copying This Manual105348
+Node: GNU Free Documentation License105601
+Node: Index127991
 
 End Tag Table
