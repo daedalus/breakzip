@@ -372,9 +372,14 @@ namespace breakzip {
                 const uint8_t *bytes = xy ?
                     crypt_test.zip.files[f].random_bytes :
                     crypt_test.zip.files[f].header_first;
+                const uint8_t *encrypted = xy ?
+                    crypt_test.zip.files[f].header_first :
+                    crypt_test.zip.files[f].header_second;
                 uint32_t bound = 0;
                 uint32_t k0n = k00;
                 uint32_t k1cn = k10;
+                uint32_t k2n = k20;
+                uint8_t sn = get_s0(k20 & 0xffff);
                 for (int stage = 0; stage < 4; ++stage) {
                     k0n = crc32(k0n, bytes[stage]);
                     uint8_t lsbk0n = k0n & 0xff;
@@ -382,6 +387,15 @@ namespace breakzip {
                     k1cn = k1cn * CRYPTCONST;
                     uint8_t carry_bit = ((k1cn & 0xffffff) + (bound & 0xffffff)) > 0x01000000;
                     bits |= carry_bit << (((4 - stage) * 4) + f * 2 + xy);
+                    k2n = crc32(k2n, (k1cn + bound)>>24);
+                    if ((bytes[stage] ^ sn) != encrypted[stage]) {
+                        fprintf(stderr, "Something's wrong: f=%d, xy=%d, stage=%d, bytes[stage]=%02x,"
+                                        "\n\tsn=%02x, encrypted[stage]=%02x, bytes[stage]^sn=%02x\n",
+                                        f, xy, stage, bytes[stage],
+                                        sn, encrypted[stage], bytes[stage] ^ sn);
+                        abort();
+                    }
+                    sn = get_s0(k2n & 0xffff);
                 }
             }
         }
