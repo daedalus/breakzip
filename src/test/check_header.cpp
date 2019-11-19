@@ -359,16 +359,16 @@ START_TEST(test_crypt_stage1) {
         ck_assert_msg(expected_s0s[0] == expected_s0s[1],
                 "The s0's didn't match!");
 
-        auto correct_guess = stage1_correct_guess(crack_test);
-        auto stage1_start = stage1_correct_guess_start(correct_guess);
-        auto stage1_end = stage1_correct_guess_end(correct_guess);
+        auto correct = correct_guess(1, crack_test);
+        auto stage1_start = stage1_correct_guess_start(correct);
+        auto stage1_end = stage1_correct_guess_end(correct);
 
-        ck_assert(correct_guess >= stage1_start);
-        ck_assert_msg(correct_guess < stage1_end,
+        ck_assert(correct >= stage1_start);
+        ck_assert_msg(correct < stage1_end,
                 "Correct: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n"
                 "Stage End: 0x%04x|%02x|%02x|%02x|%02x|%02x|%02x\n",
-                correct_guess.chunk1, correct_guess.chunk2, correct_guess.chunk3,
-                correct_guess.chunk4, 
+                correct.chunk1, correct.chunk2, correct.chunk3,
+                correct.chunk4, 
                 stage1_end.chunk1, stage1_end.chunk2, stage1_end.chunk3,
                 stage1_end.chunk4);
 
@@ -387,7 +387,7 @@ START_TEST(test_crypt_stage1) {
                 "Expected s0 arg should be 0x100, was 0x%x",
                 expected_s0_arg);
 
-        ck_assert(stage1(&crack_test, out, correct_guess, expected_s0_arg));
+        ck_assert(stage1(&crack_test, out, correct, expected_s0_arg));
         ck_assert_msg(out.size() > 0,
                 "Expected at least one valid guess, got %d",
                 out.size());
@@ -398,7 +398,7 @@ START_TEST(test_crypt_stage1) {
                     "chunk3(0x%x) | chunk4(0x%x) | carry%s\n",
                     i.chunk1, i.chunk2, i.chunk3, i.chunk4,
                     i.carry_bits.str().c_str());
-            if (correct_guess == i) {
+            if (correct == i) {
                 ++num_correct;
             }
         }
@@ -434,22 +434,22 @@ START_TEST(test_crypt_stage2) {
         ck_assert_msg(expected_s0s[0] == expected_s0s[1],
                 "The s0's didn't match!");
 
-        auto correct_guess = stage2_correct_guess(crack_test);
-        auto stage1_correct_guess = guess_t(1, correct_guess);
-        auto stage2_start = stage2_correct_guess_start(correct_guess);
-        auto stage2_end = stage2_correct_guess_end(correct_guess);
+        auto correct = correct_guess(2, crack_test);
+        guess_t stage1_correct_guess(1, correct);
+        auto stage2_start = stage2_correct_guess_start(correct);
+        auto stage2_end = stage2_correct_guess_end(correct);
 
         fprintf(stderr, "test_crypt_stage2:\n"
                 "   correct_guess: %s\n"
                 "    stage2_start: %s\n"
                 "      stage2_end: %s\n",
-                correct_guess.hex().c_str(),
+                correct.hex().c_str(),
                 stage2_start.hex().c_str(),
                 stage2_end.str().c_str());
-        ck_assert(correct_guess >= stage2_start);
-        ck_assert_msg(correct_guess < stage2_end,
+        ck_assert(correct >= stage2_start);
+        ck_assert_msg(correct < stage2_end,
                 "Correct: %s\nStage End: %s\n",
-                correct_guess.str().c_str(), stage2_end.str().c_str());
+                correct.str().c_str(), stage2_end.str().c_str());
 
         ck_assert_msg(stage2_start != stage2_end,
                 "Expect start != end, got: 0x%08lx == 0x%08lx",
@@ -469,7 +469,7 @@ START_TEST(test_crypt_stage2) {
                 "Expected s0 arg should be 0x100, was 0x%x",
                 expected_s0_arg);
 
-        ck_assert(stage2(&crack_test, in, out, correct_guess, expected_s0_arg));
+        ck_assert(stage2(&crack_test, in, out, correct, expected_s0_arg));
         ck_assert_msg(out.size() > 0,
                 "Expected at least one valid guess, got %d",
                 out.size());
@@ -477,7 +477,7 @@ START_TEST(test_crypt_stage2) {
         int num_correct = 0;
         for (auto i: out) {
             fprintf(stderr, "stage2 guess: %s\n", i.str().c_str());
-            if (correct_guess == i) {
+            if (correct == i) {
                 ++num_correct;
             }
         }
