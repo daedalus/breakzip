@@ -178,16 +178,16 @@ namespace breakzip {
         const uint32_t k20 = crypt_test.zip.keys[2];
         const uint32_t crc32k00 = crc32(k00, 0);
 
-        result.chunk2 = (crc32k00 >>  0) & 0xff;
-        result.chunk6 = (crc32k00 >>  8) & 0xff;
+        result.chunk2 = (crc32k00 >> 0) & 0xff;
+        result.chunk6 = (crc32k00 >> 8) & 0xff;
         result.chunk8 = (crc32k00 >> 16) & 0xff;
         result.chunk10 = (crc32k00 >> 24) & 0xff;
 
-        result.chunk1 = (k20 >>  0) & 0xffff;
+        result.chunk1 = (k20 >> 0) & 0xffff;
         result.chunk4 = (k20 >> 16) & 0xff;
         result.chunk5 = (k20 >> 24) & 0xff;
 
-        result.chunk3 = (k10 * CRYPTCONST     ) >> 24;
+        result.chunk3 = (k10 * CRYPTCONST) >> 24;
         result.chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
         result.chunk9 = (k10 * CRYPTCONST_POW3) >> 24;
         result.chunk11 = (k10 * CRYPTCONST_POW4) >> 24;
@@ -242,16 +242,16 @@ namespace breakzip {
 
         for (auto candidate: in) {
             uint16_t chunk1 = 0;
-            uint8_t  chunk2 = 0;
-            uint8_t  chunk3 = 0;
-            uint8_t  chunk4 = 0;
-            uint8_t  chunk5 = 0;
-            uint8_t  chunk6 = 0;
-            uint8_t  chunk7 = 0;
-            uint8_t  chunk8 = 0;
-            uint8_t  chunk9 = 0;
-            uint8_t  chunk10 = 0;
-            uint8_t  chunk11 = 0;
+            uint8_t chunk2 = 0;
+            uint8_t chunk3 = 0;
+            uint8_t chunk4 = 0;
+            uint8_t chunk5 = 0;
+            uint8_t chunk6 = 0;
+            uint8_t chunk7 = 0;
+            uint8_t chunk8 = 0;
+            uint8_t chunk9 = 0;
+            uint8_t chunk10 = 0;
+            uint8_t chunk11 = 0;
             carrybits_t bits(candidate.carry_bits);
 
             switch (stage) {
