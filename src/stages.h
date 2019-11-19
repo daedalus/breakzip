@@ -472,13 +472,14 @@ namespace breakzip {
         zip_crack_t zip;
     } crack_t;
 
+    /* Compute the correct guess from a crack_t structure. */
+    guess_t correct_guess(uint8_t stage, const crack_t crypt_test);
+
     /* Helper functions for testing stage1. */
-    guess_t stage1_correct_guess(crack_t crypt_test);
     guess_t stage1_correct_guess_start(guess_t correct_guess);
     guess_t stage1_correct_guess_end(guess_t correct_guess);
 
     /* Helper functions for testing stage2. */
-    guess_t stage2_correct_guess(const crack_t crack_test);
     guess_t stage2_correct_guess_start(guess_t correct_guess);
     guess_t stage2_correct_guess_end(guess_t correct_guess);
 
