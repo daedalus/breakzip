@@ -1,6 +1,6 @@
 This is check.info, produced by makeinfo version 6.5 from check.texi.
 
-This manual is for Check (version 0.12.0, 6 November 2019), a unit
+This manual is for Check (version 0.12.0, 20 October 2017), a unit
 testing framework for C.
 
    Copyright (C) 2001-2014 Arien Malec, Branden Archer, Chris Pickett,
@@ -23,7 +23,7 @@ File: check.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 Check
 *****
 
-This manual is for Check (version 0.12.0, 6 November 2019), a unit
+This manual is for Check (version 0.12.0, 20 October 2017), a unit
 testing framework for C.
 
    Copyright (C) 2001-2014 Arien Malec, Branden Archer, Chris Pickett,
@@ -651,8 +651,8 @@ approach to software development and OO design).
 
    Here are the changes to 'check_money.c' for our first unit test:
 
-     --- tests/check_money.1.c	2019-11-06 15:22:39.000000000 +0000
-     +++ tests/check_money.2.c	2019-11-06 15:22:39.000000000 +0000
+     --- tests/check_money.1.c
+     +++ tests/check_money.2.c
      @@ -1,24 +1,38 @@
       /*
        * Check: a unit test framework for C
@@ -753,8 +753,8 @@ tests, so that's what we will now do.
 
    We will patch our header 'money.h' as follows:
 
-     --- src/money.1.h	2019-11-06 15:22:39.000000000 +0000
-     +++ src/money.2.h	2019-11-06 15:22:39.000000000 +0000
+     --- src/money.1.h
+     +++ src/money.2.h
      @@ -1,24 +1,31 @@
       /*
        * Check: a unit test framework for C
@@ -805,8 +805,8 @@ overhead, but it is mostly one-off.  Here's a diff for the new version
 of 'check_money.c'.  Note that we include stdlib.h to get the
 definitions of 'EXIT_SUCCESS' and 'EXIT_FAILURE'.
 
-     --- tests/check_money.2.c	2019-11-06 15:22:39.000000000 +0000
-     +++ tests/check_money.3.c	2019-11-06 15:22:39.000000000 +0000
+     --- tests/check_money.2.c
+     +++ tests/check_money.3.c
      @@ -1,38 +1,65 @@
       /*
        * Check: a unit test framework for C
@@ -910,8 +910,8 @@ the 'money.h' interface hasn't been created yet.  Let's go with the
 fastest solution possible and implement stubs for each of the functions
 in 'money.c'.  Here is the diff:
 
-     --- src/money.1.c	2019-11-06 15:22:39.000000000 +0000
-     +++ src/money.3.c	2019-11-06 15:22:39.000000000 +0000
+     --- src/money.1.c
+     +++ src/money.3.c
      @@ -1,20 +1,42 @@
       /*
        * Check: a unit test framework for C
@@ -1058,8 +1058,8 @@ the 'check_money' program failed, and the bug-report address given in
 tests.  We first have to create a Money structure to hold the amount,
 and then implement the function to return the correct amount:
 
-     --- src/money.3.c	2019-11-06 15:22:39.000000000 +0000
-     +++ src/money.4.c	2019-11-06 15:22:39.000000000 +0000
+     --- src/money.3.c
+     +++ src/money.4.c
      @@ -1,42 +1,47 @@
       /*
        * Check: a unit test framework for C
@@ -1137,8 +1137,8 @@ example, if we wrote some test code as follows:
 that, the symmetric 'money_free()', and 'money_currency()' too, in order
 to make our unit test pass again, here is a diff:
 
-     --- src/money.4.c	2019-11-06 15:22:39.000000000 +0000
-     +++ src/money.5.c	2019-11-06 15:22:39.000000000 +0000
+     --- src/money.4.c
+     +++ src/money.5.c
      @@ -1,47 +1,58 @@
       /*
        * Check: a unit test framework for C
@@ -1527,8 +1527,8 @@ limits, we should also test what happens when we create 'Money' where
 'amount == 0'.  Let's put these in a separate test case called "Limits"
 so that 'money_suite' is changed like so:
 
-     --- tests/check_money.3.c	2019-11-06 15:22:39.000000000 +0000
-     +++ tests/check_money.6.c	2019-11-06 15:22:39.000000000 +0000
+     --- tests/check_money.3.c
+     +++ tests/check_money.6.c
      @@ -1,65 +1,94 @@
       /*
        * Check: a unit test framework for C
@@ -1630,8 +1630,8 @@ in the "Core" test case will be reported as "Core", and errors in the
 "Limits" test case will be reported as "Limits", giving you additional
 information about where things broke.
 
-     --- src/money.5.c	2019-11-06 15:22:39.000000000 +0000
-     +++ src/money.6.c	2019-11-06 15:22:39.000000000 +0000
+     --- src/money.5.c
+     +++ src/money.6.c
      @@ -1,58 +1,65 @@
       /*
        * Check: a unit test framework for C
@@ -1807,8 +1807,8 @@ We create a test fixture in Check as follows:
 named 'setup()' and 'teardown()', but they must take 'void' and return
 'void'.  We'll update 'check_money.c' with the following patch:
 
-     --- tests/check_money.6.c	2019-11-06 15:22:39.000000000 +0000
-     +++ tests/check_money.7.c	2019-11-06 15:22:39.000000000 +0000
+     --- tests/check_money.6.c
+     +++ tests/check_money.7.c
      @@ -1,94 +1,103 @@
       /*
        * Check: a unit test framework for C
@@ -3389,35 +3389,35 @@ Node: How to Write a Test11599
 Node: Setting Up the Money Build Using Autotools12265
 Node: Setting Up the Money Build Using CMake19389
 Node: Test a Little25608
-Node: Creating a Suite32666
-Node: SRunner Output39067
-Node: Advanced Features47823
-Node: Convenience Test Functions48596
-Node: Running Multiple Cases59528
-Node: No Fork Mode65255
-Node: Test Fixtures66270
-Node: Test Fixture Examples68552
-Node: Checked vs Unchecked Fixtures72988
-Node: Multiple Suites in one SRunner74853
-Node: Selective Running of Tests76499
-Node: Selecting Tests by Suite or Test Case77178
-Node: Selecting Tests Based on Arbitrary Tags77766
-Node: Testing Signal Handling and Exit Values80470
-Node: Looping Tests81573
-Node: Test Timeouts83296
-Node: Determining Test Coverage84453
-Node: Finding Memory Leaks86938
-Node: Test Logging90655
-Node: XML Logging92302
-Node: TAP Logging96522
-Node: Subunit Support98085
-Node: Supported Build Systems99574
-Node: Autotools100022
-Node: CMake102344
-Node: Conclusion and References102705
-Node: Environment Variable Reference103511
-Node: Copying This Manual105348
-Node: GNU Free Documentation License105601
-Node: Index127991
+Node: Creating a Suite32522
+Node: SRunner Output38779
+Node: Advanced Features47391
+Node: Convenience Test Functions48164
+Node: Running Multiple Cases59096
+Node: No Fork Mode64679
+Node: Test Fixtures65694
+Node: Test Fixture Examples67976
+Node: Checked vs Unchecked Fixtures72340
+Node: Multiple Suites in one SRunner74205
+Node: Selective Running of Tests75851
+Node: Selecting Tests by Suite or Test Case76530
+Node: Selecting Tests Based on Arbitrary Tags77118
+Node: Testing Signal Handling and Exit Values79822
+Node: Looping Tests80925
+Node: Test Timeouts82648
+Node: Determining Test Coverage83805
+Node: Finding Memory Leaks86290
+Node: Test Logging90007
+Node: XML Logging91654
+Node: TAP Logging95874
+Node: Subunit Support97437
+Node: Supported Build Systems98926
+Node: Autotools99374
+Node: CMake101696
+Node: Conclusion and References102057
+Node: Environment Variable Reference102863
+Node: Copying This Manual104700
+Node: GNU Free Documentation License104953
+Node: Index127343
 
 End Tag Table
