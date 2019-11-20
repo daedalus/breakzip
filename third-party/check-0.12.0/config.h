@@ -96,7 +96,7 @@
 /* Define to 1 if the system has the type `long double'. */
 /* #undef HAVE_LONG_DOUBLE */
 
-/* Define to 1 if the system has the type `long long int'. */
+/* Define to 1 if the system has the type 'long long int'. */
 #define HAVE_LONG_LONG_INT 1
 
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
@@ -215,7 +215,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
-/* Define to 1 if the system has the type `unsigned long long int'. */
+/* Define to 1 if the system has the type 'unsigned long long int'. */
 #define HAVE_UNSIGNED_LONG_LONG_INT 1
 
 /* Define to 1 if you have a C99 compliant 'vsnprintf' function. */
