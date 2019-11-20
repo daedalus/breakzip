@@ -19,7 +19,8 @@ third-party/check-0.12.0/tests/check_*
 third-party/check-0.12.0/tests/ex_output
 third-party/check-0.12.0/tests/.deps/
 third-party/check-0.12.0/libtool
-
+third-party/check-0.12.0/autom4te.cache/
+        
 
 third-party/zip30/flags                                                   
 third-party/zip30/zip                                                
