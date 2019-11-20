@@ -10,7 +10,6 @@ set -x
 
 PREFIX="${1:-../no_prefix_given}"
 
-aclocal && automake --gnu --add-missing && autoconf
 ./configure --prefix=${PREFIX}
 make all
 make install
