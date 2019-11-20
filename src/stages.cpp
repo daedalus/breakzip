@@ -124,50 +124,80 @@ namespace breakzip {
         return get_s0(guess.chunk1);
     }
 
-    guess_t stage1_correct_guess_start(guess_t correct_guess) {
-        guess_t mine = correct_guess;
-        mine.chunk1 = 0;
-        if (DEBUG) {
-            fprintf(stderr, "stage1_correct_guess_start: correct: %s\n"
-                    "stage1_correct_guess_start: mine:    %s\n",
-                    correct_guess.str().c_str(), mine.str().c_str());
+    guess_t correct_guess_start(uint8_t stage, guess_t correct) {
+        guess_t mine = correct;
+        switch (stage) {
+            case 1:
+                mine.carry_bits.set(1, 0);
+                mine.chunk1 = 0;
+                break;
+            case 2:
+                mine.carry_bits.set(2, 0);
+                mine.chunk5 = 0;
+                break;
+            case 3:
+                mine.carry_bits.set(3, 0);
+                mine.chunk8 = 0;
+                break;
+            case 4:
+                mine.carry_bits.set(4, 0);
+                mine.chunk10 = 0;
+                break;
+            default:
+                break;
         }
-        return std::move(mine);
+        if (DEBUG) {
+            fprintf(stderr, "correct_guess_start: correct: %s\n"
+                    "correct_guess_start:   mine: %s\n",
+                    correct.str().c_str(), mine.str().c_str());
+        }
+        return mine;
+    }
+
+    guess_t correct_guess_end(uint8_t stage, guess_t correct) {
+        guess_t mine = correct;
+        switch (stage) {
+            case 1:
+                mine.carry_bits.set(1, 0xf);
+                mine.chunk1 = 0xffff;
+                break;
+            case 2:
+                mine.carry_bits.set(2, 0xf);
+                mine.chunk5 = 0xff;
+                break;
+            case 3:
+                mine.carry_bits.set(3, 0xf);
+                mine.chunk8 = 0xff;
+                break;
+            case 4:
+                mine.carry_bits.set(4, 0xf);
+                mine.chunk10 = 0xff;
+                break;
+            default:
+                break;
+        }
+        if (DEBUG) {
+            fprintf(stderr, "correct_guess_end: correct: %s\n"
+                    "correct_guess_end:   mine: %s\n",
+                    correct.str().c_str(), mine.str().c_str());
+        }
+        return mine;
+    }
+
+    guess_t stage1_correct_guess_start(guess_t correct_guess) {
+        return correct_guess_start(1, correct_guess);
     }
 
     guess_t stage1_correct_guess_end(guess_t correct_guess) {
-        guess_t mine = correct_guess;
-        mine.chunk1 = 0;
-        mine.chunk2 += 1;
-        if (DEBUG) {
-            fprintf(stderr, "stage1_correct_guess_end: correct: %s\n"
-                    "stage1_correct_guess_end: mine:    %s\n",
-                    correct_guess.str().c_str(), mine.str().c_str());
-        }
-        return std::move(mine);
+        return correct_guess_end(1, correct_guess);
     }
 
     guess_t stage2_correct_guess_start(guess_t correct_guess) {
-        guess_t mine = correct_guess;
-        mine.chunk5 = 0;
-        if (DEBUG) {
-            fprintf(stderr, "stage2_correct_guess_start: correct: %s\n"
-                    "stage2_correct_guess_start: mine:    %s\n",
-                    correct_guess.str().c_str(), mine.str().c_str());
-        }
-        return std::move(mine);
+        return correct_guess_start(2, correct_guess);
     }
 
     guess_t stage2_correct_guess_end(guess_t correct_guess) {
-        guess_t mine = correct_guess;
-        mine.chunk5 = 0;
-        mine.chunk6 += 1;
-        if (DEBUG) {
-            fprintf(stderr, "stage2_correct_guess_end: correct: %s\n"
-                    "stage2_correct_guess_end: mine:    %s\n",
-                    correct_guess.str().c_str(), mine.str().c_str());
-        }
-        return std::move(mine);
+        return correct_guess_end(2, correct_guess);
     }
 
     guess_t correct_guess(uint8_t stage, const crack_t crypt_test) {
