@@ -200,6 +200,22 @@ namespace breakzip {
         return correct_guess_end(2, correct_guess);
     }
 
+    guess_t stage3_correct_guess_start(guess_t correct_guess) {
+        return correct_guess_start(3, correct_guess);
+    }
+
+    guess_t stage3_correct_guess_end(guess_t correct_guess) {
+        return correct_guess_end(3, correct_guess);
+    }
+
+    guess_t stage4_correct_guess_start(guess_t correct_guess) {
+        return correct_guess_start(4, correct_guess);
+    }
+
+    guess_t stage4_correct_guess_end(guess_t correct_guess) {
+        return correct_guess_end(4, correct_guess);
+    }
+
     guess_t correct_guess(uint8_t stage, const crack_t crypt_test) {
         guess_t result(stage);
 
@@ -513,29 +529,29 @@ done:
         return next(2, state, in, out);
     }
 
-    int stage3(const crack_t* state, const vector<guess_t>& in,
+    int stage3(const crack_t* state, const vector<guess_t> in,
             vector<guess_t>& out) {
         return next(3, state, in, out);
     }
 
 
     int stage4(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out) {
+            vector<guess_t>& out) {
         return next(4, state, in, out);
     }
 
     int stage5(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out) {
+            vector<guess_t>& out) {
         return next(5, state, in, out);
     }
 
     int stage6(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out) {
+            vector<guess_t>& out) {
         return next(6, state, in, out);
     }
 
     int stage7(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out) {
+            vector<guess_t>& out) {
         return next(7, state, in, out);
     }
 
