@@ -232,29 +232,30 @@ namespace breakzip {
         for (int f = 0; f < 2; ++f) {
             for (int xy = 0; xy < 2; ++xy) {
                 const uint8_t *bytes = xy ?
-                    crypt_test.zip.files[f].random_bytes :
-                    crypt_test.zip.files[f].header_first;
-                const uint8_t *encrypted = xy ?
                     crypt_test.zip.files[f].header_first :
-                    crypt_test.zip.files[f].header_second;
+                    crypt_test.zip.files[f].random_bytes;
+                const uint8_t *encrypted = xy ?
+                    crypt_test.zip.files[f].header_second :
+                    crypt_test.zip.files[f].header_first;
                 uint32_t bound = 0;
                 uint32_t k0n = k00;
                 uint32_t k1cn = k10;
                 uint32_t k2n = k20;
                 uint8_t sn = get_s0(k20 & 0xffff);
-                for (int stage = 0; stage < 4; ++stage) {
-                    k0n = crc32(k0n, bytes[stage]);
+                // stage_1 should be thought of as "stage - 1"
+                for (int stage_1 = 0; stage_1 < 4; ++stage_1) {
+                    k0n = crc32(k0n, bytes[stage_1]);
                     uint8_t lsbk0n = k0n & 0xff;
                     bound = (bound + lsbk0n) * CRYPTCONST + 1;
                     k1cn = k1cn * CRYPTCONST;
                     uint8_t carry_bit = ((k1cn & 0xffffff) + (bound & 0xffffff)) > 0x01000000;
-                    bits |= carry_bit << (((4 - stage) * 4) + f * 2 + xy);
+                    bits |= carry_bit << (((3 - stage_1) * 4) + f * 2 + xy);
                     k2n = crc32(k2n, (k1cn + bound)>>24);
-                    if ((bytes[stage] ^ sn) != encrypted[stage]) {
-                        fprintf(stderr, "Something's wrong: f=%d, xy=%d, stage=%d, bytes[stage]=%02x,"
-                                        "\n\tsn=%02x, encrypted[stage]=%02x, bytes[stage]^sn=%02x\n",
-                                        f, xy, stage, bytes[stage],
-                                        sn, encrypted[stage], bytes[stage] ^ sn);
+                    if ((bytes[stage_1] ^ sn) != encrypted[stage_1]) {
+                        fprintf(stderr, "Something's wrong: f=%d, xy=%d, stage_1=%d, bytes[stage_1]=%02x,"
+                                        "\n\tsn=%02x, encrypted[stage_1]=%02x, bytes[stage_1]^sn=%02x\n",
+                                        f, xy, stage_1, bytes[stage_1],
+                                        sn, encrypted[stage_1], bytes[stage_1] ^ sn);
                         abort();
                     }
                     sn = get_s0(k2n & 0xffff);
@@ -410,7 +411,7 @@ namespace breakzip {
                     uint8_t y1 = 0, y2 = 0, y3 = 0, y4 = 0;
 
                     /* if (is_correct_guess) {
-                     *  if (x1 ^ s1x != file.header_first[1]) {
+                     *  if ((x1 ^ s1x) != file.header_first[1]) {
                      *      abort();
                      *  }
                      * } */
@@ -421,7 +422,7 @@ namespace breakzip {
                             fileidx, k0, bound, k2);
 
                     /* if (is_correct_guess) {
-                     *   if (x2 ^ s2x != file.header_first[2]) {
+                     *   if ((x2 ^ s2x) != file.header_first[2]) {
                      *    abort();
                      *   }
                      * } */
@@ -433,7 +434,7 @@ namespace breakzip {
                             k0, bound, k2);
 
                     /* if (is_correct_guess) {
-                     *  if (x3 ^ s3x != file.header_first[3]) {
+                     *  if ((x3 ^ s3x) != file.header_first[3]) {
                      *   abort();
                      *  }
                      * } */
@@ -443,7 +444,7 @@ namespace breakzip {
                             bits.get(4, fileidx, 0), fileidx,
                             k0, bound, k2);
                     /* if (is_correct_guess) {
-                     *  if (x4 ^ s4x != file.header_first[4]) {
+                     *  if ((x4 ^ s4x) != file.header_first[4]) {
                      *   abort();
                      *  }
                      * } */
@@ -462,7 +463,7 @@ y:
                             k0, bound, k2);
 
                     y1 = x1 ^ s1x;
-                    if (y1 ^ s1y != file.header_second[1]) {
+                    if ((y1 ^ s1y) != file.header_second[1]) {
                         wrong = true;
                         break;
                     }
@@ -473,7 +474,7 @@ y:
                             bits.get(2, fileidx, 1), fileidx,
                             k0, bound, k2);
                     y2 = x2 ^ s2x;
-                    if (y2 ^ s2y != file.header_second[2]) {
+                    if ((y2 ^ s2y) != file.header_second[2]) {
                         wrong = true;
                         break;
                     }
@@ -484,7 +485,7 @@ y:
                             k0, bound, k2);
 
                     y3 = x3 ^ s3x;
-                    if (y3 ^ s3y != file.header_second[3]) {
+                    if ((y3 ^ s3y) != file.header_second[3]) {
                         wrong = true;
                         break;
                     }
@@ -495,7 +496,7 @@ y:
                             k0, bound, k2);
 
                     y4 = x4 ^ s4x;
-                    if (y4 ^ s4y != file.header_second[4]) {
+                    if ((y4 ^ s4y) != file.header_second[4]) {
                         wrong = true;
                         break;
                     }
