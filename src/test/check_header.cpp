@@ -486,6 +486,153 @@ START_TEST(test_crypt_stage2) {
     }
 }
 END_TEST
+
+START_TEST(test_crypt_stage3) {
+
+    for (auto crack_test: crypt_tests) {
+
+        auto zip = crack_test.zip;
+
+        fprintf(stderr, "test_crypt_stage3:\n"
+                "    key00: %x\n"
+                "    key10: %x\n"
+                "    key20: %x\n",
+                zip.keys[0], zip.keys[1], zip.keys[2]);
+
+        uint8_t expected_s0s[2];
+
+        int fileidx = 0;
+        for (auto file: zip.files) {
+            ck_assert_msg(file.random_bytes[0] == file.header_second[0],
+                    "Invalid test data: random_bytes[0] is not decrypted in "
+                    "header_second[0]!");
+            expected_s0s[fileidx] = file.random_bytes[0] ^ file.header_first[0];
+            ++fileidx;
+        }
+
+        ck_assert_msg(expected_s0s[0] == expected_s0s[1],
+                "The s0's didn't match!");
+
+        auto correct = correct_guess(3, crack_test);
+        guess_t stage2_correct_guess(2, correct);
+        auto stage3_start = stage3_correct_guess_start(correct);
+        auto stage3_end = stage3_correct_guess_end(correct);
+
+        fprintf(stderr, "test_crypt_stage3:\n"
+                "   correct_guess: %s\n"
+                "    stage3_start: %s\n"
+                "      stage3_end: %s\n",
+                correct.hex().c_str(),
+                stage3_start.hex().c_str(),
+                stage3_end.str().c_str());
+        ck_assert(correct >= stage3_start);
+        ck_assert_msg(correct < stage3_end,
+                "Correct: %s\nStage End: %s\n",
+                correct.str().c_str(), stage3_end.str().c_str());
+
+        ck_assert_msg(stage3_start != stage3_end,
+                "Expect start != end, got: 0x%08lx == 0x%08lx",
+                stage3_start, stage3_end);
+
+        crack_test.start = stage3_start;
+        crack_test.end = stage3_end;
+
+        vector<guess_t> out;
+        vector<guess_t> in;
+
+        in.push_back(stage2_correct_guess);
+
+        ck_assert(stage3(&crack_test, in, out));
+        ck_assert_msg(out.size() > 0,
+                "Expected at least one valid guess, got %d",
+                out.size());
+
+        int num_correct = 0;
+        for (auto i: out) {
+            fprintf(stderr, "stage3 guess: %s\n", i.str().c_str());
+            if (correct == i) {
+                ++num_correct;
+            }
+        }
+        ck_assert_msg(num_correct == 1, "Correct guess not in list! num_correct=%d",
+                num_correct);
+    }
+}
+END_TEST
+
+START_TEST(test_crypt_stage4) {
+
+    for (auto crack_test: crypt_tests) {
+
+        auto zip = crack_test.zip;
+
+        fprintf(stderr, "test_crypt_stage4:\n"
+                "    key00: %x\n"
+                "    key10: %x\n"
+                "    key20: %x\n",
+                zip.keys[0], zip.keys[1], zip.keys[2]);
+
+        uint8_t expected_s0s[2];
+
+        int fileidx = 0;
+        for (auto file: zip.files) {
+            ck_assert_msg(file.random_bytes[0] == file.header_second[0],
+                    "Invalid test data: random_bytes[0] is not decrypted in "
+                    "header_second[0]!");
+            expected_s0s[fileidx] = file.random_bytes[0] ^ file.header_first[0];
+            ++fileidx;
+        }
+
+        ck_assert_msg(expected_s0s[0] == expected_s0s[1],
+                "The s0's didn't match!");
+
+        auto correct = correct_guess(4, crack_test);
+        guess_t stage3_correct_guess(3, correct);
+        auto stage4_start = stage4_correct_guess_start(correct);
+        auto stage4_end = stage4_correct_guess_end(correct);
+
+        fprintf(stderr, "test_crypt_stage4:\n"
+                "   correct_guess: %s\n"
+                "    stage4_start: %s\n"
+                "      stage4_end: %s\n",
+                correct.hex().c_str(),
+                stage4_start.hex().c_str(),
+                stage4_end.str().c_str());
+        ck_assert(correct >= stage4_start);
+        ck_assert_msg(correct < stage4_end,
+                "Correct: %s\nStage End: %s\n",
+                correct.str().c_str(), stage4_end.str().c_str());
+
+        ck_assert_msg(stage4_start != stage4_end,
+                "Expect start != end, got: 0x%08lx == 0x%08lx",
+                stage4_start, stage4_end);
+
+        crack_test.start = stage4_start;
+        crack_test.end = stage4_end;
+
+        vector<guess_t> out;
+        vector<guess_t> in;
+
+        in.push_back(stage3_correct_guess);
+
+        ck_assert(stage4(&crack_test, in, out));
+        ck_assert_msg(out.size() > 0,
+                "Expected at least one valid guess, got %d",
+                out.size());
+
+        int num_correct = 0;
+        for (auto i: out) {
+            fprintf(stderr, "stage4 guess: %s\n", i.str().c_str());
+            if (correct == i) {
+                ++num_correct;
+            }
+        }
+        ck_assert_msg(num_correct == 1, "Correct guess not in list! num_correct=%d",
+                num_correct);
+    }
+}
+END_TEST
+
 Suite* make_suite(const std::string name) {
     Suite* s;
     TCase* tc_core;
@@ -496,6 +643,8 @@ Suite* make_suite(const std::string name) {
     tcase_add_test(tc_core, test_always_pass);
     tcase_add_test(tc_core, test_crypt_stage1);
     tcase_add_test(tc_core, test_crypt_stage2);
+    tcase_add_test(tc_core, test_crypt_stage3);
+    tcase_add_test(tc_core, test_crypt_stage4);
     tcase_add_test(tc_core, test_stage1_iterator);
     tcase_add_test(tc_core, test_stage1_operators);
     tcase_add_test(tc_core, test_stage1_ctor);

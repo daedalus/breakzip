@@ -483,6 +483,14 @@ namespace breakzip {
     guess_t stage2_correct_guess_start(guess_t correct_guess);
     guess_t stage2_correct_guess_end(guess_t correct_guess);
 
+    /* Helper functions for testing stage3. */
+    guess_t stage3_correct_guess_start(guess_t correct_guess);
+    guess_t stage3_correct_guess_end(guess_t correct_guess);
+
+    /* Helper functions for testing stage4. */
+    guess_t stage4_correct_guess_start(guess_t correct_guess);
+    guess_t stage4_correct_guess_end(guess_t correct_guess);
+
     class stage_range {
         public:
             explicit stage_range(int stage, const crack_t& state) :
@@ -606,7 +614,7 @@ namespace breakzip {
      * stage3 depends on guesses from stage2. 
      */
     int stage3(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out);
+            vector<guess_t>& out);
 
 
     // stage 4:
@@ -620,7 +628,7 @@ namespace breakzip {
     // from stage 4.
 
     int stage4(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out);
+            vector<guess_t>& out);
 
     // 
     // stage 5:
@@ -628,7 +636,7 @@ namespace breakzip {
     // We expect 2**{38 - 16} = 2**{22} chunk1-11 tuples to pass, 2**38 work
     // where the 38 in the exponent is from stage 4.
     int stage5(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out);
+            vector<guess_t>& out);
 
     // 
     // stage 6:
@@ -636,7 +644,7 @@ namespace breakzip {
     // We expect 2**{22 - 16} = 2**{6} chunk1-11 tuples to pass, 2**22 work
     // where the 22 in the exponent is from stage 5.
     int stage6(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out);
+            vector<guess_t>& out);
 
     // 
     // stage 7:
@@ -645,6 +653,6 @@ namespace breakzip {
     // i.e. only the right one, where the 6 in the exponent is from stage 6.
     // 
     int stage7(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t> out);
+            vector<guess_t>& out);
 
 }; // namespace
