@@ -78,7 +78,7 @@ namespace breakzip {
             shift_width += (0 == file) ? 0 : 2;
             shift_width += (0 == var) ? 0 : 1;
             uint8_t t = bits >> shift_width;
-            return bits & 0x01;
+            return t & 0x01;
         }
 
         uint32_t set(uint8_t stage, uint8_t val) {
