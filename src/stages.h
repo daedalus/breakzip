@@ -521,48 +521,12 @@ namespace breakzip {
     // 
     // We guess [chunk1 = bits 0..15 of key20 (16 bits)] 
     // We guess [chunk2 = bits 0..7 of crc32(key00, 0) (8 bits)]
-    // We guess [chunk3 = MSB(key10 * 0x08088405), carry for x, carry for y (10 bits)]
+    // We guess [chunk3 = MSB(key10 * 0x08088405), carry for x f0, carry for y f0, carry for x f1, carry for y f1 (12 bits)]
     // We guess [chunk4 = bits 16..23 of key20 (8 bits)]
-    //    - note if chunk4 is a uint32_t then the bits should be in the correct
-    //    position, otherwise you have to bitshift them before combining with chunk1
-    //    during the computation of s1x below.
-    // (42 bits total)
-    // 
-    // From chunk1 we compute s0 as follows:
-    //      temp = key20 | 3;
-    //      s0 = ((temp * (temp ^ 1)) >> 8) & 0xff;
-    // For each file, get x0 from the header.
-    // From that and chunk2 we compute:
-    //      temp = crctab[x0] & 0xff;
-    //      temp ^= chunk2
-    //      temp *= 0x08088405
-    //      temp = (temp + 1) >> 24;
-    // From that and chunk3 we compute MSB(key11x):
-    //      MSB(key11x) = temp + chunk3 + carry for x
-    // From that and chunk4 we compute s1x:
-    //      r = chunk4 | chunk1
-    //      key21x_low24bits = crc32(r, MSB(key11x))
-    //      temp = key21x_low24bits | 3;
-    //      s1x = ((temp * (temp ^ 1)) >> 8 & 0xff
-    //           
-    // y0 = x0 ^ s0
-    // From that and chunk2 we compute LSB(key01y) * 0x08088405 + 1
-    //      temp = crctab[y0] & 0xff;
-    //      temp ^= chunk2
-    //      temp *= 0x08088405
-    //      temp = (temp + 1) >> 24;
-    // From that and chunk3 we compute MSB(key11y):
-    //      MSB(key11y) = temp + chunk3 + carry for y
-    // From that and chunk4 we compute s1y
-    //      r = chunk4 | chunk1
-    //      key21y_low24bits = crc32(r, MSB(key11y))
-    //      temp = key21y_low24bits | 3;
-    //      s1y = ((temp * (temp ^ 1)) >> 8 & 0xff
-    // 
-    // We compute x1 ^ s1x ^ s1y and compare it to h1.  If it's wrong, our guess was wrong.
+    // (44 bits total)
     // 
     // We get 16 bits of filter from h1 in each of the two files.
-    // We expect 2**{42 - 16} = 2**26 chunk1-4 tuples to pass.
+    // We expect 2^{44 - 16} = 2^28 chunk1-4 tuples to pass, 2^44 work.
 
 
     /***
@@ -579,21 +543,12 @@ namespace breakzip {
     // We guess [chunk5 = bits 24..32 of key20 (8 bits)]
     // We guess [chunk6 = bits 8..15 of crc32(key00, 0) (8 bits)]
     // We guess [chunk7 = MSB(key10 * 0xD4652819), carry for x,
-    // carry for y (10 bits)]
-    // (26 bits total)
+    // carry for y (12 bits)]
+    // (28 bits total)
 
     // Similar process as before, but filtering with h2 in each file.  (I'll
-    // flesh this out later.)  We expect 2**{26 + 25 - 16} = 2**{35} chunk1-7
-    // tuples to pass, 2**{26 + 25} = 2**51 work where the 26 in the exponent
-    // is from stage 1 and the 25 from stage 2.
-
-
-    /* stage2 depends on guesses from stage1. Each guess from the in vector
-     * is used to generate a series of additional guesses. Each guess that
-     * passed stage 1 will get 2^26 guesses in this stage. A guess that passes
-     * stage2 will include 42 bits from stage 1 as a 64-bit integer and 26 bits
-     * from stage2 as a 32-bit integer.
-     */
+    // flesh this out later.)  We expect 2^{28 + 28 - 16} = 2^{40} chunk1-7
+    // tuples to pass, 2^{28 + 28} = 2^56 work.
 
     int stage2(const crack_t* state, const vector<guess_t> in,
             vector<guess_t>& out,
@@ -601,14 +556,13 @@ namespace breakzip {
 
     // stage 3:
     // We guess [chunk8 = bits 16..23 of crc32(key00, 0) (8 bits)]
-    // We guess [chunk9 = MSB(key10 * 0x576eac7d), carry for x, carry for y (10
+    // We guess [chunk9 = MSB(key10 * 0x576eac7d), carry for x, carry for y (12
     // bits)]
-    // (18 bits total)
+    // (20 bits total)
 
     // Similar process as before, but filtering with h3 in each file.  We
-    // expect 2**{35 + 18 - 16} = 2**{37} chunk1-9 tuples to pass, 2**{35 + 18}
-    // = 2**53 work where the 35 in the exponent is from stage 2 and the 18
-    // from stage 3.
+    // expect 2^{40 + 20 - 16} = 2^{44} chunk1-9 tuples to pass, 2^{60}
+    // work.
 
     /*
      * stage3 depends on guesses from stage2. 
@@ -616,43 +570,50 @@ namespace breakzip {
     int stage3(const crack_t* state, const vector<guess_t> in,
             vector<guess_t>& out);
 
-
     // stage 4:
-    // We guess [chunk10 = bits 24..32 of crc32(key00, 0) (8 bits)]
-    // We guess [chunk11 = MSB(key10 * 0x1201d271), carry for x, carry for y (10 bits)]
-    // (18 bits total)
-
-    // Similar process as before, but filtering with h3 in each file.  We
-    // expect 2**{37 + 18 - 16} = 2**{39} chunk1-11 tuples to pass, 2**{37 +
-    // 18} = 2**55 work where the 37 in the exponent is from stage 3 and the 18
-    // from stage 4.
-
+    // We guess [chunk11 = MSB(key10 * 0x1201d271) (8 bits)]
+    // (8 bits total)
+    // Given chunk3, chunk7, chunk9, chunk11, we do the linear algebra to
+    // get 36 vectors.  Only those vectors whose entries are all in the range
+    // [0, 2^24) are allowed.  We expect (on average) only one vector to work.
+    // From a conforming vector v, we multiply v+(chunk3<<24) by 0xd94fa8cd
+    // (which is CRYPTCONST^{-1} mod 2^32) to get k10.  Given k10, we
+    // check that it gives the 12 carry bits we've guessed.
+    // We expect 2^{44+8-12} = 2^40 candidates for the next stage with
+    // 2^{44+8} = 2^52 work
     int stage4(const crack_t* state, const vector<guess_t> in,
             vector<guess_t>& out);
 
-    // 
+
     // stage 5:
-    // No guesses, just filtration with h4 in each file.  
-    // We expect 2**{38 - 16} = 2**{22} chunk1-11 tuples to pass, 2**38 work
-    // where the 38 in the exponent is from stage 4.
+    // We guess [chunk10 = bits 24..32 of crc32(key00, 0) (8 bits)]
+    // (8 bits total)
+
+    // Similar process as before, but filtering with h3 in each file.  We
+    // expect 2^{40+8-16} = 2^{32} chunk1-11 tuples to pass, 2^{48} work
+
     int stage5(const crack_t* state, const vector<guess_t> in,
             vector<guess_t>& out);
 
     // 
     // stage 6:
-    // No guesses, just filtration with h5 in each file.  
-    // We expect 2**{22 - 16} = 2**{6} chunk1-11 tuples to pass, 2**22 work
-    // where the 22 in the exponent is from stage 5.
+    // No guesses, just filtration with h4 in each file.  
+    // We expect 2^{32 - 16} = 2^{16} chunk1-11 tuples to pass, 2^32 work
     int stage6(const crack_t* state, const vector<guess_t> in,
             vector<guess_t>& out);
 
     // 
     // stage 7:
     // No guesses, just filtration with h5 in each file.  
-    // We expect 2**{6 - 16} = 2**{-10} chunk1-11 tuples to pass, 2**6 work
-    // i.e. only the right one, where the 6 in the exponent is from stage 6.
-    // 
+    // We expect 2^{16 - 16} = 1 chunk1-11 tuples to pass, 2^16 work
     int stage7(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t>& out);
+
+    // 
+    // stage 8:
+    // No guesses, just filtration with h5 in each file.  
+    // We expect 2^{0 - 16} = 1/65536 chunk1-11 tuples to pass, negligible work
+    int stage8(const crack_t* state, const vector<guess_t> in,
             vector<guess_t>& out);
 
 }; // namespace

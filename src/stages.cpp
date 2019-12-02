@@ -555,4 +555,9 @@ done:
         return next(7, state, in, out);
     }
 
+    int stage8(const crack_t* state, const vector<guess_t> in,
+            vector<guess_t>& out) {
+        return next(7, state, in, out);
+    }
+
 }; // namespace
