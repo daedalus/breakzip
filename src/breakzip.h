@@ -37,6 +37,7 @@
 #define CRYPTCONST_POW2 0xd4652819
 #define CRYPTCONST_POW3 0x576eac7d
 #define CRYPTCONST_POW4 0x1201d271
+#define CRYPTCONST_INV 0xd94fa8cd
 
 #define LSB(x) (x & 0xff)
 
