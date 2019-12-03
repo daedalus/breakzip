@@ -5,6 +5,9 @@
 #include "stages.h"
 
 #include <algorithm>
+#include <cmath>
+#include <map>
+#include <vector>
 
 #include "breakzip.h"
 
@@ -81,37 +84,37 @@ uint32_t crc32(uint32_t x, uint8_t y) {
 }
 
 /* Functions for calculating the chunks from key material. */
-uint16_t chunk1_from_keys(const std::array<uint32_t, 3>& k) {
+uint16_t chunk1_from_keys(const std::array<uint32_t, 3> &k) {
   const uint16_t chunk1 = k[2] & 0xffff;
   return chunk1;
 }
 
-uint8_t chunk2_from_keys(const std::array<uint32_t, 3>& k) {
+uint8_t chunk2_from_keys(const std::array<uint32_t, 3> &k) {
   uint8_t chunk2 = crc32(k[0], 0) & 0xff;
   return chunk2;
 }
 
-uint8_t chunk3_from_keys(const std::array<uint32_t, 3>& k) {
+uint8_t chunk3_from_keys(const std::array<uint32_t, 3> &k) {
   const uint8_t chunk3 = (k[1] * CRYPTCONST) >> 24;
   return chunk3;
 }
 
-uint8_t chunk4_from_keys(const std::array<uint32_t, 3>& k) {
+uint8_t chunk4_from_keys(const std::array<uint32_t, 3> &k) {
   const uint8_t chunk4 = (k[2] >> 16) & 0xff;
   return chunk4;
 }
 
-uint8_t chunk5_from_keys(const std::array<uint32_t, 3>& k) {
+uint8_t chunk5_from_keys(const std::array<uint32_t, 3> &k) {
   const uint8_t chunk5 = (k[2] >> 24) & 0xff;
   return chunk5;
 }
 
-uint8_t chunk6_from_keys(const std::array<uint32_t, 3>& k) {
+uint8_t chunk6_from_keys(const std::array<uint32_t, 3> &k) {
   const uint8_t chunk6 = (crc32(k[0], 0) >> 8) & 0xff;
   return chunk6;
 }
 
-uint8_t chunk7_from_keys(const std::array<uint32_t, 3>& k) {
+uint8_t chunk7_from_keys(const std::array<uint32_t, 3> &k) {
   const uint8_t chunk7 = (k[1] * CRYPTCONST_POW2) >> 24;
   return chunk7;
 }
@@ -122,7 +125,7 @@ uint16_t get_s0(const uint16_t chunk1) {
   return s0;
 }
 
-uint16_t get_s0(const guess_t& guess) { return get_s0(guess.chunk1); }
+uint16_t get_s0(const guess_t &guess) { return get_s0(guess.chunk1); }
 
 guess_t correct_guess_start(uint8_t stage, guess_t correct) {
   guess_t mine = correct;
@@ -249,9 +252,9 @@ guess_t correct_guess(uint8_t stage, const crack_t crypt_test) {
   uint16_t bits = 0;
   for (int f = 0; f < 2; ++f) {
     for (int xy = 0; xy < 2; ++xy) {
-      const uint8_t* bytes = xy ? crypt_test.zip.files[f].header_first
+      const uint8_t *bytes = xy ? crypt_test.zip.files[f].header_first
                                 : crypt_test.zip.files[f].random_bytes;
-      const uint8_t* encrypted = xy ? crypt_test.zip.files[f].header_second
+      const uint8_t *encrypted = xy ? crypt_test.zip.files[f].header_second
                                     : crypt_test.zip.files[f].header_first;
       uint32_t bound = 0;
       uint32_t k0n = k00;
@@ -287,8 +290,8 @@ guess_t correct_guess(uint8_t stage, const crack_t crypt_test) {
 
 uint8_t step(const bool do_crc, const uint8_t k1chunk, const uint8_t byte,
              const uint8_t carry_bit, const uint8_t fileidx,
-             uint32_t& k0 /* out */, uint32_t& bound /* out */,
-             uint32_t& k2 /* out */) {
+             uint32_t &k0 /* out */, uint32_t &bound /* out */,
+             uint32_t &k2 /* out */) {
   k0 = do_crc ? crc32(k0, byte) : k0 ^ crc32tab[byte];
   const uint8_t lsbkey0n = k0 & 0xff;
   bound = bound * CRYPTCONST + lsbkey0n * CRYPTCONST + 1;
@@ -299,8 +302,133 @@ uint8_t step(const bool do_crc, const uint8_t k1chunk, const uint8_t byte,
   return s1n;
 }
 
-int next(int stage, const crack_t* state, const vector<guess_t>& in,
-         vector<guess_t>& out) {
+typedef vector<int64_t> vec;
+#define m1 0x00ffffff
+
+vector<vec> ntable = {{-14363699, -11151615, -7227643, 6235929},
+                      {-13800186, 4864286, -2714218, 16925678},
+                      {-8196160, -13783360, -38464, 8655040},
+                      {-7632647, 2232541, 4474961, 19344789},
+                      {-6167539, 2631745, -7189179, -2419111},
+                      {-5604026, 18647646, -2675754, 8270638},
+                      {-2028621, -16415105, 7150715, 11074151},
+                      {-1465108, -399204, 11664140, 21763900},
+                      {-759020, -6527132, -25324300, 14792900},
+                      {-563513, -16015901, -4513425, -10689749},
+                      {-195507, 9488769, -20810875, 25482649},
+                      {0, 0, 0, 0},
+                      {563513, 16015901, 4513425, 10689749},
+                      {4138918, -19046850, 14339894, 13493262},
+                      {5408519, -9158877, -18135121, 17212011},
+                      {5604026, -18647646, 2675754, -8270638},
+                      {5972032, 6857024, -13621696, 27901760},
+                      {6167539, -2631745, 7189179, 2419111},
+                      {6731052, 13384156, 11702604, 13108860},
+                      {7437140, 7256228, -25285836, 6137860},
+                      {8000653, 23272129, -20772411, 16827609},
+                      {11576058, -11790622, -10945942, 19631122},
+                      {11771565, -21279391, 9864933, -5851527},
+                      {12139571, 4225279, -6432517, 30320871},
+                      {12335078, -5263490, 14378358, 4838222},
+                      {13041166, -11391418, -22610082, -2132778},
+                      {13604679, 4624483, -18096657, 8556971},
+                      {14168192, 20640384, -13583232, 19246720},
+                      {17743597, -14422367, -3756763, 22050233},
+                      {19208705, -14023163, -15420903, 286333},
+                      {19772218, 1992738, -10907478, 10976082},
+                      {20335731, 18008639, -6394053, 21665831},
+                      {25376244, -16654908, -8231724, 2705444},
+                      {25939757, -639007, -3718299, 13395193},
+                      {26503270, 15376894, 795126, 24084942}};
+
+int doStage4(const crack_t *state, const vector<guess_t> &in,
+             vector<guess_t> &out) {
+  vec msbs;
+
+  for (auto candidate : in) {
+    msbs[0] = candidate.chunk3 << 24;
+    msbs[1] = candidate.chunk7 << 24;
+    msbs[2] = candidate.chunk9 << 24;
+    carrybits_t bits(candidate.carry_bits);
+    for (auto guess : stage_range(4, *state)) {
+      bits.set(4, guess.carry_bits.get(4));
+      msbs[3] = guess.chunk11 << 24;
+
+      // Find values for k10 that give those msbs
+      vec w = {+109 * msbs[0] - 18 * msbs[1] - 125 * msbs[2] + 74 * msbs[3],
+               +72 * msbs[0] - 145 * msbs[1] - 60 * msbs[2] - 163 * msbs[3],
+               -108 * msbs[0] - 123 * msbs[1] - 19 * msbs[2] + 198 * msbs[3],
+               -319 * msbs[0] + 137 * msbs[1] - 245 * msbs[2] - 85 * msbs[3]};
+
+      for (int i = 0; i < 4; ++i) {
+        w[i] = -(w[i] & m1);
+      }
+
+      vec v = {
+          (13604679 * w[0] - 563513 * w[1] - 8196160 * w[2] - 6167539 * w[3]) >>
+              32,
+          (4624483 * w[0] - 16015901 * w[1] - 13783360 * w[2] +
+           2631745 * w[3]) >>
+              32,
+          (-18096657 * w[0] - 4513425 * w[1] - 38464 * w[2] - 7189179 * w[3]) >>
+              32,
+          (8556971 * w[0] - 10689749 * w[1] + 8655040 * w[2] -
+           2419111 * w[3]) >>
+              32};
+
+      vec neighbor;
+      // Given each k10, check the carry bits we guessed
+      const uint32_t crc32k00 =
+          candidate.chunk2 | (candidate.chunk6 << 8) | (candidate.chunk8 << 16);
+      const uint32_t k20 = candidate.chunk1 | (candidate.chunk4 << 16) |
+                           (candidate.chunk5 << 24);
+      auto zip = state->zip;
+
+      for (int n = 1; n < 35; ++n) {
+        bool out_of_bounds = false;
+        for (int j = 0; j < 4; ++j) {
+          neighbor[j] = v[j] + ntable[n][j];
+          if (neighbor[j] < 0 || neighbor[j] > 0xffffff) {
+            out_of_bounds = true;
+            break;
+          }
+        }
+        if (out_of_bounds) {
+          continue;
+        }
+
+        uint32_t k10(uint32_t((neighbor[0] + msbs[0]) * CRYPTCONST_INV));
+        bool still_good = true;
+        for (int f = 0; (f < 2) && still_good; ++f) {
+          const uint8_t *bytes = zip.files[f].random_bytes;
+          for (int xy = 0; (xy < 2) && still_good; ++xy) {
+            uint32_t bound = 0;
+            uint32_t k0n = crc32k00 ^ crc32tab[bytes[0]];
+            uint32_t k1cn = k10;
+            uint32_t k2n = k20;
+            uint8_t sn = get_s0(k20 & 0xffff);
+            for (int idx = 0; (idx < 3) && still_good; ++idx) {
+              uint8_t lsbk0n = k0n & 0xff;
+              bound = (bound + lsbk0n) * CRYPTCONST + 1;
+              k1cn = k1cn * CRYPTCONST;
+              uint8_t carry_bit =
+                  ((k1cn & 0xffffff) + (bound & 0xffffff)) > 0x01000000;
+              still_good &= (bits.get(idx + 1, f, xy) == carry_bit);
+              k2n = crc32(k2n, (k1cn + bound) >> 24);
+              k0n = crc32(k0n, bytes[idx + 1]);
+            }
+          }
+        }
+        guess.k10 = k10;
+        out.push_back(guess);
+      }
+    }
+  }
+  return 1;
+}
+
+int next(int stage, const crack_t *state, const vector<guess_t> &in,
+         vector<guess_t> &out) {
   for (auto candidate : in) {
     uint16_t chunk1 = 0;
     uint8_t chunk2 = 0;
@@ -506,46 +634,46 @@ int next(int stage, const crack_t* state, const vector<guess_t>& in,
   return 1;
 }
 
-int stage1(const crack_t* state, vector<guess_t>& out,
-           const guess_t& correct_guess, uint16_t expected_s0) {
+int stage1(const crack_t *state, vector<guess_t> &out,
+           const guess_t &correct_guess, uint16_t expected_s0) {
   guess_t candidate(1);
   vector<guess_t> in;
   in.push_back(candidate);
   return next(1, state, in, out);
 }
 
-int stage2(const crack_t* state, const vector<guess_t> in, vector<guess_t>& out,
-           const guess_t& correct_guess, uint16_t expected_s0) {
+int stage2(const crack_t *state, const vector<guess_t> in, vector<guess_t> &out,
+           const guess_t &correct_guess, uint16_t expected_s0) {
   return next(2, state, in, out);
 }
 
-int stage3(const crack_t* state, const vector<guess_t> in,
-           vector<guess_t>& out) {
+int stage3(const crack_t *state, const vector<guess_t> in,
+           vector<guess_t> &out) {
   return next(3, state, in, out);
 }
 
-int stage4(const crack_t* state, const vector<guess_t> in,
-           vector<guess_t>& out) {
+int stage4(const crack_t *state, const vector<guess_t> in,
+           vector<guess_t> &out) {
   return next(4, state, in, out);
 }
 
-int stage5(const crack_t* state, const vector<guess_t> in,
-           vector<guess_t>& out) {
+int stage5(const crack_t *state, const vector<guess_t> in,
+           vector<guess_t> &out) {
   return next(5, state, in, out);
 }
 
-int stage6(const crack_t* state, const vector<guess_t> in,
-           vector<guess_t>& out) {
+int stage6(const crack_t *state, const vector<guess_t> in,
+           vector<guess_t> &out) {
   return next(6, state, in, out);
 }
 
-int stage7(const crack_t* state, const vector<guess_t> in,
-           vector<guess_t>& out) {
+int stage7(const crack_t *state, const vector<guess_t> in,
+           vector<guess_t> &out) {
   return next(7, state, in, out);
 }
 
-int stage8(const crack_t* state, const vector<guess_t> in,
-           vector<guess_t>& out) {
+int stage8(const crack_t *state, const vector<guess_t> in,
+           vector<guess_t> &out) {
   return next(7, state, in, out);
 }
 
