@@ -419,8 +419,10 @@ int doStage4(const crack_t *state, const vector<guess_t> &in,
             }
           }
         }
-        guess.k10 = k10;
-        out.push_back(guess);
+        if (still_good) {
+          guess.k10 = k10;
+          out.push_back(guess);
+        }
       }
     }
   }
