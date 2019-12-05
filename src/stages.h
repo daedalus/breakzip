@@ -123,6 +123,8 @@ namespace breakzip {
 
             uint8_t chunk10;
             uint8_t chunk11;
+            
+            uint32_t k10;
 
             carrybits_t carry_bits;
 
