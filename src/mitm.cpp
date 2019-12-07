@@ -75,8 +75,7 @@ static const uint32_t crc32tab[256] = {
     0x40df0b66, 0x37d83bf0, 0xa9bcae53, 0xdebb9ec5, 0x47b2cf7f, 0x30b5ffe9,
     0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693,
     0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
-    0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
-};
+    0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
 
 uint32_t crc32(uint32_t x, uint8_t y) {
   return (x >> 8) ^ crc32tab[y] ^ crc32tab[x & 0xff];
@@ -105,15 +104,29 @@ static const uint8_t crcinvtab[256] = {
     0xed, 0xd4, 0x9f, 0xa6, 0x97, 0xae, 0xe5, 0xdc, 0xb5, 0x8c, 0xc7, 0xfe,
     0xcf, 0xf6, 0xbd, 0x84, 0xdf, 0xe6, 0xad, 0x94, 0xa5, 0x9c, 0xd7, 0xee,
     0xc6, 0xff, 0xb4, 0x8d, 0xbc, 0x85, 0xce, 0xf7, 0xac, 0x95, 0xde, 0xe7,
-    0xd6, 0xef, 0xa4, 0x9d
-};
+    0xd6, 0xef, 0xa4, 0x9d};
 
 uint32_t pack1(uint16_t s0, uint16_t chunk2, uint16_t chunk3, uint8_t carries) {
   return uint32_t(s0 | (chunk2 << 8) | (chunk3 << 16) | (carries << 24));
 }
 
+void unpack1(uint32_t packed, uint16_t &s0, uint16_t &chunk2, uint16_t &chunk3,
+             uint8_t &carries) {
+  s0 = packed & 0xff;
+  chunk2 = (packed >> 8) & 0xff;
+  chunk3 = (packed >> 16) & 0xff;
+  carries = (packed >> 24) & 0x3f;
+}
+
 uint32_t pack2(uint16_t s1xf0, uint16_t s1xf1, uint8_t prefix) {
   return uint32_t(s1xf0 | (s1xf1 << 8) | (prefix << 16));
+}
+
+void unpack2(uint32_t packed, uint16_t &s1xf0, uint16_t &s1xf1,
+             uint8_t &prefix) {
+  s1xf0 = packed & 0xff;
+  s1xf1 = (packed >> 8) & 0xff;
+  prefix = (packed >> 16) & 0x3f;
 }
 
 uint32_t mapkey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
@@ -122,14 +135,17 @@ uint32_t mapkey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
          (uint32_t(msbxf0 ^ msbyf1) << 16);
 }
 
-int main() {
-  // Stage 1
+vector<vector<uint32_t>> table1(0x01000000);
+vector<uint64_t> candidates(0);
+
+void stage1() {
+  // STAGE 1
+  //
   // Guess s0, chunk2, chunk3 and carry bits.
   // Keep track of bounds to exclude some carry bit options
   bool correct_guess = false;
   uint8_t correct_chunk2 = crc32(test_keys[0], 0) & 0xff;
   uint8_t correct_chunk3 = (test_keys[1] * CRYPTCONST) >> 24;
-  vector<vector<uint32_t>> table1(0x01000000);
 
   uint8_t xf0 = test_bytes[0][0][0];
   uint8_t xf1 = test_bytes[1][0][0];
@@ -247,7 +263,8 @@ int main() {
     */
   }
   fprintf(stderr,
-          "\nTable1:\ntotal mapkeys: %08x, max on one: %08x, index of maximum: %08x, "
+          "\nTable1:\ntotal mapkeys: %08x, max on one: %08x, index of maximum: "
+          "%08x, "
           "populated: %08x\n",
           total_mapkeys, max_on_one, index_max, populated);
 
@@ -260,14 +277,12 @@ int main() {
   }
 
   // Second half of MITM for stage 1
-  vector<vector<uint32_t>> table2(0x01000000);
   for (uint16_t s1xf1 = 0; s1xf1 < 0x100; ++s1xf1) {
     for (uint16_t s1xf0 = 0; s1xf0 < 0x100; ++s1xf0) {
       for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
         uint16_t pxf0(preimages[s1xf0][prefix]);
-        // fprintf(stderr, "\ns1xf1: %02x, s1xf0: %02x, prefix: %02x, pxf0: %04x\nFirst:\n", uint8_t(s1xf1), uint8_t(s1xf0), prefix, pxf0);
         uint32_t mapkey(0);
-        bool found(false);
+        vector<uint8_t> firsts(0);
         for (uint8_t first = 0; first < 0x40; ++first) {
           uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
           uint16_t pyf0 = preimages[s1yf0][first];
@@ -275,34 +290,28 @@ int main() {
           uint8_t inv = (xored >> 1) & 0xff;
           uint8_t idx = crcinvtab[inv];
           uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          // fprintf(stderr, "pyf0: %04x, xored: %04x, inv: %02x, crc32tab[%02x]: %08x, match: %04x, diff: %04x\n", pyf0, xored, inv, idx, crc32tab[idx], match, match ^ xored);
           if (match == xored) {
-            mapkey |= idx;
-            found = true;
-            // fprintf(stderr, "Found: first: %02x\n", first);
-            break;
+            firsts.push_back(idx);
           }
         }
-        if (!found) { continue; }
-        found = false;
-        // fprintf(stderr, "\nSecond:\n");
+        if (!firsts.size()) {
+          continue;
+        }
+        vector<uint8_t> seconds(0);
         for (uint8_t second = 0; second < 0x40; ++second) {
           uint16_t pxf1 = preimages[s1xf1][second];
           uint16_t xored = pxf0 ^ pxf1;
           uint8_t inv = (xored >> 1) & 0xff;
           uint8_t idx = crcinvtab[inv];
           uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          // fprintf(stderr, "pxf1: %04x, xored: %04x, inv: %02x, crc32tab[%02x]: %08x, match: %04x, diff: %04x\n", pxf1, xored, inv, idx, crc32tab[idx], match, match ^ xored);
           if (match == xored) {
-            mapkey |= (idx << 8);
-            found = true;
-            // fprintf(stderr, "Found: second: %02x\n", second);
-            break;
+            seconds.push_back(idx);
           }
         }
-        if (!found) { continue; }
-        found = false;
-        // fprintf(stderr, "\nThird:\n");
+        if (!seconds.size()) {
+          continue;
+        }
+        vector<uint8_t> thirds(0);
         for (uint8_t third = 0; third < 0x40; ++third) {
           uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
           uint16_t pyf1 = preimages[s1yf1][third];
@@ -310,49 +319,58 @@ int main() {
           uint8_t inv = (xored >> 1) & 0xff;
           uint8_t idx = crcinvtab[inv];
           uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          // fprintf(stderr, "pyf1: %04x, xored: %04x, inv: %02x, crc32tab[%02x]: %08x, match: %04x, diff: %04x\n", pyf1, xored, inv, idx, crc32tab[idx], match, match ^ xored);
           if (match == xored) {
-            mapkey |= (idx << 16);
-            found = true;
-            // fprintf(stderr, "Found: third: %02x\n", third);
-            break;
+            thirds.push_back(idx);
           }
         }
-        if (!found) { continue; }
-        table2[mapkey].push_back(pack2(s1xf0, s1xf1, prefix));
+        if (!thirds.size()) {
+          continue;
+        }
+        for (auto f : firsts) {
+          for (auto s : seconds) {
+            for (auto t : thirds) {
+              mapkey = f | (s << 8) | (t << 16);
+              for (auto c : table1[mapkey]) {
+                candidates.push_back(
+                    (uint64_t(pack2(s1xf0, s1xf1, prefix)) << 32) | c);
+              }
+            }
+          }
+        }
       }
     }
   }
 
-  // Get some stats
-  total_mapkeys = 0;
-  max_on_one = 0;
-  index_max = 0x01000000;
-  populated = 0;
-  for (uint32_t i = 0; i < 0x01000000; ++i) {
-    uint32_t size = table2[i].size();
-    total_mapkeys += size;
-    populated += !!size;
-    if (size > max_on_one) {
-      max_on_one = size;
-      index_max = i;
-    }
-    /*
-    if (!!size) {
-      printf("%d, %d\n", i, size);
-    }
-    */
-  }
-  fprintf(stderr,
-          "\nTable2:\ntotal mapkeys: %08x, max on one: %08x, index of maximum: %08x, "
-          "populated: %08x\n",
-          total_mapkeys, max_on_one, index_max, populated);
+  fprintf(stderr, "candidates.size() == %04lx\n", candidates.size());
+}
 
-  // Compute how many candidates
-  uint64_t total_candidates = 0;
-  for (uint32_t i = 0; i < 0x01000000; ++i) {
-    total_candidates += table1[i].size() * table2[i].size();
+void stage2() {
+  // STAGE 2
+  //
+  // Guess chunk6, chunk7 and carry bits
+  // Keep track of bounds to exclude some carry bit options
+
+  // Now that we have actual msbs, check prediction of s1xf0, etc. and filter
+  // more
+  for (auto c : candidates) {
+    uint16_t s0, chunk2, chunk3, s1xf0, s1xf1;
+    uint8_t carries, prefix;
+    unpack1(c & 0xffffffff, s0, chunk2, chunk3, carries);
+    unpack2(c >> 32, s1xf0, s1xf1, prefix);
+    uint8_t carryxf0 = carries & 1;
+    uint8_t carryyf0 = (carries >> 1) & 1;
+    uint8_t carryxf1 = (carries >> 2) & 1;
+    uint8_t carryyf1 = (carries >> 3) & 1;
+    uint32_t k01xf0 = chunk2 ^ crc32tab[test_bytes[0][0][0]];
+    uint8_t lsbk01xf0 = k01xf0 & 0xff;
+    uint32_t boundxf0 = lsbk01xf0 * CRYPTCONST + 1;
+    uint8_t msbxf0 = chunk3 + carryxf0 + (boundxf0 >> 24);
+    uint32_t crcmsbxf0 = crc32tab[msbxf0];
   }
-  fprintf(stderr, "Total candidates: %016lx = %ld\n", total_candidates, total_candidates);
+}
+
+int main() {
+  stage1();
+
   return 0;
 }
