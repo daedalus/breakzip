@@ -157,7 +157,8 @@ vector<vector<uint16_t>> preimages(0x100);
 
 vector<guess> s1candidates(0);
 
-uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry, uint32_t &k0, uint32_t &upper, uint32_t &lower) {
+uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
+                        uint32_t &k0, uint32_t &upper, uint32_t &lower) {
   if (crc_flag) {
     k0 = crc32(k0, x);
   } else {
@@ -166,9 +167,12 @@ uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry, 
   uint32_t lsbc = (k0 & 0xff) * CRYPTCONST + 1;
   uint32_t bound = 0x01000000 - (lsbc & 0x00ffffff);
 
-  if (carry) { lower = bound > lower ? bound : lower; } 
-  else { upper = bound < upper ? bound : upper; }
-  
+  if (carry) {
+    lower = bound > lower ? bound : lower;
+  } else {
+    upper = bound < upper ? bound : upper;
+  }
+
   return k1msb + (lsbc >> 24) + carry;
 }
 
@@ -197,12 +201,14 @@ void stage1() {
 
           // xf0
           uint32_t k0crc = chunk2;
-          uint32_t msbxf0 = first_half_step(xf0, false, chunk3, carryxf0, k0crc, upper, lower);
-          
+          uint32_t msbxf0 = first_half_step(xf0, false, chunk3, carryxf0, k0crc,
+                                            upper, lower);
+
           // yf0
           uint8_t yf0 = xf0 ^ s0;
           k0crc = chunk2;
-          uint32_t msbyf0 = first_half_step(yf0, false, chunk3, carryyf0, k0crc, upper, lower);
+          uint32_t msbyf0 = first_half_step(yf0, false, chunk3, carryyf0, k0crc,
+                                            upper, lower);
 
           if (upper < lower) {
             continue;
@@ -210,8 +216,9 @@ void stage1() {
 
           // xf1
           k0crc = chunk2;
-          uint32_t msbxf1 = first_half_step(xf1, false, chunk3, carryxf1, k0crc, upper, lower);
- 
+          uint32_t msbxf1 = first_half_step(xf1, false, chunk3, carryxf1, k0crc,
+                                            upper, lower);
+
           if (upper < lower) {
             continue;
           }
@@ -219,7 +226,8 @@ void stage1() {
           // yf1
           uint8_t yf1 = xf1 ^ s0;
           k0crc = chunk2;
-          uint32_t msbyf1 = first_half_step(yf1, false, chunk3, carryyf1, k0crc, upper, lower);
+          uint32_t msbyf1 = first_half_step(yf1, false, chunk3, carryyf1, k0crc,
+                                            upper, lower);
 
           if (upper < lower) {
             continue;
@@ -312,7 +320,9 @@ void stage1() {
                 uint16_t chunk3;
                 uint8_t carries;
                 unpack1(c, s0, chunk2, chunk3, carries);
-                guess g = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3), uint8_t(carries), uint8_t(s1xf0), uint8_t(s1xf1), uint8_t(prefix)};
+                guess g = {uint8_t(s0),      uint8_t(chunk2), uint8_t(chunk3),
+                           uint8_t(carries), uint8_t(s1xf0),  uint8_t(s1xf1),
+                           uint8_t(prefix)};
                 s1candidates.push_back(g);
               }
             }
@@ -332,15 +342,15 @@ void stage2() {
   // Guess chunk6, chunk7 and carry bits
   // Keep track of bounds to exclude some carry bit options
 
-  // Now that we have actual k20 bits, check prediction of s2xf0, etc. and filter
-  // more
+  // Now that we have actual k20 bits, check prediction of s2xf0, etc. and
+  // filter more
   for (auto c : s1candidates) {
     uint8_t cb1 = c.cb1;
     uint8_t carryx0f0 = cb1 & 1;
     uint8_t carryy0f0 = (cb1 >> 1) & 1;
     uint8_t carryx0f1 = (cb1 >> 2) & 1;
     uint8_t carryy0f1 = (cb1 >> 3) & 1;
-    
+
     vector<vector<guess>> table2(0x01000000);
     for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
       for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
@@ -349,20 +359,24 @@ void stage2() {
           uint8_t carryyf0 = (cb2 >> 1) & 1;
           uint8_t carryxf1 = (cb2 >> 2) & 1;
           uint8_t carryyf1 = (cb2 >> 3) & 1;
-          
+
           uint32_t upper = 0x01000000;
           uint32_t lower = 0x00000000;
-          
-          
+
           // xf0
           uint32_t k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[0][0][0], false, c.chunk3, c.cb1 & 1, k0crc, upper, lower);
-          uint32_t msbxf0 = first_half_step(test_bytes[0][0][1], true, chunk7, carryxf0, k0crc, upper, lower);
-          
+          first_half_step(test_bytes[0][0][0], false, c.chunk3, c.cb1 & 1,
+                          k0crc, upper, lower);
+          uint32_t msbxf0 = first_half_step(test_bytes[0][0][1], true, chunk7,
+                                            carryxf0, k0crc, upper, lower);
+
           // yf0
           k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[0][0][0] ^ c.s0, false, c.chunk3, (c.cb1 >> 1) & 1, k0crc, upper, lower);
-          uint32_t msbyf0 = first_half_step(test_bytes[0][0][1] ^ c.s1xf0, true, chunk7, carryyf0, k0crc, upper, lower);
+          first_half_step(test_bytes[0][0][0] ^ c.s0, false, c.chunk3,
+                          (c.cb1 >> 1) & 1, k0crc, upper, lower);
+          uint32_t msbyf0 =
+              first_half_step(test_bytes[0][0][1] ^ c.s1xf0, true, chunk7,
+                              carryyf0, k0crc, upper, lower);
 
           if (upper < lower) {
             continue;
@@ -370,17 +384,22 @@ void stage2() {
 
           // xf1
           k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[1][0][0], false, c.chunk3, (c.cb1 >> 2) & 1, k0crc, upper, lower);
-          uint32_t msbxf1 = first_half_step(test_bytes[1][0][1], true, chunk7, carryxf1, k0crc, upper, lower);
- 
+          first_half_step(test_bytes[1][0][0], false, c.chunk3,
+                          (c.cb1 >> 2) & 1, k0crc, upper, lower);
+          uint32_t msbxf1 = first_half_step(test_bytes[1][0][1], true, chunk7,
+                                            carryxf1, k0crc, upper, lower);
+
           if (upper < lower) {
             continue;
           }
 
           // yf1
           k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[1][0][0] ^ c.s0, false, c.chunk3, (c.cb1 >> 3) & 1, k0crc, upper, lower);
-          uint32_t msbyf1 = first_half_step(test_bytes[1][0][1] ^ c.s1xf1, true, chunk7, carryyf1, k0crc, upper, lower);
+          first_half_step(test_bytes[1][0][0] ^ c.s0, false, c.chunk3,
+                          (c.cb1 >> 3) & 1, k0crc, upper, lower);
+          uint32_t msbyf1 =
+              first_half_step(test_bytes[1][0][1] ^ c.s1xf1, true, chunk7,
+                              carryyf1, k0crc, upper, lower);
 
           if (upper < lower) {
             continue;
@@ -395,7 +414,7 @@ void stage2() {
         }
       }
     }
-    
+
     // Second half of MITM for stage 2
     for (uint16_t s2xf0 = 0; s2xf0 < 0x100; ++s2xf0) {
       for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
