@@ -157,6 +157,21 @@ vector<vector<uint16_t>> preimages(0x100);
 
 vector<guess> s1candidates(0);
 
+uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry, uint32_t &k0, uint32_t &upper, uint32_t &lower) {
+  if (crc_flag) {
+    k0 = crc32(k0, x);
+  } else {
+    k0 ^= crc32tab[x];
+  }
+  uint32_t lsbc = (k0 & 0xff) * CRYPTCONST + 1;
+  uint32_t bound = 0x01000000 - (lsbc & 0x00ffffff);
+
+  if (carry) { lower = bound > lower ? bound : lower; } 
+  else { upper = bound < upper ? bound : upper; }
+  
+  return k1msb + (lsbc >> 24) + carry;
+}
+
 void stage1() {
   // STAGE 1
   //
@@ -181,76 +196,34 @@ void stage1() {
           uint32_t lower = 0x00000000;  // inclusive
 
           // xf0
-          uint32_t k01xf0 = chunk2 ^ crc32tab[xf0];
-          uint8_t lsbk01xf0 = k01xf0 & 0xff;
-          uint32_t boundxf0 = lsbk01xf0 * CRYPTCONST + 1;
-          uint32_t bound = 0x01000000 - (boundxf0 & 0x00ffffff);
-
-          if (carryxf0) {
-            lower = bound;
-          } else {
-            upper = bound;
-          }
-
-          uint8_t msbxf0 = chunk3 + carryxf0 + (boundxf0 >> 24);
-
+          uint32_t k0crc = chunk2;
+          uint32_t msbxf0 = first_half_step(xf0, false, chunk3, carryxf0, k0crc, upper, lower);
+          
           // yf0
           uint8_t yf0 = xf0 ^ s0;
-
-          uint32_t k01yf0 = chunk2 ^ crc32tab[yf0];
-          uint8_t lsbk01yf0 = k01yf0 & 0xff;
-          uint32_t boundyf0 = lsbk01yf0 * CRYPTCONST + 1;
-          bound = 0x01000000 - (boundyf0 & 0x00ffffff);
-
-          if (carryyf0) {
-            lower = (bound > lower) ? bound : lower;
-          } else {
-            upper = (bound < upper) ? bound : upper;
-          }
+          k0crc = chunk2;
+          uint32_t msbyf0 = first_half_step(yf0, false, chunk3, carryyf0, k0crc, upper, lower);
 
           if (upper < lower) {
             continue;
           }
-
-          uint8_t msbyf0 = chunk3 + carryyf0 + (boundyf0 >> 24);
 
           // xf1
-          uint32_t k01xf1 = chunk2 ^ crc32tab[xf1];
-          uint8_t lsbk01xf1 = k01xf1 & 0xff;
-          uint32_t boundxf1 = lsbk01xf1 * CRYPTCONST + 1;
-          bound = 0x01000000 - (boundxf1 & 0x00ffffff);
-
-          if (carryxf1) {
-            lower = bound;
-          } else {
-            upper = bound;
-          }
-
+          k0crc = chunk2;
+          uint32_t msbxf1 = first_half_step(xf1, false, chunk3, carryxf1, k0crc, upper, lower);
+ 
           if (upper < lower) {
             continue;
           }
-
-          uint8_t msbxf1 = chunk3 + carryxf1 + (boundxf1 >> 24);
 
           // yf1
-          uint8_t yf1 = xf0 ^ s0;
-
-          uint32_t k01yf1 = chunk2 ^ crc32tab[yf1];
-          uint8_t lsbk01yf1 = k01yf1 & 0xff;
-          uint32_t boundyf1 = lsbk01yf1 * CRYPTCONST + 1;
-          bound = 0x01000000 - (boundyf1 & 0x00ffffff);
-
-          if (carryyf1) {
-            lower = (bound > lower) ? bound : lower;
-          } else {
-            upper = (bound < upper) ? bound : upper;
-          }
+          uint8_t yf1 = xf1 ^ s0;
+          k0crc = chunk2;
+          uint32_t msbyf1 = first_half_step(yf1, false, chunk3, carryyf1, k0crc, upper, lower);
 
           if (upper < lower) {
             continue;
           }
-
-          uint8_t msbyf1 = chunk3 + carryyf1 + (boundyf1 >> 24);
 
           uint32_t mk = mapkey(msbxf0, msbyf0, msbxf1, msbyf1);
           table1[mk].push_back(pack1(s0, chunk2, chunk3, carries));
