@@ -176,6 +176,20 @@ uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
   return k1msb + (lsbc >> 24) + carry;
 }
 
+void second_half_step(uint16_t offset, uint8_t stream_byte,
+                      vector<uint8_t> &idxs) {
+  for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
+    uint16_t preimage = preimages[stream_byte][prefix];
+    uint16_t xored = offset ^ preimage;
+    uint8_t inv = (xored >> 1) & 0xff;
+    uint8_t idx = crcinvtab[inv];
+    uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
+    if (match == xored) {
+      idxs.push_back(idx);
+    }
+  }
+}
+
 void stage1() {
   // STAGE 1
   //
@@ -265,55 +279,28 @@ void stage1() {
     for (uint16_t s1xf1 = 0; s1xf1 < 0x100; ++s1xf1) {
       for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
         uint16_t pxf0(preimages[s1xf0][prefix]);
-        uint32_t mapkey(0);
         vector<uint8_t> firsts(0);
-        for (uint8_t first = 0; first < 0x40; ++first) {
-          uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
-          uint16_t pyf0 = preimages[s1yf0][first];
-          uint16_t xored = pxf0 ^ pyf0;
-          uint8_t inv = (xored >> 1) & 0xff;
-          uint8_t idx = crcinvtab[inv];
-          uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          if (match == xored) {
-            firsts.push_back(idx);
-          }
-        }
+        uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
+        second_half_step(pxf0, s1yf0, firsts);
+
         if (!firsts.size()) {
           continue;
         }
         vector<uint8_t> seconds(0);
-        for (uint8_t second = 0; second < 0x40; ++second) {
-          uint16_t pxf1 = preimages[s1xf1][second];
-          uint16_t xored = pxf0 ^ pxf1;
-          uint8_t inv = (xored >> 1) & 0xff;
-          uint8_t idx = crcinvtab[inv];
-          uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          if (match == xored) {
-            seconds.push_back(idx);
-          }
-        }
+        second_half_step(pxf0, s1xf1, seconds);
         if (!seconds.size()) {
           continue;
         }
         vector<uint8_t> thirds(0);
-        for (uint8_t third = 0; third < 0x40; ++third) {
-          uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
-          uint16_t pyf1 = preimages[s1yf1][third];
-          uint16_t xored = pxf0 ^ pyf1;
-          uint8_t inv = (xored >> 1) & 0xff;
-          uint8_t idx = crcinvtab[inv];
-          uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          if (match == xored) {
-            thirds.push_back(idx);
-          }
-        }
+        uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
+        second_half_step(pxf0, s1yf1, thirds);
         if (!thirds.size()) {
           continue;
         }
         for (auto f : firsts) {
           for (auto s : seconds) {
             for (auto t : thirds) {
-              mapkey = f | (s << 8) | (t << 16);
+              uint32_t mapkey(f | (s << 8) | (t << 16));
               for (auto c : table1[mapkey]) {
                 uint16_t s0;
                 uint16_t chunk2;
@@ -420,55 +407,28 @@ void stage2() {
       for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
         for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
           uint16_t pxf0(preimages[s2xf0][prefix]);
-          uint32_t mapkey(0);
+
           vector<uint8_t> firsts(0);
-          for (uint8_t first = 0; first < 0x40; ++first) {
-            uint8_t s2yf0 = s2xf0 ^ test_bytes[0][0][2] ^ test_bytes[0][2][2];
-            uint16_t pyf0 = preimages[s2yf0][first];
-            uint16_t xored = pxf0 ^ pyf0;
-            uint8_t inv = (xored >> 1) & 0xff;
-            uint8_t idx = crcinvtab[inv];
-            uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-            if (match == xored) {
-              firsts.push_back(idx);
-            }
-          }
+          uint8_t s2yf0 = s2xf0 ^ test_bytes[0][0][2] ^ test_bytes[0][2][2];
+          second_half_step(pxf0, s2yf0, firsts);
           if (!firsts.size()) {
             continue;
           }
           vector<uint8_t> seconds(0);
-          for (uint8_t second = 0; second < 0x40; ++second) {
-            uint16_t pxf1 = preimages[s2xf1][second];
-            uint16_t xored = pxf0 ^ pxf1;
-            uint8_t inv = (xored >> 1) & 0xff;
-            uint8_t idx = crcinvtab[inv];
-            uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-            if (match == xored) {
-              seconds.push_back(idx);
-            }
-          }
+          second_half_step(pxf0, s2xf1, seconds);
           if (!seconds.size()) {
             continue;
           }
           vector<uint8_t> thirds(0);
-          for (uint8_t third = 0; third < 0x40; ++third) {
-            uint8_t s2yf1 = s2xf1 ^ test_bytes[1][0][2] ^ test_bytes[1][2][2];
-            uint16_t pyf1 = preimages[s2yf1][third];
-            uint16_t xored = pxf0 ^ pyf1;
-            uint8_t inv = (xored >> 1) & 0xff;
-            uint8_t idx = crcinvtab[inv];
-            uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-            if (match == xored) {
-              thirds.push_back(idx);
-            }
-          }
+          uint8_t s2yf1 = s2xf0 ^ test_bytes[1][0][2] ^ test_bytes[1][2][2];
+          second_half_step(pxf0, s2yf1, thirds);
           if (!thirds.size()) {
             continue;
           }
           for (auto f : firsts) {
             for (auto s : seconds) {
               for (auto t : thirds) {
-                mapkey = f | (s << 8) | (t << 16);
+                uint32_t mapkey(f | (s << 8) | (t << 16));
                 for (auto c : table2[mapkey]) {
                   guess g = c;
                   g.s2xf0 = s2xf0;
