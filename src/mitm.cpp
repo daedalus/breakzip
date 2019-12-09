@@ -106,29 +106,6 @@ static const uint8_t crcinvtab[256] = {
     0xc6, 0xff, 0xb4, 0x8d, 0xbc, 0x85, 0xce, 0xf7, 0xac, 0x95, 0xde, 0xe7,
     0xd6, 0xef, 0xa4, 0x9d};
 
-uint32_t pack1(uint16_t s0, uint16_t chunk2, uint16_t chunk3, uint8_t carries) {
-  return uint32_t(s0 | (chunk2 << 8) | (chunk3 << 16) | (carries << 24));
-}
-
-void unpack1(uint32_t packed, uint16_t &s0, uint16_t &chunk2, uint16_t &chunk3,
-             uint8_t &carries) {
-  s0 = packed & 0xff;
-  chunk2 = (packed >> 8) & 0xff;
-  chunk3 = (packed >> 16) & 0xff;
-  carries = (packed >> 24) & 0x3f;
-}
-
-uint32_t pack2(uint16_t s1xf0, uint16_t s1xf1, uint8_t prefix) {
-  return uint32_t(s1xf0 | (s1xf1 << 8) | (prefix << 16));
-}
-
-void unpack2(uint32_t packed, uint16_t &s1xf0, uint16_t &s1xf1,
-             uint8_t &prefix) {
-  s1xf0 = packed & 0xff;
-  s1xf1 = (packed >> 8) & 0xff;
-  prefix = (packed >> 16) & 0x3f;
-}
-
 uint32_t mapkey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
                 uint8_t msbyf1) {
   return (msbxf0 ^ msbyf0) | (uint32_t(msbxf0 ^ msbxf1) << 8) |
@@ -194,7 +171,7 @@ void stage1() {
   // STAGE 1
   //
   // Guess s0, chunk2, chunk3 and carry bits.
-  vector<vector<uint32_t>> table1(0x01000000);
+  vector<vector<guess>> table1(0x01000000);
   uint8_t xf0 = test_bytes[0][0][0];
   uint8_t xf1 = test_bytes[1][0][0];
 
@@ -248,7 +225,8 @@ void stage1() {
           }
 
           uint32_t mk = mapkey(msbxf0, msbyf0, msbxf1, msbyf1);
-          table1[mk].push_back(pack1(s0, chunk2, chunk3, carries));
+          guess g = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3), carries};
+          table1[mk].push_back(g);
         }
       }
     }
@@ -302,14 +280,10 @@ void stage1() {
             for (auto t : thirds) {
               uint32_t mapkey(f | (s << 8) | (t << 16));
               for (auto c : table1[mapkey]) {
-                uint16_t s0;
-                uint16_t chunk2;
-                uint16_t chunk3;
-                uint8_t carries;
-                unpack1(c, s0, chunk2, chunk3, carries);
-                guess g = {uint8_t(s0),      uint8_t(chunk2), uint8_t(chunk3),
-                           uint8_t(carries), uint8_t(s1xf0),  uint8_t(s1xf1),
-                           uint8_t(prefix)};
+                guess g(c);
+                g.s1xf0 = s1xf0;
+                g.s1xf1 = s1xf1;
+                g.prefix1 = prefix;
                 s1candidates.push_back(g);
               }
             }
