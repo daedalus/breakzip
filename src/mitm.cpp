@@ -106,47 +106,72 @@ static const uint8_t crcinvtab[256] = {
     0xc6, 0xff, 0xb4, 0x8d, 0xbc, 0x85, 0xce, 0xf7, 0xac, 0x95, 0xde, 0xe7,
     0xd6, 0xef, 0xa4, 0x9d};
 
-uint32_t pack1(uint16_t s0, uint16_t chunk2, uint16_t chunk3, uint8_t carries) {
-  return uint32_t(s0 | (chunk2 << 8) | (chunk3 << 16) | (carries << 24));
-}
-
-void unpack1(uint32_t packed, uint16_t &s0, uint16_t &chunk2, uint16_t &chunk3,
-             uint8_t &carries) {
-  s0 = packed & 0xff;
-  chunk2 = (packed >> 8) & 0xff;
-  chunk3 = (packed >> 16) & 0xff;
-  carries = (packed >> 24) & 0x3f;
-}
-
-uint32_t pack2(uint16_t s1xf0, uint16_t s1xf1, uint8_t prefix) {
-  return uint32_t(s1xf0 | (s1xf1 << 8) | (prefix << 16));
-}
-
-void unpack2(uint32_t packed, uint16_t &s1xf0, uint16_t &s1xf1,
-             uint8_t &prefix) {
-  s1xf0 = packed & 0xff;
-  s1xf1 = (packed >> 8) & 0xff;
-  prefix = (packed >> 16) & 0x3f;
-}
-
 uint32_t mapkey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
                 uint8_t msbyf1) {
   return (msbxf0 ^ msbyf0) | (uint32_t(msbxf0 ^ msbxf1) << 8) |
          (uint32_t(msbxf0 ^ msbyf1) << 16);
 }
 
-vector<vector<uint32_t>> table1(0x01000000);
-vector<uint64_t> candidates(0);
+typedef struct guess {
+  // Stage 1
+  uint8_t s0;
+  uint8_t chunk2;
+  uint8_t chunk3;
+  uint8_t cb1;
+  uint8_t s1xf0;
+  uint8_t s1xf1;
+  uint8_t prefix1;
+  // Stage 2
+  uint8_t chunk6;
+  uint8_t chunk7;
+  uint8_t cb2;
+  uint8_t s2xf0;
+  uint8_t s2xf1;
+  uint8_t prefix2;
+} guess;
+
+vector<vector<uint16_t>> preimages(0x100);
+
+vector<guess> s1candidates(0);
+
+uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
+                        uint32_t &k0, uint32_t &upper, uint32_t &lower) {
+  if (crc_flag) {
+    k0 = crc32(k0, x);
+  } else {
+    k0 ^= crc32tab[x];
+  }
+  uint32_t lsbc = (k0 & 0xff) * CRYPTCONST + 1;
+  uint32_t bound = 0x01000000 - (lsbc & 0x00ffffff);
+
+  if (carry) {
+    lower = bound > lower ? bound : lower;
+  } else {
+    upper = bound < upper ? bound : upper;
+  }
+
+  return k1msb + (lsbc >> 24) + carry;
+}
+
+void second_half_step(uint16_t offset, uint8_t stream_byte,
+                      vector<uint8_t> &idxs) {
+  for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
+    uint16_t preimage = preimages[stream_byte][prefix];
+    uint16_t xored = offset ^ preimage;
+    uint8_t inv = (xored >> 1) & 0xff;
+    uint8_t idx = crcinvtab[inv];
+    uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
+    if (match == xored) {
+      idxs.push_back(idx);
+    }
+  }
+}
 
 void stage1() {
   // STAGE 1
   //
   // Guess s0, chunk2, chunk3 and carry bits.
-  // Keep track of bounds to exclude some carry bit options
-  bool correct_guess = false;
-  uint8_t correct_chunk2 = crc32(test_keys[0], 0) & 0xff;
-  uint8_t correct_chunk3 = (test_keys[1] * CRYPTCONST) >> 24;
-
+  vector<vector<guess>> table1(0x01000000);
   uint8_t xf0 = test_bytes[0][0][0];
   uint8_t xf1 = test_bytes[1][0][0];
 
@@ -166,83 +191,47 @@ void stage1() {
           uint32_t lower = 0x00000000;  // inclusive
 
           // xf0
-          uint32_t k01xf0 = chunk2 ^ crc32tab[xf0];
-          uint8_t lsbk01xf0 = k01xf0 & 0xff;
-          uint32_t boundxf0 = lsbk01xf0 * CRYPTCONST + 1;
-          uint32_t bound = 0x01000000 - (boundxf0 & 0x00ffffff);
-
-          if (carryxf0) {
-            lower = bound;
-          } else {
-            upper = bound;
-          }
-
-          uint8_t msbxf0 = chunk3 + carryxf0 + (boundxf0 >> 24);
+          uint32_t k0crc = chunk2;
+          uint32_t msbxf0 = first_half_step(xf0, false, chunk3, carryxf0, k0crc,
+                                            upper, lower);
 
           // yf0
           uint8_t yf0 = xf0 ^ s0;
-
-          uint32_t k01yf0 = chunk2 ^ crc32tab[yf0];
-          uint8_t lsbk01yf0 = k01yf0 & 0xff;
-          uint32_t boundyf0 = lsbk01yf0 * CRYPTCONST + 1;
-          bound = 0x01000000 - (boundyf0 & 0x00ffffff);
-
-          if (carryyf0) {
-            lower = (bound > lower) ? bound : lower;
-          } else {
-            upper = (bound < upper) ? bound : upper;
-          }
+          k0crc = chunk2;
+          uint32_t msbyf0 = first_half_step(yf0, false, chunk3, carryyf0, k0crc,
+                                            upper, lower);
 
           if (upper < lower) {
             continue;
           }
-
-          uint8_t msbyf0 = chunk3 + carryyf0 + (boundyf0 >> 24);
 
           // xf1
-          uint32_t k01xf1 = chunk2 ^ crc32tab[xf1];
-          uint8_t lsbk01xf1 = k01xf1 & 0xff;
-          uint32_t boundxf1 = lsbk01xf1 * CRYPTCONST + 1;
-          bound = 0x01000000 - (boundxf1 & 0x00ffffff);
-
-          if (carryxf1) {
-            lower = bound;
-          } else {
-            upper = bound;
-          }
+          k0crc = chunk2;
+          uint32_t msbxf1 = first_half_step(xf1, false, chunk3, carryxf1, k0crc,
+                                            upper, lower);
 
           if (upper < lower) {
             continue;
           }
-
-          uint8_t msbxf1 = chunk3 + carryxf1 + (boundxf1 >> 24);
 
           // yf1
-          uint8_t yf1 = xf0 ^ s0;
-
-          uint32_t k01yf1 = chunk2 ^ crc32tab[yf1];
-          uint8_t lsbk01yf1 = k01yf1 & 0xff;
-          uint32_t boundyf1 = lsbk01yf1 * CRYPTCONST + 1;
-          bound = 0x01000000 - (boundyf1 & 0x00ffffff);
-
-          if (carryyf1) {
-            lower = (bound > lower) ? bound : lower;
-          } else {
-            upper = (bound < upper) ? bound : upper;
-          }
+          uint8_t yf1 = xf1 ^ s0;
+          k0crc = chunk2;
+          uint32_t msbyf1 = first_half_step(yf1, false, chunk3, carryyf1, k0crc,
+                                            upper, lower);
 
           if (upper < lower) {
             continue;
           }
 
-          uint8_t msbyf1 = chunk3 + carryyf1 + (boundyf1 >> 24);
-
           uint32_t mk = mapkey(msbxf0, msbyf0, msbxf1, msbyf1);
-          table1[mk].push_back(pack1(s0, chunk2, chunk3, carries));
+          guess g = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3), carries};
+          table1[mk].push_back(g);
         }
       }
     }
   }
+
   // Get some stats
   uint32_t total_mapkeys(0);
   uint32_t max_on_one(0);
@@ -256,11 +245,6 @@ void stage1() {
       max_on_one = size;
       index_max = i;
     }
-    /*
-    if (!!size) {
-      printf("%d, %d\n", i, size);
-    }
-    */
   }
   fprintf(stderr,
           "\nTable1:\ntotal mapkeys: %08x, max on one: %08x, index of maximum: "
@@ -268,71 +252,39 @@ void stage1() {
           "populated: %08x\n",
           total_mapkeys, max_on_one, index_max, populated);
 
-  // Build preimage lookup table
-  vector<vector<uint16_t>> preimages(0x100);
-  for (uint16_t k20 = 0; k20 < 0x4000; ++k20) {
-    uint16_t temp = (k20 << 2) | 3;
-    uint8_t s = ((temp * (temp ^ 1)) >> 8) & 0xff;
-    preimages[s].push_back(k20);
-  }
-
   // Second half of MITM for stage 1
-  for (uint16_t s1xf1 = 0; s1xf1 < 0x100; ++s1xf1) {
-    for (uint16_t s1xf0 = 0; s1xf0 < 0x100; ++s1xf0) {
+  for (uint16_t s1xf0 = 0; s1xf0 < 0x100; ++s1xf0) {
+    for (uint16_t s1xf1 = 0; s1xf1 < 0x100; ++s1xf1) {
       for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
         uint16_t pxf0(preimages[s1xf0][prefix]);
-        uint32_t mapkey(0);
         vector<uint8_t> firsts(0);
-        for (uint8_t first = 0; first < 0x40; ++first) {
-          uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
-          uint16_t pyf0 = preimages[s1yf0][first];
-          uint16_t xored = pxf0 ^ pyf0;
-          uint8_t inv = (xored >> 1) & 0xff;
-          uint8_t idx = crcinvtab[inv];
-          uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          if (match == xored) {
-            firsts.push_back(idx);
-          }
-        }
+        uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
+        second_half_step(pxf0, s1yf0, firsts);
+
         if (!firsts.size()) {
           continue;
         }
         vector<uint8_t> seconds(0);
-        for (uint8_t second = 0; second < 0x40; ++second) {
-          uint16_t pxf1 = preimages[s1xf1][second];
-          uint16_t xored = pxf0 ^ pxf1;
-          uint8_t inv = (xored >> 1) & 0xff;
-          uint8_t idx = crcinvtab[inv];
-          uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          if (match == xored) {
-            seconds.push_back(idx);
-          }
-        }
+        second_half_step(pxf0, s1xf1, seconds);
         if (!seconds.size()) {
           continue;
         }
         vector<uint8_t> thirds(0);
-        for (uint8_t third = 0; third < 0x40; ++third) {
-          uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
-          uint16_t pyf1 = preimages[s1yf1][third];
-          uint16_t xored = pxf0 ^ pyf1;
-          uint8_t inv = (xored >> 1) & 0xff;
-          uint8_t idx = crcinvtab[inv];
-          uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-          if (match == xored) {
-            thirds.push_back(idx);
-          }
-        }
+        uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
+        second_half_step(pxf0, s1yf1, thirds);
         if (!thirds.size()) {
           continue;
         }
         for (auto f : firsts) {
           for (auto s : seconds) {
             for (auto t : thirds) {
-              mapkey = f | (s << 8) | (t << 16);
+              uint32_t mapkey(f | (s << 8) | (t << 16));
               for (auto c : table1[mapkey]) {
-                candidates.push_back(
-                    (uint64_t(pack2(s1xf0, s1xf1, prefix)) << 32) | c);
+                guess g(c);
+                g.s1xf0 = s1xf0;
+                g.s1xf1 = s1xf1;
+                g.prefix1 = prefix;
+                s1candidates.push_back(g);
               }
             }
           }
@@ -341,35 +293,141 @@ void stage1() {
     }
   }
 
-  fprintf(stderr, "candidates.size() == %04lx\n", candidates.size());
+  fprintf(stderr, "s1candidates.size() == %04lx\n", s1candidates.size());
 }
 
+vector<guess> s2candidates(0);
 void stage2() {
   // STAGE 2
   //
   // Guess chunk6, chunk7 and carry bits
   // Keep track of bounds to exclude some carry bit options
 
-  // Now that we have actual msbs, check prediction of s1xf0, etc. and filter
-  // more
-  for (auto c : candidates) {
-    uint16_t s0, chunk2, chunk3, s1xf0, s1xf1;
-    uint8_t carries, prefix;
-    unpack1(c & 0xffffffff, s0, chunk2, chunk3, carries);
-    unpack2(c >> 32, s1xf0, s1xf1, prefix);
-    uint8_t carryxf0 = carries & 1;
-    uint8_t carryyf0 = (carries >> 1) & 1;
-    uint8_t carryxf1 = (carries >> 2) & 1;
-    uint8_t carryyf1 = (carries >> 3) & 1;
-    uint32_t k01xf0 = chunk2 ^ crc32tab[test_bytes[0][0][0]];
-    uint8_t lsbk01xf0 = k01xf0 & 0xff;
-    uint32_t boundxf0 = lsbk01xf0 * CRYPTCONST + 1;
-    uint8_t msbxf0 = chunk3 + carryxf0 + (boundxf0 >> 24);
-    uint32_t crcmsbxf0 = crc32tab[msbxf0];
+  // Now that we have actual k20 bits, check prediction of s2xf0, etc. and
+  // filter more
+  for (auto c : s1candidates) {
+    uint8_t cb1 = c.cb1;
+    uint8_t carryx0f0 = cb1 & 1;
+    uint8_t carryy0f0 = (cb1 >> 1) & 1;
+    uint8_t carryx0f1 = (cb1 >> 2) & 1;
+    uint8_t carryy0f1 = (cb1 >> 3) & 1;
+
+    vector<vector<guess>> table2(0x01000000);
+    for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
+      for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
+        for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
+          uint8_t carryxf0 = cb2 & 1;
+          uint8_t carryyf0 = (cb2 >> 1) & 1;
+          uint8_t carryxf1 = (cb2 >> 2) & 1;
+          uint8_t carryyf1 = (cb2 >> 3) & 1;
+
+          uint32_t upper = 0x01000000;
+          uint32_t lower = 0x00000000;
+
+          // xf0
+          uint32_t k0crc = c.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[0][0][0], false, c.chunk3, c.cb1 & 1,
+                          k0crc, upper, lower);
+          uint32_t msbxf0 = first_half_step(test_bytes[0][0][1], true, chunk7,
+                                            carryxf0, k0crc, upper, lower);
+
+          // yf0
+          k0crc = c.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[0][0][0] ^ c.s0, false, c.chunk3,
+                          (c.cb1 >> 1) & 1, k0crc, upper, lower);
+          uint32_t msbyf0 =
+              first_half_step(test_bytes[0][0][1] ^ c.s1xf0, true, chunk7,
+                              carryyf0, k0crc, upper, lower);
+
+          if (upper < lower) {
+            continue;
+          }
+
+          // xf1
+          k0crc = c.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[1][0][0], false, c.chunk3,
+                          (c.cb1 >> 2) & 1, k0crc, upper, lower);
+          uint32_t msbxf1 = first_half_step(test_bytes[1][0][1], true, chunk7,
+                                            carryxf1, k0crc, upper, lower);
+
+          if (upper < lower) {
+            continue;
+          }
+
+          // yf1
+          k0crc = c.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[1][0][0] ^ c.s0, false, c.chunk3,
+                          (c.cb1 >> 3) & 1, k0crc, upper, lower);
+          uint32_t msbyf1 =
+              first_half_step(test_bytes[1][0][1] ^ c.s1xf1, true, chunk7,
+                              carryyf1, k0crc, upper, lower);
+
+          if (upper < lower) {
+            continue;
+          }
+
+          uint32_t mk = mapkey(msbxf0, msbyf0, msbxf1, msbyf1);
+          guess g = c;
+          g.chunk6 = chunk6;
+          g.chunk7 = chunk7;
+          g.cb2 = cb2;
+          table2[mk].push_back(g);
+        }
+      }
+    }
+
+    // Second half of MITM for stage 2
+    for (uint16_t s2xf0 = 0; s2xf0 < 0x100; ++s2xf0) {
+      for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
+        for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
+          uint16_t pxf0(preimages[s2xf0][prefix]);
+
+          vector<uint8_t> firsts(0);
+          uint8_t s2yf0 = s2xf0 ^ test_bytes[0][0][2] ^ test_bytes[0][2][2];
+          second_half_step(pxf0, s2yf0, firsts);
+          if (!firsts.size()) {
+            continue;
+          }
+          vector<uint8_t> seconds(0);
+          second_half_step(pxf0, s2xf1, seconds);
+          if (!seconds.size()) {
+            continue;
+          }
+          vector<uint8_t> thirds(0);
+          uint8_t s2yf1 = s2xf0 ^ test_bytes[1][0][2] ^ test_bytes[1][2][2];
+          second_half_step(pxf0, s2yf1, thirds);
+          if (!thirds.size()) {
+            continue;
+          }
+          for (auto f : firsts) {
+            for (auto s : seconds) {
+              for (auto t : thirds) {
+                uint32_t mapkey(f | (s << 8) | (t << 16));
+                for (auto c : table2[mapkey]) {
+                  guess g = c;
+                  g.s2xf0 = s2xf0;
+                  g.s2xf1 = s2xf1;
+                  g.prefix2 = prefix;
+                  // TODO: add check for consistency with k21s
+                  s2candidates.push_back(g);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 
 int main() {
+  // Build preimage lookup table
+  for (uint16_t k20 = 0; k20 < 0x4000; ++k20) {
+    uint16_t temp = (k20 << 2) | 3;
+    uint8_t s = ((temp * (temp ^ 1)) >> 8) & 0xff;
+    preimages[s].push_back(k20);
+  }
+
   stage1();
 
   return 0;
