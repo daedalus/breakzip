@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <algorithm>
 #include <cmath>
@@ -119,35 +120,37 @@ void fromMapKey(uint8_t msbxf0, uint32_t mapkey, uint8_t &msbyf0,
   msbyf1 = msbxf0 ^ ((mapkey >> 16) & 0xff);
 }
 
-typedef struct guess {
-  // Stage 1
+typedef struct stage1a {
   uint8_t s0;
   uint8_t chunk2;
   uint8_t chunk3;
-  uint8_t cb1;
-  uint8_t s1xf0;
-  uint8_t s1xf1;
-  uint8_t prefix1;
-  uint8_t first1;
-  uint8_t second1;
-  uint8_t third1;
+  uint8_t cb;
+  // We don't need the space, but if we did we could recompute msbk11xf0 as
+  // chunk3 + (((chunk2 ^ crc32tab[test_bytes[0][0][0]]) * CRYPTCONST + 1) >>
+  // 24) + (cb & 1)
+  uint8_t msbk11xf0;
+} stage1a;
 
-  // Stage 2
-  uint8_t chunk6;
-  uint8_t chunk7;
-  uint8_t cb2;
-  uint8_t msbx2f0;
-  uint8_t s2xf0;
-  uint8_t s2xf1;
-  uint8_t prefix2;
-  uint8_t first2;
-  uint8_t second2;
-  uint8_t third2;
-} guess;
+typedef struct guess1 {
+  uint8_t s0;
+  uint8_t chunk2;
+  uint8_t chunk3;
+  uint8_t cb;
+  uint16_t crck20;
+  uint8_t s1xf0;
+  uint8_t prefix;
+  uint8_t s1xf1;
+  uint32_t k11msbs;
+  // Could compute these from s1s, prefix, and k11msbs
+  uint16_t k21xf0;
+  uint16_t k21xf1;
+  uint16_t k21yf0;
+  uint16_t k21yf1;
+} guess1;
 
 vector<vector<uint16_t>> preimages(0x100);
 
-vector<guess> s1candidates(0);
+vector<guess1> s1candidates(0);
 
 uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
                         uint32_t &k0, uint32_t &upper, uint32_t &lower) {
@@ -186,9 +189,10 @@ void stage1() {
   // STAGE 1
   //
   // Guess s0, chunk2, chunk3 and carry bits.
-  vector<vector<guess>> table1(0x01000000);
+  vector<vector<stage1a>> table1(0x01000000);
   uint8_t xf0 = test_bytes[0][0][0];
   uint8_t xf1 = test_bytes[1][0][0];
+  uint32_t total_mapkeys(0);
 
   for (uint16_t s0 = 0; s0 < 0x100; ++s0) {
     fprintf(stderr, "%02x ", s0);
@@ -206,59 +210,63 @@ void stage1() {
           uint32_t lower = 0x00000000;  // inclusive
 
           uint32_t k0crc = chunk2;
-          uint32_t msbxf0 = first_half_step(xf0, false, chunk3, carryxf0, k0crc,
-                                            upper, lower);
+          uint8_t msbxf0 = first_half_step(xf0, false, chunk3, carryxf0, k0crc,
+                                           upper, lower);
           uint8_t yf0 = xf0 ^ s0;
           k0crc = chunk2;
-          uint32_t msbyf0 = first_half_step(yf0, false, chunk3, carryyf0, k0crc,
-                                            upper, lower);
+          uint8_t msbyf0 = first_half_step(yf0, false, chunk3, carryyf0, k0crc,
+                                           upper, lower);
           if (upper < lower) {
             continue;
           }
           k0crc = chunk2;
-          uint32_t msbxf1 = first_half_step(xf1, false, chunk3, carryxf1, k0crc,
-                                            upper, lower);
+          uint8_t msbxf1 = first_half_step(xf1, false, chunk3, carryxf1, k0crc,
+                                           upper, lower);
           if (upper < lower) {
             continue;
           }
           uint8_t yf1 = xf1 ^ s0;
           k0crc = chunk2;
-          uint32_t msbyf1 = first_half_step(yf1, false, chunk3, carryyf1, k0crc,
-                                            upper, lower);
+          uint8_t msbyf1 = first_half_step(yf1, false, chunk3, carryyf1, k0crc,
+                                           upper, lower);
           if (upper < lower) {
             continue;
           }
           uint32_t mk = toMapKey(msbxf0, msbyf0, msbxf1, msbyf1);
-          guess g = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3), carries};
-          table1[mk].push_back(g);
+          stage1a c = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3), carries,
+                       msbxf0};
+          if (!table1[mk].size()) {
+            ++total_mapkeys;
+          }
+          table1[mk].push_back(c);
         }
       }
     }
   }
 
   // Second half of MITM for stage 1
-  // TODO: figure out what the best nesting is
-  //       prefix, s1xf0 lets us work out firsts and then loop over seconds
-  //       & thirds
   for (uint16_t s1xf0 = 0; s1xf0 < 0x100; ++s1xf0) {
-    for (uint16_t s1xf1 = 0; s1xf1 < 0x100; ++s1xf1) {
-      for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
-        uint16_t pxf0(preimages[s1xf0][prefix]);
-        vector<uint8_t> firsts(0);
-        uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
-        second_half_step(pxf0, s1yf0, firsts);
-        if (!firsts.size()) {
-          continue;
-        }
+    for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
+      uint16_t pxf0(preimages[s1xf0][prefix]);
+      vector<uint8_t> firsts(0);
+      uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
+      second_half_step(pxf0, s1yf0, firsts);
+      if (!firsts.size()) {
+        continue;
+      }
+      bool done = false;
+      for (uint16_t s1xf1 = 0; s1xf1 < 0x100 && !done; ++s1xf1) {
         vector<uint8_t> seconds(0);
         second_half_step(pxf0, s1xf1, seconds);
         if (!seconds.size()) {
+          done = true;
           continue;
         }
         vector<uint8_t> thirds(0);
         uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
         second_half_step(pxf0, s1yf1, thirds);
         if (!thirds.size()) {
+          done = true;
           continue;
         }
         for (auto f : firsts) {
@@ -266,13 +274,21 @@ void stage1() {
             for (auto t : thirds) {
               uint32_t mapkey(f | (s << 8) | (t << 16));
               for (auto c : table1[mapkey]) {
-                guess g(c);
-                g.s1xf0 = s1xf0;
-                g.s1xf1 = s1xf1;
-                g.prefix1 = prefix;
-                g.first1 = f;
-                g.second1 = s;
-                g.third1 = t;
+                guess1 g;
+                g.s0 = c.s0;
+                g.chunk2 = c.chunk2;
+                g.chunk3 = c.chunk3;
+                g.cb = c.cb;
+                g.crck20 = ((pxf0 << 2) ^ crc32tab[c.msbk11xf0]) & 0xffff;
+                // Can iterate thru 64 preimages of s0 * 2 low bits to find
+                // a:b:low s.t. 7..2 of (a ^ crc32tab[b:low]) = 7..2 of crck20;
+                // get 4 solutions for msb crck20
+                // Don't need to do it here.
+                g.k11msbs = mapkey ^ (c.msbk11xf0 * 0x01010101);
+                g.k21xf0 = pxf0;
+                g.k21yf0 = preimages[s1yf0][f];
+                g.k21xf1 = preimages[s1xf1][s];
+                g.k21yf1 = preimages[s1yf1][t];
                 s1candidates.push_back(g);
               }
             }
@@ -282,30 +298,31 @@ void stage1() {
     }
   }
 
-  fprintf(stderr, "s1candidates.size() == %04lx\n", s1candidates.size());
+  fprintf(stderr, "total_mapkeys = %04x, s1candidates.size() == %04lx\n",
+          total_mapkeys, s1candidates.size());
 }
 
-vector<guess> s2candidates(0);
-bool s2consistent(guess &g, uint32_t mapkey) {
-  uint8_t mx2f0(g.msbx2f0), my2f0, mx2f1, my2f1;
-  fromMapKey(mx2f0, mapkey, my2f0, mx2f1, my2f1);
-  uint16_t txf0 = (crc32tab[mx2f0] & 0xffff) | 3;
-  uint16_t tyf0 = (crc32tab[my2f0] & 0xffff) | 3;
-  uint16_t txf1 = (crc32tab[mx2f1] & 0xffff) | 3;
-  uint16_t tyf1 = (crc32tab[my2f1] & 0xffff) | 3;
-  // TODO: only the x checks should be needed. 
-  //       the y checks should always pass
-  uint8_t s1xf0 = (txf0 * (txf0 ^ 1)) >> 8;
-  uint8_t s1yf0 = (tyf0 * (tyf0 ^ 1)) >> 8;
-  uint8_t s1xf1 = (txf1 * (txf1 ^ 1)) >> 8;
-  uint8_t s1yf1 = (tyf1 * (tyf1 ^ 1)) >> 8;
-  return s1xf0 == g.s1xf0 &&
-         s1yf0 == (g.s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1]) &&
-         s1xf1 == g.s1xf1 &&
-         s1yf1 == (g.s1xf0 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1]);
-}
+typedef struct stage2a {
+  guess1 g;
+  uint8_t chunk6;
+  uint8_t chunk7;
+  uint8_t cb;
+  uint8_t msbk12xf0;
+} stage2a;
 
+typedef struct guess2 {
+  guess1 g1;
+  uint8_t chunk6;
+  uint8_t chunk7;
+  uint8_t cb2;
+  uint32_t k12msbs;
+  uint8_t s2xf0;
+  uint8_t s2xf1;
+} guess2;
+
+vector<guess2> s2candidates(0);
 void stage2() {
+  uint32_t total_mapkeys(0);
   // STAGE 2
   //
   // Guess chunk6, chunk7 and carry bits
@@ -313,66 +330,89 @@ void stage2() {
 
   // Now that we have actual k20 bits, check prediction of s2xf0, etc. and
   // filter more
-  for (auto c : s1candidates) {
-    uint8_t cb1 = c.cb1;
+  for (guess1 c1 : s1candidates) {
+    uint8_t cb1 = c1.cb;
     uint8_t carryx0f0 = cb1 & 1;
     uint8_t carryy0f0 = (cb1 >> 1) & 1;
     uint8_t carryx0f1 = (cb1 >> 2) & 1;
     uint8_t carryy0f1 = (cb1 >> 3) & 1;
 
-    vector<vector<guess>> table2(0x01000000);
-    for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
-      for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
-        for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
-          uint8_t carryxf0 = cb2 & 1;
-          uint8_t carryyf0 = (cb2 >> 1) & 1;
-          uint8_t carryxf1 = (cb2 >> 2) & 1;
-          uint8_t carryyf1 = (cb2 >> 3) & 1;
-          uint32_t upper = 0x01000000;
-          uint32_t lower = 0x00000000;
-          uint32_t k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[0][0][0], false, c.chunk3, c.cb1 & 1,
-                          k0crc, upper, lower);
-          uint32_t msbxf0 = first_half_step(test_bytes[0][0][1], true, chunk7,
-                                            carryxf0, k0crc, upper, lower);
-          k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[0][0][0] ^ c.s0, false, c.chunk3,
-                          (c.cb1 >> 1) & 1, k0crc, upper, lower);
-          uint32_t msbyf0 =
-              first_half_step(test_bytes[0][0][1] ^ c.s1xf0, true, chunk7,
-                              carryyf0, k0crc, upper, lower);
-          if (upper < lower) {
-            continue;
-          }
-          k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[1][0][0], false, c.chunk3,
-                          (c.cb1 >> 2) & 1, k0crc, upper, lower);
-          uint32_t msbxf1 = first_half_step(test_bytes[1][0][1], true, chunk7,
-                                            carryxf1, k0crc, upper, lower);
-          if (upper < lower) {
-            continue;
-          }
-          k0crc = c.chunk2 | (chunk6 << 8);
-          first_half_step(test_bytes[1][0][0] ^ c.s0, false, c.chunk3,
-                          (c.cb1 >> 3) & 1, k0crc, upper, lower);
-          uint32_t msbyf1 =
-              first_half_step(test_bytes[1][0][1] ^ c.s1xf1, true, chunk7,
-                              carryyf1, k0crc, upper, lower);
-          if (upper < lower) {
-            continue;
-          }
-          uint32_t mk = toMapKey(msbxf0, msbyf0, msbxf1, msbyf1);
-          guess g = c;
-          g.chunk6 = chunk6;
-          g.chunk7 = chunk7;
-          g.cb2 = cb2;
-          g.msbx2f0 = msbxf0;
-          table2[mk].push_back(g);
+    vector<vector<stage2a>> table2(0x01000000);
+    // Monte Carlo sampling of keyspace
+    for (uint8_t i = 0; i < 10; ++i) {
+      uint16_t chunk6 = rand() & 0xff;
+      uint16_t chunk7 = rand() & 0xff;
+      //    for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
+      //      for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
+      for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
+        uint8_t carryx1f0 = cb2 & 1;
+        uint8_t carryy1f0 = (cb2 >> 1) & 1;
+        uint8_t carryx1f1 = (cb2 >> 2) & 1;
+        uint8_t carryy1f1 = (cb2 >> 3) & 1;
+        uint32_t upper = 0x01000000;
+        uint32_t lower = 0x00000000;
+        uint32_t k0crc = c1.chunk2 | (chunk6 << 8);
+        first_half_step(test_bytes[0][0][0], false, c1.chunk3, carryx0f0, k0crc,
+                        upper, lower);
+        uint32_t msbxf0 = first_half_step(test_bytes[0][0][1], true, chunk7,
+                                          carryx1f0, k0crc, upper, lower);
+        k0crc = c1.chunk2 | (chunk6 << 8);
+        first_half_step(test_bytes[0][0][0] ^ c1.s0, false, c1.chunk3,
+                        carryy0f0, k0crc, upper, lower);
+        uint32_t msbyf0 =
+            first_half_step(test_bytes[0][0][1] ^ c1.s1xf0, true, chunk7,
+                            carryy1f0, k0crc, upper, lower);
+        if (upper < lower) {
+          continue;
         }
+        k0crc = c1.chunk2 | (chunk6 << 8);
+        first_half_step(test_bytes[1][0][0], false, c1.chunk3, carryx0f1, k0crc,
+                        upper, lower);
+        uint32_t msbxf1 = first_half_step(test_bytes[1][0][1], true, chunk7,
+                                          carryx1f1, k0crc, upper, lower);
+        if (upper < lower) {
+          continue;
+        }
+        k0crc = c1.chunk2 | (chunk6 << 8);
+        first_half_step(test_bytes[1][0][0] ^ c1.s0, false, c1.chunk3,
+                        carryy0f1, k0crc, upper, lower);
+        uint32_t msbyf1 =
+            first_half_step(test_bytes[1][0][1] ^ c1.s1xf1, true, chunk7,
+                            carryy1f1, k0crc, upper, lower);
+        if (upper < lower) {
+          continue;
+        }
+        uint32_t mk = toMapKey(msbxf0, msbyf0, msbxf1, msbyf1);
+        stage2a s2a;
+        s2a.g = c1;
+        s2a.chunk6 = chunk6;
+        s2a.chunk7 = chunk7;
+        s2a.cb = cb2;
+        s2a.msbk12xf0 = msbxf0;
+        if (!table2[mk].size()) {
+          ++total_mapkeys;
+        }
+        table2[mk].push_back(s2a);
       }
     }
+    //      }
+    //    }
 
     // Second half of MITM for stage 2
+    /*
+    crc32(k21x, msbk12x) ^ crc32(k21y, msbk12y)
+    = crc32(crc32(k20, msbk11x), msbk12x) ^ crc32(crc32(k20, msbk11x), msbk12y)
+    = crc32(crc32(k20, msbk11x) ^ crc32(k20, msbk11x), msbk12x ^ msbk12y)
+    = crc32(crc32(0, msbk11x ^ msbk11y), msbk12x ^ msbk12y)
+    = crc32(crc32tab[msbk11x ^ msbk11y], msbk12x ^ msbk12y)
+    = (crc32tab[msbk11x ^ msbk11y] >> 8) ^ crc32tab[(crc32tab[msbk11x ^ msbk11y]
+    & 0xff) ^ msbk12x ^ msbk12y]
+    */
+    // Should I store mk instead of k11msbs?
+    uint32_t mk1 = c1.k11msbs ^ ((c1.k11msbs >> 24) * 0x01010101);
+    uint32_t cyf0 = crc32tab[mk1 & 0xff];
+    uint32_t cxf1 = crc32tab[(mk1 >> 8) & 0xff];
+    uint32_t cyf1 = crc32tab[(mk1 >> 16) & 0xff];
     for (uint16_t s2xf0 = 0; s2xf0 < 0x100; ++s2xf0) {
       for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
         for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
@@ -380,37 +420,44 @@ void stage2() {
 
           vector<uint8_t> firsts(0);
           uint8_t s2yf0 = s2xf0 ^ test_bytes[0][0][2] ^ test_bytes[0][2][2];
-          second_half_step(pxf0, s2yf0, firsts);
+          // >> 10 is >> 8 from the last line in the equation above plus >> 2
+          // for moving bits 15..2 to 13..0
+          second_half_step(pxf0 ^ (cyf0 >> 10), s2yf0, firsts);
           if (!firsts.size()) {
             continue;
           }
           vector<uint8_t> seconds(0);
-          second_half_step(pxf0, s2xf1, seconds);
+          second_half_step(pxf0 ^ (cxf1 >> 10), s2xf1, seconds);
           if (!seconds.size()) {
             continue;
           }
           vector<uint8_t> thirds(0);
           uint8_t s2yf1 = s2xf0 ^ test_bytes[1][0][2] ^ test_bytes[1][2][2];
-          second_half_step(pxf0, s2yf1, thirds);
+          second_half_step(pxf0 ^ (cyf1 >> 10), s2yf1, thirds);
           if (!thirds.size()) {
             continue;
           }
           for (auto f : firsts) {
             for (auto s : seconds) {
               for (auto t : thirds) {
-                uint32_t mapkey(f | (s << 8) | (t << 16));
-                for (auto c : table2[mapkey]) {
-                  guess g = c;
+                // xoring with these c?f? bytes as in the last line of the
+                // equation above
+                uint32_t mapkey((f ^ (cyf0 & 0xff)) |
+                                ((s ^ (cxf1 & 0xff)) << 8) |
+                                ((t ^ (cyf1 & 0xff)) << 16));
+                for (auto c2 : table2[mapkey]) {
+                  if (pxf0 != (crc32(c1.k21xf0, c2.msbk12xf0) & 0x3f)) {
+                    continue;
+                  }
+                  guess2 g;
+                  g.g1 = c2.g;
+                  g.chunk6 = c2.chunk6;
+                  g.chunk7 = c2.chunk7;
+                  g.cb2 = c2.cb;
+                  g.k12msbs = mapkey ^ (c2.msbk12xf0 * 0x01010101);
                   g.s2xf0 = s2xf0;
                   g.s2xf1 = s2xf1;
-                  g.prefix2 = prefix;
-                  g.first2 = f;
-                  g.second2 = s;
-                  g.third2 = t;
-                  // TODO: add check for consistency with k21s
-                  if (s2consistent(g, mapkey)) {
-                    s2candidates.push_back(g);
-                  }
+                  s2candidates.push_back(g);
                 }
               }
             }
@@ -419,6 +466,9 @@ void stage2() {
       }
     }
   }
+
+  fprintf(stderr, "total_mapkeys = %04x, s2candidates.size() == %04lx\n",
+          total_mapkeys, s2candidates.size());
 }
 
 int main() {
