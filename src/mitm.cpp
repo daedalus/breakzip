@@ -12,6 +12,7 @@ using namespace std;
 // Meet in the middle attack
 
 // Test data
+/*
 uint32_t test_keys[3] = {0xe4858bae, 0xa8254576, 0x3743e7bb};
 uint8_t test_bytes[2][3][10] = {
     {
@@ -25,6 +26,22 @@ uint8_t test_bytes[2][3][10] = {
         {0x4e, 0x8a, 0x3c, 0x9a, 0x72, 0x23, 0x41, 0xbe, 0xab, 0xb0},  // rand
         {0x54, 0x34, 0xf2, 0x0b, 0x6b, 0x08, 0x3d, 0x17, 0xb2, 0xbf},  // 1st
         {0x4e, 0xc3, 0x69, 0xf4, 0x97, 0x6e, 0x5a, 0x66, 0x77, 0xcb},  // 2nd
+    }};
+*/
+
+uint32_t test_keys[3] = {0x1e096225, 0xcb831619, 0x296e7f2b};
+uint8_t test_bytes[2][3][10] = {
+    {
+        // 1st file
+        {0x20, 0x95, 0x07, 0xa5, 0xb9, 0x4c, 0x99, 0xcc, 0xe7, 0x4a},  // rand
+        {0x12, 0x27, 0x02, 0xf6, 0x62, 0xe7, 0x23, 0xfc, 0x18, 0xb5},  // 1st
+        {0x20, 0x7e, 0xbd, 0xf1, 0xb2, 0x4e, 0xd9, 0xea, 0xa9, 0xc6}   // 2nd
+    },
+    {
+        // 2nd file
+        {0x3d, 0xff, 0x6c, 0xe0, 0x91, 0xbf, 0xc2, 0x2b, 0xca, 0x90},  // rand
+        {0x0f, 0xe4, 0xa7, 0x4a, 0x4d, 0x82, 0x82, 0x1e, 0xc9, 0x57},  // 1st
+        {0x3d, 0x4c, 0xed, 0x9f, 0x49, 0xf9, 0x78, 0x53, 0xee, 0x14}   // 2nd
     }};
 
 #define CRYPTCONST 0x08088405
@@ -106,6 +123,94 @@ static const uint8_t crcinvtab[256] = {
     0xcf, 0xf6, 0xbd, 0x84, 0xdf, 0xe6, 0xad, 0x94, 0xa5, 0x9c, 0xd7, 0xee,
     0xc6, 0xff, 0xb4, 0x8d, 0xbc, 0x85, 0xce, 0xf7, 0xac, 0x95, 0xde, 0xe7,
     0xd6, 0xef, 0xa4, 0x9d};
+
+typedef struct correct_guess {
+  uint8_t chunk2;
+  uint8_t chunk3;
+  uint8_t chunk6;
+  uint8_t chunk7;
+  uint8_t chunk8;
+  uint8_t chunk9;
+  uint8_t chunk10;
+  uint8_t chunk11;
+  // carry bits:
+  // stage: 1111222233334444
+  // file:  1100110011001100
+  // xy:    1010101010101010
+  uint16_t carries;
+  uint8_t sx[2][4];
+} correct_guess;
+
+uint8_t get_s0(uint16_t k20) {
+  uint16_t temp = k20 | 3;
+  return (temp * (temp ^ 1)) >> 8;
+}
+
+correct_guess correct() {
+  correct_guess result;
+
+  const uint32_t k00 = test_keys[0];
+  const uint32_t k10 = test_keys[1];
+  const uint32_t k20 = test_keys[2];
+  const uint32_t crc32k00 = crc32(k00, 0);
+
+  result.chunk2 = (crc32k00 >> 0) & 0xff;
+  result.chunk6 = (crc32k00 >> 8) & 0xff;
+  result.chunk8 = (crc32k00 >> 16) & 0xff;
+  result.chunk10 = (crc32k00 >> 24) & 0xff;
+
+  result.chunk3 = (k10 * CRYPTCONST) >> 24;
+  result.chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
+  result.chunk9 = (k10 * CRYPTCONST_POW3) >> 24;
+  result.chunk11 = (k10 * CRYPTCONST_POW4) >> 24;
+
+  for (int f = 0; f < 2; ++f) {
+    for (int s = 0; s < 4; ++s) {
+      result.sx[f][s] = test_bytes[f][0][s] ^ test_bytes[f][1][s];
+    }
+  }
+
+  uint16_t bits = 0;
+  for (int f = 0; f < 2; ++f) {
+    for (int xy = 0; xy < 2; ++xy) {
+      const uint8_t *bytes = test_bytes[f][xy];
+      const uint8_t *encrypted = test_bytes[f][xy + 1];
+      uint32_t bound = 0;
+      uint32_t k0n = k00;
+      uint32_t k1cn = k10;
+      uint32_t k2n = k20;
+      uint8_t sn = get_s0(k20 & 0xffff);
+      // stage_1 should be thought of as "stage - 1"
+      for (int stage_1 = 0; stage_1 < 4; ++stage_1) {
+        k0n = crc32(k0n, bytes[stage_1]);
+        uint8_t lsbk0n = k0n & 0xff;
+        bound = (bound + lsbk0n) * CRYPTCONST + 1;
+        k1cn = k1cn * CRYPTCONST;
+        uint8_t carry_bit =
+            ((k1cn & 0xffffff) + (bound & 0xffffff)) > 0x01000000;
+        bits |= carry_bit << (((3 - stage_1) * 4) + f * 2 + xy);
+        k2n = crc32(k2n, (k1cn + bound) >> 24);
+        if ((bytes[stage_1] ^ sn) != encrypted[stage_1]) {
+          fprintf(
+              stderr,
+              "Something's wrong: f=%d, xy=%d, stage_1=%d, bytes[stage_1]=%02x,"
+              "\n\tsn=%02x, encrypted[stage_1]=%02x, bytes[stage_1]^sn=%02x\n",
+              f, xy, stage_1, bytes[stage_1], sn, encrypted[stage_1],
+              bytes[stage_1] ^ sn);
+          abort();
+        }
+        sn = get_s0(k2n & 0xffff);
+        fprintf(stderr, "f: %d, xy: %d, stage: %d, k2>>2: %08x, sn: %02x\n", f,
+                xy, stage_1 + 1, k2n >> 2, sn);
+      }
+    }
+  }
+  result.carries = bits;
+  return result;
+}
+
+correct_guess c;
+unsigned long s1idx;
 
 uint32_t toMapKey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
                   uint8_t msbyf1) {
@@ -202,6 +307,10 @@ void stage1() {
     for (uint16_t chunk2 = 0; chunk2 < 0x100; ++chunk2) {
       for (uint16_t chunk3 = 0; chunk3 < 0x100; ++chunk3) {
         for (uint8_t carries = 0; carries < 0x10; ++carries) {
+          if (s0 == c.sx[0][0] && chunk2 == c.chunk2 && chunk3 == c.chunk3 &&
+              carries == (c.carries >> 12)) {
+            fprintf(stderr, "On correct guess.\n");
+          }
           uint8_t carryxf0 = carries & 1;
           uint8_t carryyf0 = (carries >> 1) & 1;
           uint8_t carryxf1 = (carries >> 2) & 1;
@@ -217,12 +326,28 @@ void stage1() {
           uint8_t msbyf0 = first_half_step(yf0, false, chunk3, carryyf0, k0crc,
                                            upper, lower);
           if (upper < lower) {
+            if (s0 == c.sx[0][0] && chunk2 == c.chunk2 && chunk3 == c.chunk3 &&
+                carries == (c.carries >> 24)) {
+              fprintf(stderr,
+                      "Failed to get correct guess: s0 = %02x, chunk2 = %02x, "
+                      "chunk3 = "
+                      "%02x, carries = %x\n",
+                      s0, chunk2, chunk3, carries);
+            }
             continue;
           }
           k0crc = chunk2;
           uint8_t msbxf1 = first_half_step(xf1, false, chunk3, carryxf1, k0crc,
                                            upper, lower);
           if (upper < lower) {
+            if (s0 == c.sx[0][0] && chunk2 == c.chunk2 && chunk3 == c.chunk3 &&
+                carries == (c.carries >> 12)) {
+              fprintf(stderr,
+                      "Failed to get correct guess: s0 = %02x, chunk2 = %02x, "
+                      "chunk3 = "
+                      "%02x, carries = %x\n",
+                      s0, chunk2, chunk3, carries);
+            }
             continue;
           }
           uint8_t yf1 = xf1 ^ s0;
@@ -230,66 +355,92 @@ void stage1() {
           uint8_t msbyf1 = first_half_step(yf1, false, chunk3, carryyf1, k0crc,
                                            upper, lower);
           if (upper < lower) {
+            if (s0 == c.sx[0][0] && chunk2 == c.chunk2 && chunk3 == c.chunk3 &&
+                carries == (c.carries >> 12)) {
+              fprintf(stderr,
+                      "Failed to get correct guess: s0 = %02x, chunk2 = %02x, "
+                      "chunk3 = "
+                      "%02x, carries = %x\n",
+                      s0, chunk2, chunk3, carries);
+            }
             continue;
           }
           uint32_t mk = toMapKey(msbxf0, msbyf0, msbxf1, msbyf1);
-          stage1a c = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3), carries,
-                       msbxf0};
+          if (s0 == c.sx[0][0] && chunk2 == c.chunk2 && chunk3 == c.chunk3 &&
+              carries == (c.carries >> 12)) {
+            fprintf(stderr,
+                    "MSBs: %02x, %02x, %02x, %02x, Mapkey: %08x, carries: %x, "
+                    "c.carries: %04x\n",
+                    msbxf0, msbyf0, msbxf1, msbyf1, mk, carries, c.carries);
+          }
+          stage1a candidate = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3),
+                               carries, msbxf0};
           if (!table1[mk].size()) {
             ++total_mapkeys;
           }
-          table1[mk].push_back(c);
+          table1[mk].push_back(candidate);
         }
       }
     }
   }
 
   // Second half of MITM for stage 1
+  bool found_correct = false;
   for (uint16_t s1xf0 = 0; s1xf0 < 0x100; ++s1xf0) {
     for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
       uint16_t pxf0(preimages[s1xf0][prefix]);
+      if (s1xf0 == c.sx[0][1]) {
+        fprintf(stderr, "s1xf0: %02x, prefix: %04x    ", s1xf0, pxf0);
+        if ((prefix & 3) == 3) { fprintf(stderr, "\n"); }
+      }
       vector<uint8_t> firsts(0);
       uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
       second_half_step(pxf0, s1yf0, firsts);
       if (!firsts.size()) {
         continue;
       }
-      bool done = false;
-      for (uint16_t s1xf1 = 0; s1xf1 < 0x100 && !done; ++s1xf1) {
+      for (uint16_t s1xf1 = 0; s1xf1 < 0x100; ++s1xf1) {
         vector<uint8_t> seconds(0);
         second_half_step(pxf0, s1xf1, seconds);
         if (!seconds.size()) {
-          done = true;
           continue;
         }
         vector<uint8_t> thirds(0);
         uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
         second_half_step(pxf0, s1yf1, thirds);
         if (!thirds.size()) {
-          done = true;
           continue;
         }
         for (auto f : firsts) {
           for (auto s : seconds) {
             for (auto t : thirds) {
               uint32_t mapkey(f | (s << 8) | (t << 16));
-              for (auto c : table1[mapkey]) {
+              for (auto candidate : table1[mapkey]) {
                 guess1 g;
-                g.s0 = c.s0;
-                g.chunk2 = c.chunk2;
-                g.chunk3 = c.chunk3;
-                g.cb = c.cb;
-                g.crck20 = ((pxf0 << 2) ^ crc32tab[c.msbk11xf0]) & 0xffff;
+                g.s0 = candidate.s0;
+                g.chunk2 = candidate.chunk2;
+                g.chunk3 = candidate.chunk3;
+                g.cb = candidate.cb;
+                g.crck20 =
+                    ((pxf0 << 2) ^ crc32tab[candidate.msbk11xf0]) & 0xffff;
                 // Can iterate thru 64 preimages of s0 * 2 low bits to find
                 // a:b:low s.t. 7..2 of (a ^ crc32tab[b:low]) = 7..2 of crck20;
                 // get 4 solutions for msb crck20
                 // Don't need to do it here.
-                g.k11msbs = mapkey ^ (c.msbk11xf0 * 0x01010101);
+                g.k11msbs = mapkey ^ (candidate.msbk11xf0 * 0x01010101);
                 g.k21xf0 = pxf0;
-                g.k21yf0 = preimages[s1yf0][f];
-                g.k21xf1 = preimages[s1xf1][s];
-                g.k21yf1 = preimages[s1yf1][t];
+                g.k21yf0 = pxf0 ^ (crc32tab[f] >> 2);
+                g.k21xf1 = pxf0 ^ (crc32tab[s] >> 2);
+                g.k21yf1 = pxf0 ^ (crc32tab[t] >> 2);
+                g.s1xf0 = s1xf0;
+                g.s1xf1 = s1xf1;
                 s1candidates.push_back(g);
+                
+                if (s1xf0 == c.sx[0][1] && s1xf1 == c.sx[1][1] && candidate.s0 == c.sx[0][0] && candidate.chunk2 == c.chunk2 && candidate.chunk3 == c.chunk3 && candidate.cb == (c.carries >> 12)) {
+                  found_correct = true;
+                  s1idx = s1candidates.size() - 1;
+                  fprintf(stderr, "Correct s1candidates index = %lx\n", s1idx);
+                }
               }
             }
           }
@@ -297,7 +448,10 @@ void stage1() {
       }
     }
   }
-
+  if (!found_correct) {
+    fprintf(stderr, "Failed to use correct guess: s1xf0 = %02x, s1xf1 = %02x\n",
+            c.sx[0][1], c.sx[1][1]);
+  }
   fprintf(stderr, "total_mapkeys = %04x, s1candidates.size() == %04lx\n",
           total_mapkeys, s1candidates.size());
 }
@@ -330,7 +484,16 @@ void stage2() {
 
   // Now that we have actual k20 bits, check prediction of s2xf0, etc. and
   // filter more
-  for (guess1 c1 : s1candidates) {
+  // for (guess1 c1 : s1candidates) {
+  for (uint8_t sample = 0; sample < 5; ++sample) {
+    fprintf(stderr, "Sample: %d\n", sample);
+    fprintf(stderr, "Stage 2a\n");
+    uint32_t random_c1 = rand() % s1candidates.size();
+    if (sample == 0) {
+      random_c1 = s1idx;
+    }
+    guess1 c1 = s1candidates[random_c1];
+
     uint8_t cb1 = c1.cb;
     uint8_t carryx0f0 = cb1 & 1;
     uint8_t carryy0f0 = (cb1 >> 1) & 1;
@@ -338,67 +501,79 @@ void stage2() {
     uint8_t carryy0f1 = (cb1 >> 3) & 1;
 
     vector<vector<stage2a>> table2(0x01000000);
-    // Monte Carlo sampling of keyspace
-    for (uint8_t i = 0; i < 10; ++i) {
-      uint16_t chunk6 = rand() & 0xff;
-      uint16_t chunk7 = rand() & 0xff;
-      //    for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
-      //      for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
-      for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
-        uint8_t carryx1f0 = cb2 & 1;
-        uint8_t carryy1f0 = (cb2 >> 1) & 1;
-        uint8_t carryx1f1 = (cb2 >> 2) & 1;
-        uint8_t carryy1f1 = (cb2 >> 3) & 1;
-        uint32_t upper = 0x01000000;
-        uint32_t lower = 0x00000000;
-        uint32_t k0crc = c1.chunk2 | (chunk6 << 8);
-        first_half_step(test_bytes[0][0][0], false, c1.chunk3, carryx0f0, k0crc,
-                        upper, lower);
-        uint32_t msbxf0 = first_half_step(test_bytes[0][0][1], true, chunk7,
-                                          carryx1f0, k0crc, upper, lower);
-        k0crc = c1.chunk2 | (chunk6 << 8);
-        first_half_step(test_bytes[0][0][0] ^ c1.s0, false, c1.chunk3,
-                        carryy0f0, k0crc, upper, lower);
-        uint32_t msbyf0 =
-            first_half_step(test_bytes[0][0][1] ^ c1.s1xf0, true, chunk7,
-                            carryy1f0, k0crc, upper, lower);
-        if (upper < lower) {
-          continue;
+    for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
+      for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
+        for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
+          if ((chunk6 == c.chunk6) && (chunk7 == c.chunk7) && (cb2 == ((c.carries >> 8) & 0xf))) {
+            fprintf(stderr, "On correct candidate for stage 2a\n");
+          }
+          uint8_t carryx1f0 = cb2 & 1;
+          uint8_t carryy1f0 = (cb2 >> 1) & 1;
+          uint8_t carryx1f1 = (cb2 >> 2) & 1;
+          uint8_t carryy1f1 = (cb2 >> 3) & 1;
+          // bounds on low 24 bits of k10 * CRYPTCONST
+          uint32_t upper1 = 0x01000000;
+          uint32_t lower1 = 0x00000000;
+          // bounds on low 24 bits of k10 * CRYPTCONST_POW2
+          uint32_t upper2 = 0x01000000;
+          uint32_t lower2 = 0x00000000;
+          uint32_t k0crc = c1.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[0][0][0], false, c1.chunk3, carryx0f0,
+                          k0crc, upper1, lower1);
+          uint32_t msbxf0 = first_half_step(test_bytes[0][0][1], true, chunk7,
+                                            carryx1f0, k0crc, upper2, lower2);
+          k0crc = c1.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[0][0][0] ^ c1.s0, false, c1.chunk3,
+                          carryy0f0, k0crc, upper1, lower1);
+          uint32_t msbyf0 =
+              first_half_step(test_bytes[0][0][1] ^ c1.s1xf0, true, chunk7,
+                              carryy1f0, k0crc, upper2, lower2);
+          if (upper1 < lower1) {
+            fprintf(stderr, "ERROR: Should never happen!\n");
+          }
+          if (upper2 < lower2) {
+            continue;
+          }
+          k0crc = c1.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[1][0][0], false, c1.chunk3, carryx0f1,
+                          k0crc, upper1, lower1);
+          uint32_t msbxf1 = first_half_step(test_bytes[1][0][1], true, chunk7,
+                                            carryx1f1, k0crc, upper2, lower2);
+          if (upper1 < lower1) {
+            fprintf(stderr, "ERROR: Should never happen!\n");
+          }
+          if (upper2 < lower2) {
+            continue;
+          }
+          k0crc = c1.chunk2 | (chunk6 << 8);
+          first_half_step(test_bytes[1][0][0] ^ c1.s0, false, c1.chunk3,
+                          carryy0f1, k0crc, upper1, lower1);
+          uint32_t msbyf1 =
+              first_half_step(test_bytes[1][0][1] ^ c1.s1xf1, true, chunk7,
+                              carryy1f1, k0crc, upper2, lower2);
+          if (upper1 < lower1) {
+            fprintf(stderr, "ERROR: Should never happen!\n");
+          }
+          if (upper2 < lower2) {
+            continue;
+          }
+          uint32_t mk = toMapKey(msbxf0, msbyf0, msbxf1, msbyf1);
+          stage2a s2a;
+          s2a.g = c1;
+          s2a.chunk6 = chunk6;
+          s2a.chunk7 = chunk7;
+          s2a.cb = cb2;
+          s2a.msbk12xf0 = msbxf0;
+          if (!table2[mk].size()) {
+            ++total_mapkeys;
+          }
+          table2[mk].push_back(s2a);
         }
-        k0crc = c1.chunk2 | (chunk6 << 8);
-        first_half_step(test_bytes[1][0][0], false, c1.chunk3, carryx0f1, k0crc,
-                        upper, lower);
-        uint32_t msbxf1 = first_half_step(test_bytes[1][0][1], true, chunk7,
-                                          carryx1f1, k0crc, upper, lower);
-        if (upper < lower) {
-          continue;
-        }
-        k0crc = c1.chunk2 | (chunk6 << 8);
-        first_half_step(test_bytes[1][0][0] ^ c1.s0, false, c1.chunk3,
-                        carryy0f1, k0crc, upper, lower);
-        uint32_t msbyf1 =
-            first_half_step(test_bytes[1][0][1] ^ c1.s1xf1, true, chunk7,
-                            carryy1f1, k0crc, upper, lower);
-        if (upper < lower) {
-          continue;
-        }
-        uint32_t mk = toMapKey(msbxf0, msbyf0, msbxf1, msbyf1);
-        stage2a s2a;
-        s2a.g = c1;
-        s2a.chunk6 = chunk6;
-        s2a.chunk7 = chunk7;
-        s2a.cb = cb2;
-        s2a.msbk12xf0 = msbxf0;
-        if (!table2[mk].size()) {
-          ++total_mapkeys;
-        }
-        table2[mk].push_back(s2a);
       }
     }
-    //      }
-    //    }
 
     // Second half of MITM for stage 2
+    fprintf(stderr, "Stage 2b\n");
     /*
     crc32(k21x, msbk12x) ^ crc32(k21y, msbk12y)
     = crc32(crc32(k20, msbk11x), msbk12x) ^ crc32(crc32(k20, msbk11x), msbk12y)
@@ -409,6 +584,7 @@ void stage2() {
     & 0xff) ^ msbk12x ^ msbk12y]
     */
     // Should I store mk instead of k11msbs?
+    // Figure out whether to use to/from mapkey functions
     uint32_t mk1 = c1.k11msbs ^ ((c1.k11msbs >> 24) * 0x01010101);
     uint32_t cyf0 = crc32tab[mk1 & 0xff];
     uint32_t cxf1 = crc32tab[(mk1 >> 8) & 0xff];
@@ -479,7 +655,23 @@ int main() {
     preimages[s].push_back(k20);
   }
 
+  c = correct();
+  fprintf(stderr,
+          "Keys: crc32(k00,0) = %08x, k10*c = %08x, k10*c^2 = %08x, k10*c^3 = "
+          "%08x, k10*c^4 = %08x\n",
+          crc32(test_keys[0], 0), test_keys[1] * CRYPTCONST,
+          test_keys[1] * CRYPTCONST_POW2, test_keys[1] * CRYPTCONST_POW3,
+          test_keys[1] * CRYPTCONST_POW4);
+
+  fprintf(
+      stderr,
+      "Correct:\ns0=%02x, ch2=%02x, ch3=%02x, ch6=%02x, ch7=%02x, ch8=%02x, "
+      "ch9=%02x, ch10=%02x, ch11=%02x, carries=%04x, sf1=%08x, sf2=%08x\n",
+      c.sx[0][0], c.chunk2, c.chunk3, c.chunk6, c.chunk7, c.chunk8, c.chunk9,
+      c.chunk10, c.chunk11, c.carries, *((uint32_t *)c.sx[0]),
+      *((uint32_t *)c.sx[1]));
   stage1();
+  stage2();
 
   return 0;
 }
