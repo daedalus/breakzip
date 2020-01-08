@@ -39,7 +39,7 @@ if [ ! -d ${BUILD_DIR} ] ; then {
 # Build and Unit test
 cd ${BUILD_DIR}
 cmake ${CMAKE_VARS} -B${BUILD_DIR} -H${SRCDIR}
-make -j 8
+make -j 1
 
 # Build the package
 cd ${BUILD_DIR}

@@ -1,12 +1,12 @@
 cmake_minimum_required (VERSION 3.5.2 FATAL_ERROR)
-project (breakzip CXX)
+project (breakzip CXX CUDA)
 set (breakzip_VERSION_MAJOR 1)
 set (breakzip_VERSION_MINOR 0)
 set (breakzip_VERSION_PATCH 0)
 
 set (WITH_TCMALLOC 0)
 
-enable_testing()
+include(CTest)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/Modules")
 
@@ -83,6 +83,7 @@ set(LIBS ${LIBS} ${Readline_LIBRARY})
 message(STATUS "Linking: ${LIBS}")
 
 include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/src/cuda_common/inc")
 
 # So that cmake can find breakzip_config.h
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/src")
@@ -96,6 +97,8 @@ add_subdirectory (src)
 include_directories("${PROJECT_BINARY_DIR}")
 
 INCLUDE(InstallRequiredSystemLibraries)
+
+SET(CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES src/cuda_common/inc /usr/local/cuda/include)
 
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "BreakZip - cracking utils for old zip archives")
 SET(CPACK_PACKAGE_VENDOR "Pyrofex Corporation")

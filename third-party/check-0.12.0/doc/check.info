@@ -1,6 +1,6 @@
 This is check.info, produced by makeinfo version 6.5 from check.texi.
 
-This manual is for Check (version 0.12.0, 20 October 2017), a unit
+This manual is for Check (version 0.12.0, 8 January 2020), a unit
 testing framework for C.
 
    Copyright (C) 2001-2014 Arien Malec, Branden Archer, Chris Pickett,
@@ -23,7 +23,7 @@ File: check.info,  Node: Top,  Next: Introduction,  Prev: (dir),  Up: (dir)
 Check
 *****
 
-This manual is for Check (version 0.12.0, 20 October 2017), a unit
+This manual is for Check (version 0.12.0, 8 January 2020), a unit
 testing framework for C.
 
    Copyright (C) 2001-2014 Arien Malec, Branden Archer, Chris Pickett,
@@ -3380,44 +3380,44 @@ Index
 
 
 Tag Table:
-Node: Top781
-Node: Introduction2832
-Node: Unit Testing in C4967
-Node: Other Frameworks for C6835
-Node: Tutorial10765
-Node: How to Write a Test11599
-Node: Setting Up the Money Build Using Autotools12265
-Node: Setting Up the Money Build Using CMake19389
-Node: Test a Little25608
-Node: Creating a Suite32522
-Node: SRunner Output38779
-Node: Advanced Features47391
-Node: Convenience Test Functions48164
-Node: Running Multiple Cases59096
-Node: No Fork Mode64679
-Node: Test Fixtures65694
-Node: Test Fixture Examples67976
-Node: Checked vs Unchecked Fixtures72340
-Node: Multiple Suites in one SRunner74205
-Node: Selective Running of Tests75851
-Node: Selecting Tests by Suite or Test Case76530
-Node: Selecting Tests Based on Arbitrary Tags77118
-Node: Testing Signal Handling and Exit Values79822
-Node: Looping Tests80925
-Node: Test Timeouts82648
-Node: Determining Test Coverage83805
-Node: Finding Memory Leaks86290
-Node: Test Logging90007
-Node: XML Logging91654
-Node: TAP Logging95874
-Node: Subunit Support97437
-Node: Supported Build Systems98926
-Node: Autotools99374
-Node: CMake101696
-Node: Conclusion and References102057
-Node: Environment Variable Reference102863
-Node: Copying This Manual104700
-Node: GNU Free Documentation License104953
-Node: Index127343
+Node: Top780
+Node: Introduction2830
+Node: Unit Testing in C4965
+Node: Other Frameworks for C6833
+Node: Tutorial10763
+Node: How to Write a Test11597
+Node: Setting Up the Money Build Using Autotools12263
+Node: Setting Up the Money Build Using CMake19387
+Node: Test a Little25606
+Node: Creating a Suite32520
+Node: SRunner Output38777
+Node: Advanced Features47389
+Node: Convenience Test Functions48162
+Node: Running Multiple Cases59094
+Node: No Fork Mode64677
+Node: Test Fixtures65692
+Node: Test Fixture Examples67974
+Node: Checked vs Unchecked Fixtures72338
+Node: Multiple Suites in one SRunner74203
+Node: Selective Running of Tests75849
+Node: Selecting Tests by Suite or Test Case76528
+Node: Selecting Tests Based on Arbitrary Tags77116
+Node: Testing Signal Handling and Exit Values79820
+Node: Looping Tests80923
+Node: Test Timeouts82646
+Node: Determining Test Coverage83803
+Node: Finding Memory Leaks86288
+Node: Test Logging90005
+Node: XML Logging91652
+Node: TAP Logging95872
+Node: Subunit Support97435
+Node: Supported Build Systems98924
+Node: Autotools99372
+Node: CMake101694
+Node: Conclusion and References102055
+Node: Environment Variable Reference102861
+Node: Copying This Manual104698
+Node: GNU Free Documentation License104951
+Node: Index127341
 
 End Tag Table
