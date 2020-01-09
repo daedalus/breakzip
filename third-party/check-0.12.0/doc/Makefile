@@ -198,13 +198,13 @@ am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 am__DIST_COMMON = $(check_TEXINFOS) $(srcdir)/Makefile.in mdate-sh \
 	texinfo.tex
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/missing aclocal-1.16
+ACLOCAL = ${SHELL} /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/missing aclocal-1.16
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 1
 AR = ar
-AUTOCONF = ${SHELL} /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/missing autoconf
-AUTOHEADER = ${SHELL} /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/missing autoheader
-AUTOMAKE = ${SHELL} /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/missing automake-1.16
+AUTOCONF = ${SHELL} /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/missing autoconf
+AUTOHEADER = ${SHELL} /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/missing autoheader
+AUTOMAKE = ${SHELL} /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/missing automake-1.16
 AWK = mawk
 AWK_GSUB_DBL_BSLASH = \\\\\\\\
 AWK_PATH = /usr/bin/mawk
@@ -257,7 +257,7 @@ LIPO =
 LN_S = ln -s
 LTLIBOBJS = 
 LT_SYS_LIBRARY_PATH = 
-MAKEINFO = ${SHELL} /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/missing makeinfo
+MAKEINFO = ${SHELL} /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/missing makeinfo
 MANIFEST_TOOL = :
 MKDIR_P = /usr/bin/mkdir -p
 NM = /usr/bin/nm -B
@@ -287,10 +287,10 @@ SHELL = /bin/bash
 STRIP = strip
 TEX = false
 VERSION = 0.12.0
-abs_builddir = /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc
-abs_srcdir = /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc
-abs_top_builddir = /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0
-abs_top_srcdir = /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0
+abs_builddir = /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc
+abs_srcdir = /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc
+abs_top_builddir = /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0
+abs_top_srcdir = /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0
 ac_ct_AR = ar
 ac_ct_CC = gcc
 ac_ct_DUMPBIN = 
@@ -320,7 +320,7 @@ host_vendor = pc
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/install-sh
+install_sh = ${SHELL} /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -329,7 +329,7 @@ mandir = ${datarootdir}/man
 mkdir_p = $(MKDIR_P)
 oldincludedir = /usr/include
 pdfdir = ${docdir}
-prefix = /usr/local/pyrofex/leaf/Customers/Tolsi/breakzip/build.out
+prefix = /usr/local/pyrofex/leaf/breakzip/build.out
 program_transform_name = s,x,x,
 psdir = ${docdir}
 runstatedir = ${localstatedir}/run
@@ -951,47 +951,47 @@ $(srcdir)/check.texi: money.1-2.h.diff \
 # think that means there is an error
 money.1-2.h.diff: $(eg_src)/money.1.h $(eg_src)/money.2.h
 	cd $(eg_root); \
-	diff -U 100 src/money.1.h src/money.2.h ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 src/money.1.h src/money.2.h ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 money.1-3.c.diff: $(eg_src)/money.1.c $(eg_src)/money.3.c
 	cd $(eg_root); \
-	diff -U 100 src/money.1.c src/money.3.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 src/money.1.c src/money.3.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 money.3-4.c.diff: $(eg_src)/money.3.c $(eg_src)/money.4.c
 	cd $(eg_root); \
-	diff -U 100 src/money.3.c src/money.4.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 src/money.3.c src/money.4.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 money.4-5.c.diff: $(eg_src)/money.4.c $(eg_src)/money.5.c
 	cd $(eg_root); \
-	diff -U 100 src/money.4.c src/money.5.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 src/money.4.c src/money.5.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 money.5-6.c.diff: $(eg_src)/money.5.c $(eg_src)/money.6.c
 	cd $(eg_root); \
-	diff -U 100 src/money.5.c src/money.6.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 src/money.5.c src/money.6.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 check_money.1-2.c.diff: $(eg_tests)/check_money.1.c $(eg_tests)/check_money.2.c
 	cd $(eg_root); \
-	diff -U 100 tests/check_money.1.c tests/check_money.2.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 tests/check_money.1.c tests/check_money.2.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 check_money.2-3.c.diff: $(eg_tests)/check_money.2.c $(eg_tests)/check_money.3.c
 	cd $(eg_root); \
-	diff -U 100 tests/check_money.2.c tests/check_money.3.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 tests/check_money.2.c tests/check_money.3.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 check_money.3-6.c.diff: $(eg_tests)/check_money.3.c $(eg_tests)/check_money.6.c
 	cd $(eg_root); \
-	diff -U 100 tests/check_money.3.c tests/check_money.6.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 tests/check_money.3.c tests/check_money.6.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 check_money.6-7.c.diff: $(eg_tests)/check_money.6.c $(eg_tests)/check_money.7.c
 	cd $(eg_root); \
-	diff -U 100 tests/check_money.6.c tests/check_money.7.c ${filter_timestapms} > /home/leaf/Pyrofex/Customers/Tolsi/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
+	diff -U 100 tests/check_money.6.c tests/check_money.7.c ${filter_timestapms} > /home/leaf/Pyrofex/breakzip/third-party/check-0.12.0/doc/$@ || test $$? -eq 1; \
 	cd -;
 
 clean-local:
