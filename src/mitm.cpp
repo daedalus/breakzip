@@ -467,6 +467,7 @@ void stage1() {
                 g.k21xf1 = pxf0 ^ (crc32tab[s] >> 2);
                 g.k21yf1 = pxf0 ^ (crc32tab[t] >> 2);
                 g.s1xf0 = s1xf0;
+                g.prefix = prefix;
                 g.s1xf1 = s1xf1;
                 s1candidates.push_back(g);
 
@@ -507,10 +508,17 @@ typedef struct guess2 {
   uint8_t chunk6;
   uint8_t chunk7;
   uint8_t cb2;
-  uint32_t k12msbs;
   uint8_t s2xf0;
+  uint8_t prefix;
   uint8_t s2xf1;
+  uint32_t k12msbs;
+  // Could compute these from s2s, prefix, and k12msbs
+  uint16_t k22xf0;
+  uint16_t k22xf1;
+  uint16_t k22yf0;
+  uint16_t k22yf1;
 } guess2;
+
 
 vector<guess2> s2candidates(0);
 void stage2() {
@@ -522,7 +530,7 @@ void stage2() {
   // Now that we have actual k20 bits, check prediction of s2xf0, etc. and
   // filter more
   // for (guess1 c1 : s1candidates) {
-  for (uint8_t sample = 0; sample < 5; ++sample) {
+  for (uint8_t sample = 0; sample < 20; ++sample) {
     uint32_t total_mapkeys(0);
     fprintf(stderr, "Sample: %d\n", sample);
     fprintf(stderr, "Stage 2a\n");
@@ -690,6 +698,10 @@ void stage2() {
                 uint32_t mapkey((f ^ cyf0l) | ((s ^ cxf1l) << 8) |
                                 ((t ^ cyf1l) << 16));
                 for (auto c2 : table2[mapkey]) {
+                  // TODO: reconstruct k20. Can we propagate the lowbits here to lowbits of k20?
+                  // We have s0, s1xf0, s1xf1, s2xf0, s2xf1 as constraints on k20.
+                  // Possibly overspecified, may filter more bits.  If not, at least we have k20 and
+                  // maybe can do a MITM on 8:9,cb in stage 3.
                   bool viable = false;
                   for (uint8_t lowbits = 0; lowbits < 4; ++lowbits) {
                     if ((pxf0 & 0x3f) == ((crc32((c1.k21xf0 << 2) | lowbits, c2.msbk12xf0) >> 2) & 0x3f)) {
@@ -707,7 +719,13 @@ void stage2() {
                   g.cb2 = c2.cb;
                   g.k12msbs = mapkey ^ (c2.msbk12xf0 * 0x01010101);
                   g.s2xf0 = s2xf0;
+                  g.prefix = prefix;
                   g.s2xf1 = s2xf1;
+                  g.k22xf0 = pxf0;
+                  g.k22yf0 = pxf0 ^ (crc32tab[f] >> 2);
+                  g.k22xf1 = pxf0 ^ (crc32tab[s] >> 2);
+                  g.k22yf1 = pxf0 ^ (crc32tab[t] >> 2);
+                  
                   if (g.g1.chunk2 == c.chunk2 && g.g1.chunk3 == c.chunk3 &&
                       g.g1.cb == (c.carries >> 12) && g.chunk6 == c.chunk6 &&
                       g.chunk7 == c.chunk7 &&

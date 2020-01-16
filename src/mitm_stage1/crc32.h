@@ -1,6 +1,8 @@
 #ifndef CRC32_H
 #define CRC32_H
 
+#include <cstdint>
+
 extern const uint32_t crc32tab[256];
 extern const uint8_t crcinvtab[256];
 
