@@ -1,5 +1,22 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "mitm_stage1.h"
 #include "crc32.h"
+
+void build_preimages(vector<vector<uint16_t>>& preimages) {
+  // Build preimage lookup table
+  for (uint16_t k20 = 0; k20 < 0x4000; ++k20) {
+    uint16_t temp = (k20 << 2) | 3;
+    uint8_t s = ((temp * (temp ^ 1)) >> 8) & 0xff;
+    preimages[s].push_back(k20);
+  }
+}
+
+uint8_t get_s0(uint16_t k20) {
+  uint16_t temp = k20 | 3;
+  return (temp * (temp ^ 1)) >> 8;
+}
 
 correct_guess correct(archive_info info) {
   correct_guess result;
@@ -120,7 +137,7 @@ uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
 // Finds idxs such that crc32tab[idx] is the xor of offset and some prefix of
 // stream_byte. We expect one on average.
 void second_half_step(uint16_t offset, uint8_t stream_byte,
-                      vector<uint8_t> &idxs) {
+                      vector<uint8_t> &idxs, vector<vector<uint16_t>>& preimages) {
   for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
     uint16_t preimage = preimages[stream_byte][prefix];
     uint16_t xored = offset ^ preimage;
@@ -153,7 +170,7 @@ void fromMapKey(uint8_t msbxf0, uint32_t mapkey, uint8_t &msbyf0,
 
 // info: the info about the archive to attack
 // table: vector<vector<stage1a>> table(0x01000000)
-void mitm_stage1a(archive_info info, vector<vector<stage1a>>& table, correct_guess *c = nullptr) {
+void mitm_stage1a(archive_info info, vector<vector<stage1a>>& table, correct_guess *c) {
   // STAGE 1
   //
   // Guess s0, chunk2, chunk3 and carry bits.
@@ -237,13 +254,10 @@ void mitm_stage1a(archive_info info, vector<vector<stage1a>>& table, correct_gue
             fprintf(stderr,
                     "MSBs: %02x, %02x, %02x, %02x, Mapkey: %08x, carries: %x, "
                     "c.carries: %04x\n",
-                    msbxf0, msbyf0, msbxf1, msbyf1, mk, carries, c.carries);
+                    msbxf0, msbyf0, msbxf1, msbyf1, mk, carries, c->carries);
           }
           stage1a candidate = {uint8_t(s0), uint8_t(chunk2), uint8_t(chunk3),
                                carries, msbxf0};
-          if (!table[mk].size()) {
-            ++total_mapkeys;
-          }
           table[mk].push_back(candidate);
         }
       }
@@ -254,7 +268,7 @@ void mitm_stage1a(archive_info info, vector<vector<stage1a>>& table, correct_gue
 // info: the info about the archive to attack
 // table: the output of mitm_stage1a
 // candidates: an empty list
-void mitm_stage1b(archive_info info, vector<vector<stage1a>>& table, vector<stage1_candidate>& candidates, correct_guess *c = nullptr) {
+void mitm_stage1b(archive_info info, vector<vector<stage1a>>& table, vector<stage1_candidate>& candidates, FILE *f, vector<vector<uint16_t>>& preimages, correct_guess *c) {
   // Second half of MITM for stage 1
   bool found_correct = false;
   for (uint16_t s1xf0 = 0; s1xf0 < 0x100; ++s1xf0) {
@@ -267,20 +281,20 @@ void mitm_stage1b(archive_info info, vector<vector<stage1a>>& table, vector<stag
         }
       }
       vector<uint8_t> firsts(0);
-      uint8_t s1yf0 = s1xf0 ^ test_bytes[0][0][1] ^ test_bytes[0][2][1];
-      second_half_step(pxf0, s1yf0, firsts);
+      uint8_t s1yf0 = s1xf0 ^ info.file[0].x[1] ^ info.file[0].h[1];
+      second_half_step(pxf0, s1yf0, firsts, preimages);
       if (!firsts.size()) {
         continue;
       }
       for (uint16_t s1xf1 = 0; s1xf1 < 0x100; ++s1xf1) {
         vector<uint8_t> seconds(0);
-        second_half_step(pxf0, s1xf1, seconds);
+        second_half_step(pxf0, s1xf1, seconds, preimages);
         if (!seconds.size()) {
           continue;
         }
         vector<uint8_t> thirds(0);
-        uint8_t s1yf1 = s1xf1 ^ test_bytes[1][0][1] ^ test_bytes[1][2][1];
-        second_half_step(pxf0, s1yf1, thirds);
+        uint8_t s1yf1 = s1xf1 ^ info.file[1].x[1] ^ info.file[1].h[1];
+        second_half_step(pxf0, s1yf1, thirds, preimages);
         if (!thirds.size()) {
           continue;
         }
@@ -288,7 +302,7 @@ void mitm_stage1b(archive_info info, vector<vector<stage1a>>& table, vector<stag
           for (auto s : seconds) {
             for (auto t : thirds) {
               uint32_t mapkey(f | (s << 8) | (t << 16));
-              for (stage1a candidate : table1[mapkey]) {
+              for (stage1a candidate : table[mapkey]) {
                 stage1_candidate g;
                 g.chunk2 = candidate.chunk2;
                 g.chunk3 = candidate.chunk3;
@@ -311,7 +325,7 @@ void mitm_stage1b(archive_info info, vector<vector<stage1a>>& table, vector<stag
                 // Now starting at the top, iterate over 64 possibilities for
                 // 15..2 of CD
                 for (uint8_t i = 0; i < 64; ++i) {
-                  uint16_t maybek20 = (preimages[s0][i] << 2);
+                  uint32_t maybek20 = (preimages[candidate.s0][i] << 2);
                   // and 4 possibilities for low two bits of D
                   for (uint8_t lo = 0; lo < 4; ++lo) {
                     // CD
@@ -325,16 +339,15 @@ void mitm_stage1b(archive_info info, vector<vector<stage1a>>& table, vector<stag
                     }
                   }
                 }
-                s1candidates.push_back(g);
+                candidates.push_back(g);
 
                 if (nullptr != c && s1xf0 == c->sx[0][1] && s1xf1 == c->sx[1][1] &&
                     candidate.s0 == c->sx[0][0] &&
                     candidate.chunk2 == c->chunk2 &&
                     candidate.chunk3 == c->chunk3 &&
-                    candidate.cb == (c->carries >> 12)) {
+                    candidate.cb1 == (c->carries >> 12)) {
                   found_correct = true;
-                  s1idx = s1candidates.size() - 1;
-                  fprintf(stderr, "Correct s1candidates index = %lx\n", s1idx);
+                  fprintf(stderr, "Correct candidates index = %lx\n", candidates.size() - 1);
                 }
               }
             }
@@ -347,5 +360,5 @@ void mitm_stage1b(archive_info info, vector<vector<stage1a>>& table, vector<stag
     fprintf(stderr, "Failed to use correct guess: s1xf0 = %02x, s1xf1 = %02x\n",
             c->sx[0][1], c->sx[1][1]);
   }
-  fprintf(stderr, "s1candidates.size() == %04lx\n", s1candidates.size());
+  fprintf(stderr, "Stage 1 candidates.size() == %04lx\n", candidates.size());
 }
