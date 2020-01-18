@@ -5,10 +5,12 @@
 *.lo
 *.log
 *.o
+*.out
 *.so
 *.swp
 *.sym
 *.zip
+
 
 build.out/**
           **/config.log
