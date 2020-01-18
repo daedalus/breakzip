@@ -13,8 +13,6 @@ THIRD_PARTY_BUILD="${1:-build.out}"
 DEF_PFX="$(readlink -f $(pwd))/build.out"
 BUILD_DIR="${2:-${DEF_PFX}}"
 LIBDIR="${THIRD_PARTY_BUILD}/lib"
-export VERBOSE=1
-export DEBUG=1
 CMAKE_VARS="-DCMAKE_BUILD_TYPE=${BUILD:-Release}"
 
 #
