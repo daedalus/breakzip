@@ -15,7 +15,10 @@ DEFINE_bool(print_summary, false,
 DEFINE_int32(seed_start, 0x56a50000, "Seed to start search.");
 DEFINE_int32(seed_end, 0x56a90000, "Seed to end search.");
 
-const char * usage_message = R"usage(
+namespace breakzip {
+    using namespace std;
+
+    const char * usage_message = R"usage(
     -flagfile                   load flags from file     type: string default: ""
     -fromenv                    set flags from the environment [use 'export FLAGS_flag1=value']
                                 type: string default: ""
@@ -51,10 +54,6 @@ const char * usage_message = R"usage(
     -debug                      Enable debugging output. type: bool default: false
     -log_level                  Set the log level. type: int32 default: 3
     )usage";
-
-
-namespace breakzip {
-    using namespace std;
 
     static std::string version_string() {
         ostringstream ss;
