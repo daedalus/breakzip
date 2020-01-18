@@ -1,6 +1,7 @@
 # Author: Nash E. Foster
 
-add_subdirectory (test)
+add_subdirectory(test)
+add_subdirectory(mitm_stage1)
 configure_file(breakzip_config.h.in breakzip_config.h)
 add_library(breakzipcore breakzip.cpp stages.cpp)
 
