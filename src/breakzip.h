@@ -43,6 +43,8 @@
 
 namespace breakzip {
 
+    std::string version_string();
+
     int main(int argc, char* argv[]);
     bool InitBreakZip(int argc, char* argv[]);
     void ShutdownBreakZip();
@@ -137,6 +139,7 @@ namespace breakzip {
         }
 
         char* crypt_hdr() { return crypt_hdr_; }
+        std::vector<uint8_t> crypt_header();
 
         private:
         struct inner_lfh {
@@ -171,6 +174,7 @@ namespace breakzip {
             void hexdump(FILE* f);
             void print_summary(FILE* f);
             std::vector<uint8_t> known_seed_bytes();
+            std::vector<LocalFileHeader*> local_file_headers();
 
         private:
             EndOfCentralDirectoryRecord* eocdr_;
