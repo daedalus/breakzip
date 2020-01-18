@@ -20,5 +20,5 @@ foreach (SOURCE_FILE ${ALL_SOURCE_FILES})
     endif ()
 endforeach ()
 
-add_custom_target(clangformat COMMAND /usr/bin/clang-format -style=Google
+add_custom_target(clangformat COMMAND /usr/bin/clang-format
         -i ${ALL_SOURCE_FILES})
