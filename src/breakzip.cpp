@@ -15,7 +15,10 @@ DEFINE_bool(print_summary, false,
 DEFINE_int32(seed_start, 0x56a50000, "Seed to start search.");
 DEFINE_int32(seed_end, 0x56a90000, "Seed to end search.");
 
-const char * usage_message = R"usage(
+namespace breakzip {
+    using namespace std;
+
+    const char * usage_message = R"usage(
     -flagfile                   load flags from file     type: string default: ""
     -fromenv                    set flags from the environment [use 'export FLAGS_flag1=value']
                                 type: string default: ""
@@ -52,11 +55,7 @@ const char * usage_message = R"usage(
     -log_level                  Set the log level. type: int32 default: 3
     )usage";
 
-
-namespace breakzip {
-    using namespace std;
-
-    static std::string version_string() {
+    std::string version_string() {
         ostringstream ss;
         ss << BREAKZIP_VERSION_MAJOR << "." << BREAKZIP_VERSION_MINOR <<
             "." << BREAKZIP_VERSION_PATCH << " (c) Pyrofex Corporation. ";
@@ -181,6 +180,16 @@ namespace breakzip {
                 file_data_ += 12; // crypt header is 12 bytes.
             }
         }
+
+    vector<uint8_t> LocalFileHeader::crypt_header() {
+        vector<uint8_t> rval(10);
+        if (nullptr != crypt_hdr_) {
+            for (int i = 0; i < 10; ++i) {
+                rval[i] = (uint8_t)crypt_hdr_[i];
+            }
+        }
+        return std::move(rval);
+    }
 
     void LocalFileHeader::dump(FILE* f) {
         if (nullptr == lfh_) {
@@ -407,6 +416,16 @@ namespace breakzip {
         }
 
         return 0;
+    }
+
+    std::vector<LocalFileHeader*> ZipFile::local_file_headers() {
+        std::vector<LocalFileHeader*> rval(2);
+
+        for (int i = 0; i < 2; ++i) {
+            rval[i] = this->lfhs_[i];
+        }
+
+        return std::move(rval);
     }
 
     /***

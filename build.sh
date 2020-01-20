@@ -13,9 +13,8 @@ THIRD_PARTY_BUILD="${1:-build.out}"
 DEF_PFX="$(readlink -f $(pwd))/build.out"
 BUILD_DIR="${2:-${DEF_PFX}}"
 LIBDIR="${THIRD_PARTY_BUILD}/lib"
-export VERBOSE=1
-export DEBUG=1
-CMAKE_VARS="-DCMAKE_BUILD_TYPE=${BUILD:-Release}"
+CMAKE_VARS="-DCMAKE_BUILD_TYPE=${BUILD:-Release} "\
+"-DCMAKE_VERBOSE_MAKEFILE:BOOL=${VERBOSE:-OFF}"
 
 #
 # The third party libraries currently control their own versions.
@@ -38,6 +37,7 @@ if [ ! -d ${BUILD_DIR} ] ; then {
 
 # Build and Unit test
 cd ${BUILD_DIR}
+echo "Building with CMAKE_VARS=${CMAKE_VARS}"
 cmake ${CMAKE_VARS} -B${BUILD_DIR} -H${SRCDIR}
 make -j 1
 
