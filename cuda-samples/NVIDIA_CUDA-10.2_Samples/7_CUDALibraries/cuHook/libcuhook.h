@@ -1,5 +1,5 @@
 #ifndef _CUHOOK_H_
-# define _CUHOOK_H_
+#define _CUHOOK_H_
 
 typedef enum HookTypesEnum {
     PRE_CALL_HOOK,
@@ -17,14 +17,19 @@ typedef enum HookSymbolsEnum {
 } HookSymbols;
 
 // One and only function to call to register a callback
-// You need to dlsym this symbol in your application and call it to register callbacks
-typedef void (*fnCuHookRegisterCallback)(HookSymbols symbol, HookTypes type, void* callback);
-extern "C" { void cuHookRegisterCallback(HookSymbols symbol, HookTypes type, void* callback); }
+// You need to dlsym this symbol in your application and call it to register
+// callbacks
+typedef void (*fnCuHookRegisterCallback)(HookSymbols symbol, HookTypes type,
+                                         void* callback);
+extern "C" {
+void cuHookRegisterCallback(HookSymbols symbol, HookTypes type, void* callback);
+}
 
-// In case you want to intercept, the callbacks need the same type/parameters as the real functions
-typedef CUresult CUDAAPI (*fnMemAlloc)(CUdeviceptr *dptr, size_t bytesize);
+// In case you want to intercept, the callbacks need the same type/parameters as
+// the real functions
+typedef CUresult CUDAAPI (*fnMemAlloc)(CUdeviceptr* dptr, size_t bytesize);
 typedef CUresult CUDAAPI (*fnMemFree)(CUdeviceptr dptr);
-typedef CUresult CUDAAPI (*fnCtxGetCurrent)(CUcontext *pctx);
+typedef CUresult CUDAAPI (*fnCtxGetCurrent)(CUcontext* pctx);
 typedef CUresult CUDAAPI (*fnCtxSetCurrent)(CUcontext ctx);
 typedef CUresult CUDAAPI (*fnCtxDestroy)(CUcontext ctx);
 

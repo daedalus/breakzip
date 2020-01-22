@@ -26,19 +26,19 @@
 
 // OpenGL Graphics includes
 #include <helper_gl.h>
-#if defined (__APPLE__) || defined(MACOSX)
-  #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  #include <GLUT/glut.h>
-  #ifndef glutCloseFunc
-  #define glutCloseFunc glutWMCloseFunc
-  #endif
+#if defined(__APPLE__) || defined(MACOSX)
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#include <GLUT/glut.h>
+#ifndef glutCloseFunc
+#define glutCloseFunc glutWMCloseFunc
+#endif
 #else
 #include <GL/freeglut.h>
 #endif
 
 // CUDA Runtime and Interop
-#include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
+#include <cuda_runtime.h>
 
 // Helper functions
 #include <helper_functions.h>
@@ -51,10 +51,9 @@ typedef unsigned int uint;
 typedef unsigned char uchar;
 
 #define MAX_EPSILON_ERROR 5.00f
-#define THRESHOLD         0.30f
+#define THRESHOLD 0.30f
 
 const char *sSDKsample = "CUDA 3D Volume Filtering";
-
 
 #include "volume.h"
 #include "volumeFilter.h"
@@ -75,31 +74,32 @@ float density = 0.05f;
 float brightness = 1.0f;
 float transferOffset = 0.0f;
 float transferScale = 1.0f;
-bool  linearFiltering = true;
-bool  preIntegrated = true;
+bool linearFiltering = true;
+bool preIntegrated = true;
 StopWatchInterface *animationTimer = NULL;
 
-float   filterFactor = 0.0f;
-bool    filterAnimation = true;
-int     filterIterations = 2;
-float   filterTimeScale = 0.001f;
-float   filterBias = 0.0f;
-float4  filterWeights[3*3*3];
+float filterFactor = 0.0f;
+bool filterAnimation = true;
+int filterIterations = 2;
+float filterTimeScale = 0.001f;
+float filterBias = 0.0f;
+float4 filterWeights[3 * 3 * 3];
 
-Volume  volumeOriginal;
-Volume  volumeFilter0;
-Volume  volumeFilter1;
+Volume volumeOriginal;
+Volume volumeFilter0;
+Volume volumeFilter1;
 
-GLuint pbo = 0;           // OpenGL pixel buffer object
-GLuint volumeTex = 0;     // OpenGL texture object
-struct cudaGraphicsResource *cuda_pbo_resource; // CUDA Graphics Resource (to transfer PBO)
+GLuint pbo = 0;        // OpenGL pixel buffer object
+GLuint volumeTex = 0;  // OpenGL texture object
+struct cudaGraphicsResource
+    *cuda_pbo_resource;  // CUDA Graphics Resource (to transfer PBO)
 
 StopWatchInterface *timer = 0;
 
 // Auto-Verification Code
 const int frameCheckNumber = 2;
-int fpsCount = 0;        // FPS count for averaging
-int fpsLimit = 1;        // FPS limit for sampling
+int fpsCount = 0;  // FPS count for averaging
+int fpsLimit = 1;  // FPS limit for sampling
 int g_Index = 0;
 unsigned int frameCount = 0;
 unsigned int g_TotalErrors = 0;
@@ -107,18 +107,16 @@ unsigned int g_TotalErrors = 0;
 int *pArgc;
 char **pArgv;
 
-#define MAX(a,b) ((a > b) ? a : b)
+#define MAX(a, b) ((a > b) ? a : b)
 
 //////////////////////////////////////////////////////////////////////////
 // QA RELATED
 
-void computeFPS()
-{
+void computeFPS() {
     frameCount++;
     fpsCount++;
 
-    if (fpsCount == fpsLimit)
-    {
+    if (fpsCount == fpsLimit) {
         char fps[256];
         float ifps = 1.f / (sdkGetAverageTimerValue(&timer) / 1000.f);
         sprintf(fps, "CUDA 3D Volume Filtering: %3.1f fps", ifps);
@@ -134,78 +132,50 @@ void computeFPS()
 //////////////////////////////////////////////////////////////////////////
 // 3D FILTER
 
-static float filteroffsets[3*3*3][3] =
-{
-    {-1,-1,-1},{ 0,-1,-1},{ 1,-1,-1},
-    {-1, 0,-1},{ 0, 0,-1},{ 1, 0,-1},
-    {-1, 1,-1},{ 0, 1,-1},{ 1, 1,-1},
+static float filteroffsets[3 * 3 * 3][3] = {
+    {-1, -1, -1}, {0, -1, -1}, {1, -1, -1}, {-1, 0, -1}, {0, 0, -1},
+    {1, 0, -1},   {-1, 1, -1}, {0, 1, -1},  {1, 1, -1},
 
-    {-1,-1, 0},{ 0,-1, 0},{ 1,-1, 0},
-    {-1, 0, 0},{ 0, 0, 0},{ 1, 0, 0},
-    {-1, 1, 0},{ 0, 1, 0},{ 1, 1, 0},
+    {-1, -1, 0},  {0, -1, 0},  {1, -1, 0},  {-1, 0, 0},  {0, 0, 0},
+    {1, 0, 0},    {-1, 1, 0},  {0, 1, 0},   {1, 1, 0},
 
-    {-1,-1, 1},{ 0,-1, 1},{ 1,-1, 1},
-    {-1, 0, 1},{ 0, 0, 1},{ 1, 0, 1},
-    {-1, 1, 1},{ 0, 1, 1},{ 1, 1, 1},
+    {-1, -1, 1},  {0, -1, 1},  {1, -1, 1},  {-1, 0, 1},  {0, 0, 1},
+    {1, 0, 1},    {-1, 1, 1},  {0, 1, 1},   {1, 1, 1},
 };
 
-static float filterblur[3*3*3] =
-{
-    0,1,0,
-    1,2,1,
-    0,1,0,
+static float filterblur[3 * 3 * 3] = {
+    0, 1, 0, 1, 2, 1, 0, 1, 0,
 
-    1,2,1,
-    2,4,2,
-    1,2,1,
+    1, 2, 1, 2, 4, 2, 1, 2, 1,
 
-    0,1,0,
-    1,2,1,
-    0,1,0,
+    0, 1, 0, 1, 2, 1, 0, 1, 0,
 };
-static float filtersharpen[3*3*3] =
-{
-    0,0,0,
-    0,-2,0,
-    0,0,0,
+static float filtersharpen[3 * 3 * 3] = {
+    0, 0,  0, 0,  -2, 0,  0, 0,  0,
 
-    0,-2,0,
-    -2,15,-2,
-    0,-2,0,
+    0, -2, 0, -2, 15, -2, 0, -2, 0,
 
-    0,0,0,
-    0,-2,0,
-    0,0,0,
+    0, 0,  0, 0,  -2, 0,  0, 0,  0,
 };
 
-static float filterpassthru[3*3*3] =
-{
-    0,0,0,
-    0,0,0,
-    0,0,0,
+static float filterpassthru[3 * 3 * 3] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
 
-    0,0,0,
-    0,1,0,
-    0,0,0,
+    0, 0, 0, 0, 1, 0, 0, 0, 0,
 
-    0,0,0,
-    0,0,0,
-    0,0,0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
-void FilterKernel_init()
-{
+void FilterKernel_init() {
     float sumblur = 0.0f;
     float sumsharpen = 0.0f;
 
-    for (int i = 0; i < 3*3*3; i++)
-    {
+    for (int i = 0; i < 3 * 3 * 3; i++) {
         sumblur += filterblur[i];
         sumsharpen += filtersharpen[i];
     }
 
-    for (int i = 0; i < 3*3*3; i++)
-    {
+    for (int i = 0; i < 3 * 3 * 3; i++) {
         filterblur[i] /= sumblur;
         filtersharpen[i] /= sumsharpen;
 
@@ -215,64 +185,58 @@ void FilterKernel_init()
     }
 }
 
-void FilterKernel_update(float blurfactor)
-{
-    if (blurfactor > 0.0f)
-    {
-        for (int i = 0; i < 3*3*3; i++)
-        {
-            filterWeights[i].w = filterblur[i] * blurfactor + filterpassthru[i] * (1.0f - blurfactor);
+void FilterKernel_update(float blurfactor) {
+    if (blurfactor > 0.0f) {
+        for (int i = 0; i < 3 * 3 * 3; i++) {
+            filterWeights[i].w = filterblur[i] * blurfactor +
+                                 filterpassthru[i] * (1.0f - blurfactor);
         }
-    }
-    else
-    {
+    } else {
         blurfactor = -blurfactor;
 
-        for (int i = 0; i < 3*3*3; i++)
-        {
-            filterWeights[i].w = filtersharpen[i] * blurfactor + filterpassthru[i] * (1.0f - blurfactor);
+        for (int i = 0; i < 3 * 3 * 3; i++) {
+            filterWeights[i].w = filtersharpen[i] * blurfactor +
+                                 filterpassthru[i] * (1.0f - blurfactor);
         }
     }
-
 }
 
-void filter()
-{
-    if (filterAnimation)
-    {
-        filterFactor = cosf(sdkGetTimerValue(&animationTimer) * filterTimeScale);
+void filter() {
+    if (filterAnimation) {
+        filterFactor =
+            cosf(sdkGetTimerValue(&animationTimer) * filterTimeScale);
     }
 
     FilterKernel_update(filterFactor);
 
-    Volume *volumeRender = VolumeFilter_runFilter(&volumeOriginal,&volumeFilter0,&volumeFilter1,
-                                                  filterIterations, 3*3*3,filterWeights,filterBias);
-
+    Volume *volumeRender = VolumeFilter_runFilter(
+        &volumeOriginal, &volumeFilter0, &volumeFilter1, filterIterations,
+        3 * 3 * 3, filterWeights, filterBias);
 }
 
 //////////////////////////////////////////////////////////////////////////
 // RENDERING
 
 // render image using CUDA
-void render()
-{
-
-    VolumeRender_copyInvViewMatrix(invViewMatrix, sizeof(float4)*3);
+void render() {
+    VolumeRender_copyInvViewMatrix(invViewMatrix, sizeof(float4) * 3);
 
     // map PBO to get CUDA device pointer
     uint *d_output;
     // map PBO to get CUDA device pointer
     checkCudaErrors(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
     size_t num_bytes;
-    checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&d_output, &num_bytes,
-                                                         cuda_pbo_resource));
-    //printf("CUDA mapped PBO: May access %ld bytes\n", num_bytes);
+    checkCudaErrors(cudaGraphicsResourceGetMappedPointer(
+        (void **)&d_output, &num_bytes, cuda_pbo_resource));
+    // printf("CUDA mapped PBO: May access %ld bytes\n", num_bytes);
 
     // clear image
-    checkCudaErrors(cudaMemset(d_output, 0, width*height*4));
+    checkCudaErrors(cudaMemset(d_output, 0, width * height * 4));
 
     // call CUDA kernel, writing results to PBO
-    VolumeRender_render(gridSize, blockSize, d_output, width, height, density, brightness, transferOffset, transferScale, volumeOriginal.volumeTex);
+    VolumeRender_render(gridSize, blockSize, d_output, width, height, density,
+                        brightness, transferOffset, transferScale,
+                        volumeOriginal.volumeTex);
 
     getLastCudaError("render kernel failed");
 
@@ -280,8 +244,7 @@ void render()
 }
 
 // display results using OpenGL (called by GLUT)
-void display()
-{
+void display() {
     sdkStartTimer(&timer);
 
     // use OpenGL to build view matrix
@@ -322,7 +285,8 @@ void display()
     // copy from pbo to texture
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbo);
     glBindTexture(GL_TEXTURE_2D, volumeTex);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA,
+                    GL_UNSIGNED_BYTE, 0);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
     // draw textured quad
@@ -349,36 +313,28 @@ void display()
     computeFPS();
 }
 
-void idle()
-{
-    glutPostRedisplay();
-}
+void idle() { glutPostRedisplay(); }
 
 //////////////////////////////////////////////////////////////////////////
 // LOGIC
 
-void keyboard(unsigned char key, int x, int y)
-{
-    switch (key)
-    {
+void keyboard(unsigned char key, int x, int y) {
+    switch (key) {
         case 27:
-            #if defined (__APPLE__) || defined(MACOSX)
-                exit(EXIT_SUCCESS);
-            #else
-                glutDestroyWindow(glutGetWindow());
-                return;
-            #endif
+#if defined(__APPLE__) || defined(MACOSX)
+            exit(EXIT_SUCCESS);
+#else
+            glutDestroyWindow(glutGetWindow());
+            return;
+#endif
             break;
 
         case ' ':
             filterAnimation = !filterAnimation;
 
-            if (!filterAnimation)
-            {
+            if (!filterAnimation) {
                 sdkStopTimer(&animationTimer);
-            }
-            else
-            {
+            } else {
                 sdkStartTimer(&animationTimer);
             }
 
@@ -430,21 +386,20 @@ void keyboard(unsigned char key, int x, int y)
             break;
     }
 
-    printf("density = %.2f, brightness = %.2f, transferOffset = %.2f, transferScale = %.2f\n", density, brightness, transferOffset, transferScale);
+    printf(
+        "density = %.2f, brightness = %.2f, transferOffset = %.2f, "
+        "transferScale = %.2f\n",
+        density, brightness, transferOffset, transferScale);
     glutPostRedisplay();
 }
 
 int ox, oy;
 int buttonState = 0;
 
-void mouse(int button, int state, int x, int y)
-{
-    if (state == GLUT_DOWN)
-    {
-        buttonState  |= 1<<button;
-    }
-    else if (state == GLUT_UP)
-    {
+void mouse(int button, int state, int x, int y) {
+    if (state == GLUT_DOWN) {
+        buttonState |= 1 << button;
+    } else if (state == GLUT_UP) {
         buttonState = 0;
     }
 
@@ -453,25 +408,19 @@ void mouse(int button, int state, int x, int y)
     glutPostRedisplay();
 }
 
-void motion(int x, int y)
-{
+void motion(int x, int y) {
     float dx, dy;
     dx = (float)(x - ox);
     dy = (float)(y - oy);
 
-    if (buttonState == 4)
-    {
+    if (buttonState == 4) {
         // right = zoom
         viewTranslation.z += dy / 100.0f;
-    }
-    else if (buttonState == 2)
-    {
+    } else if (buttonState == 2) {
         // middle = translate
         viewTranslation.x += dx / 100.0f;
         viewTranslation.y -= dy / 100.0f;
-    }
-    else if (buttonState == 1)
-    {
+    } else if (buttonState == 1) {
         // left = rotate
         viewRotation.x += dy / 5.0f;
         viewRotation.y += dx / 5.0f;
@@ -485,13 +434,9 @@ void motion(int x, int y)
 //////////////////////////////////////////////////////////////////////////
 // SAMPLE INIT/DEINIT
 
-static int iDivUp(int a, int b)
-{
-    return (a % b != 0) ? (a / b + 1) : (a / b);
-}
+static int iDivUp(int a, int b) { return (a % b != 0) ? (a / b + 1) : (a / b); }
 void initPixelBuffer();
-void reshape(int w, int h)
-{
+void reshape(int w, int h) {
     width = w;
     height = h;
     initPixelBuffer();
@@ -509,27 +454,22 @@ void reshape(int w, int h)
     glOrtho(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
 }
 
-
-void initGL(int *argc, char **argv)
-{
+void initGL(int *argc, char **argv) {
     // initialize GLUT callback functions
     glutInit(argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
     glutInitWindowSize(width, height);
     glutCreateWindow("CUDA 3D Volume Filtering");
 
-    if (!isGLVersionSupported(2,0) ||
-        !areGLExtensionsSupported("GL_ARB_pixel_buffer_object"))
-    {
+    if (!isGLVersionSupported(2, 0) ||
+        !areGLExtensionsSupported("GL_ARB_pixel_buffer_object")) {
         printf("Required OpenGL extensions are missing.");
         exit(EXIT_SUCCESS);
     }
 }
 
-void initPixelBuffer()
-{
-    if (pbo)
-    {
+void initPixelBuffer() {
+    if (pbo) {
         // unregister this buffer object from CUDA C
         checkCudaErrors(cudaGraphicsUnregisterResource(cuda_pbo_resource));
 
@@ -541,16 +481,19 @@ void initPixelBuffer()
     // create pixel buffer object for display
     glGenBuffers(1, &pbo);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pbo);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, width*height*sizeof(GLubyte)*4, 0, GL_STREAM_DRAW_ARB);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB,
+                 width * height * sizeof(GLubyte) * 4, 0, GL_STREAM_DRAW_ARB);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
     // register this buffer object with CUDA
-    checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_pbo_resource, pbo, cudaGraphicsMapFlagsWriteDiscard));
+    checkCudaErrors(cudaGraphicsGLRegisterBuffer(
+        &cuda_pbo_resource, pbo, cudaGraphicsMapFlagsWriteDiscard));
 
     // create texture for display
     glGenTextures(1, &volumeTex);
     glBindTexture(GL_TEXTURE_2D, volumeTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -558,8 +501,7 @@ void initPixelBuffer()
 
 //////////////////////////////////////////////////////////////////////////
 
-void cleanup()
-{
+void cleanup() {
     sdkDeleteTimer(&timer);
     sdkDeleteTimer(&animationTimer);
 
@@ -568,8 +510,7 @@ void cleanup()
     Volume_deinit(&volumeFilter1);
     VolumeRender_deinit();
 
-    if (pbo)
-    {
+    if (pbo) {
         cudaGraphicsUnregisterResource(cuda_pbo_resource);
         glDeleteBuffers(1, &pbo);
         glDeleteTextures(1, &volumeTex);
@@ -577,12 +518,10 @@ void cleanup()
 }
 
 // Load raw data from disk
-void *loadRawFile(char *filename, size_t size)
-{
+void *loadRawFile(char *filename, size_t size) {
     FILE *fp = fopen(filename, "rb");
 
-    if (!fp)
-    {
+    if (!fp) {
         fprintf(stderr, "Error opening file '%s'\n", filename);
         return 0;
     }
@@ -596,55 +535,50 @@ void *loadRawFile(char *filename, size_t size)
     return data;
 }
 
-void initData(int argc, char **argv)
-{
+void initData(int argc, char **argv) {
     // parse arguments
     char *filename;
 
-    if (getCmdLineArgumentString(argc, (const char **) argv, "file", &filename))
-    {
+    if (getCmdLineArgumentString(argc, (const char **)argv, "file",
+                                 &filename)) {
         volumeFilename = filename;
     }
 
     int n;
 
-    if (checkCmdLineFlag(argc, (const char **) argv, "size"))
-    {
-        n = getCmdLineArgumentInt(argc, (const char **) argv, "size");
+    if (checkCmdLineFlag(argc, (const char **)argv, "size")) {
+        n = getCmdLineArgumentInt(argc, (const char **)argv, "size");
         volumeSize.width = volumeSize.height = volumeSize.depth = n;
     }
 
-    if (checkCmdLineFlag(argc, (const char **) argv, "xsize"))
-    {
-        n = getCmdLineArgumentInt(argc, (const char **) argv, "xsize");
+    if (checkCmdLineFlag(argc, (const char **)argv, "xsize")) {
+        n = getCmdLineArgumentInt(argc, (const char **)argv, "xsize");
         volumeSize.width = n;
     }
 
-    if (checkCmdLineFlag(argc, (const char **) argv, "ysize"))
-    {
-        n = getCmdLineArgumentInt(argc, (const char **) argv, "ysize");
+    if (checkCmdLineFlag(argc, (const char **)argv, "ysize")) {
+        n = getCmdLineArgumentInt(argc, (const char **)argv, "ysize");
         volumeSize.height = n;
     }
 
-    if (checkCmdLineFlag(argc, (const char **) argv, "zsize"))
-    {
-        n = getCmdLineArgumentInt(argc, (const char **) argv, "zsize");
+    if (checkCmdLineFlag(argc, (const char **)argv, "zsize")) {
+        n = getCmdLineArgumentInt(argc, (const char **)argv, "zsize");
         volumeSize.depth = n;
     }
 
     char *path = sdkFindFilePath(volumeFilename, argv[0]);
 
-    if (path == 0)
-    {
+    if (path == 0) {
         printf("Error finding file '%s'\n", volumeFilename);
         exit(EXIT_FAILURE);
     }
 
-    size_t size = volumeSize.width*volumeSize.height*volumeSize.depth*sizeof(VolumeType);
+    size_t size = volumeSize.width * volumeSize.height * volumeSize.depth *
+                  sizeof(VolumeType);
     void *h_volume = loadRawFile(path, size);
 
     FilterKernel_init();
-    Volume_init(&volumeOriginal,volumeSize, h_volume, 0);
+    Volume_init(&volumeOriginal, volumeSize, h_volume, 0);
     free(h_volume);
     Volume_init(&volumeFilter0, volumeSize, NULL, 1);
     Volume_init(&volumeFilter1, volumeSize, NULL, 1);
@@ -661,19 +595,14 @@ void initData(int argc, char **argv)
 
 //////////////////////////////////////////////////////////////////////////
 // AUTOMATIC TESTING
-void runSingleTest(const char *ref_file, const char *exec_path)
-{
+void runSingleTest(const char *ref_file, const char *exec_path) {
     uint *d_output;
-    checkCudaErrors(cudaMalloc((void **)&d_output, width*height*sizeof(uint)));
-    checkCudaErrors(cudaMemset(d_output, 0, width*height*sizeof(uint)));
+    checkCudaErrors(
+        cudaMalloc((void **)&d_output, width * height * sizeof(uint)));
+    checkCudaErrors(cudaMemset(d_output, 0, width * height * sizeof(uint)));
 
-    float modelView[16] =
-    {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 4.0f, 1.0f
-    };
+    float modelView[16] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+                           0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 4.0f, 1.0f};
 
     invViewMatrix[0] = modelView[0];
     invViewMatrix[1] = modelView[4];
@@ -689,17 +618,15 @@ void runSingleTest(const char *ref_file, const char *exec_path)
     invViewMatrix[11] = modelView[14];
 
     // call CUDA kernel, writing results to PBO
-    VolumeRender_copyInvViewMatrix(invViewMatrix, sizeof(float4)*3);
+    VolumeRender_copyInvViewMatrix(invViewMatrix, sizeof(float4) * 3);
     filterAnimation = false;
 
     // Start timer 0 and process n loops on the GPU
     int nIter = 10;
-    float scale = 2.0f/float(nIter-1);
+    float scale = 2.0f / float(nIter - 1);
 
-    for (int i = -1; i < nIter; i++)
-    {
-        if (i == 0)
-        {
+    for (int i = -1; i < nIter; i++) {
+        if (i == 0) {
             cudaDeviceSynchronize();
             sdkStartTimer(&timer);
         }
@@ -707,26 +634,32 @@ void runSingleTest(const char *ref_file, const char *exec_path)
         filterFactor = (float(i) * scale) - 1.0f;
         filterFactor = -filterFactor;
         filter();
-        VolumeRender_render(gridSize, blockSize, d_output, width, height, density, brightness, transferOffset, transferScale, volumeOriginal.volumeTex);
+        VolumeRender_render(gridSize, blockSize, d_output, width, height,
+                            density, brightness, transferOffset, transferScale,
+                            volumeOriginal.volumeTex);
     }
 
     cudaDeviceSynchronize();
     sdkStopTimer(&timer);
     // Get elapsed time and throughput, then log to sample and master logs
-    double dAvgTime = sdkGetTimerValue(&timer)/(nIter * 1000.0);
-    printf("volumeFiltering, Throughput = %.4f MTexels/s, Time = %.5f s, Size = %u Texels, NumDevsUsed = %u, Workgroup = %u\n",
-           (1.0e-6 * width * height)/dAvgTime, dAvgTime, (width * height), 1, blockSize.x * blockSize.y);
-
+    double dAvgTime = sdkGetTimerValue(&timer) / (nIter * 1000.0);
+    printf(
+        "volumeFiltering, Throughput = %.4f MTexels/s, Time = %.5f s, Size = "
+        "%u Texels, NumDevsUsed = %u, Workgroup = %u\n",
+        (1.0e-6 * width * height) / dAvgTime, dAvgTime, (width * height), 1,
+        blockSize.x * blockSize.y);
 
     getLastCudaError("Error: kernel execution FAILED");
     checkCudaErrors(cudaDeviceSynchronize());
 
-    unsigned char *h_output = (unsigned char *)malloc(width*height*4);
-    checkCudaErrors(cudaMemcpy(h_output, d_output, width*height*4, cudaMemcpyDeviceToHost));
+    unsigned char *h_output = (unsigned char *)malloc(width * height * 4);
+    checkCudaErrors(cudaMemcpy(h_output, d_output, width * height * 4,
+                               cudaMemcpyDeviceToHost));
 
     sdkSavePPM4ub("volumefilter.ppm", h_output, width, height);
-    bool bTestResult = sdkComparePPM("volumefilter.ppm", sdkFindFilePath(ref_file, exec_path),
-                                     MAX_EPSILON_ERROR, THRESHOLD, true);
+    bool bTestResult =
+        sdkComparePPM("volumefilter.ppm", sdkFindFilePath(ref_file, exec_path),
+                      MAX_EPSILON_ERROR, THRESHOLD, true);
 
     checkCudaErrors(cudaFree(d_output));
     free(h_output);
@@ -739,8 +672,7 @@ void runSingleTest(const char *ref_file, const char *exec_path)
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
 
-void printHelp()
-{
+void printHelp() {
     printf("\nUsage: volumeFiltering <options>\n");
     printf("\t\t-file = filename.raw (volume file for input)\n\n");
     printf("\t\t-size = 64 (volume size, isotropic)\n\n");
@@ -749,38 +681,33 @@ void printHelp()
     printf("\t\t-zsize = 32 (volume size, anisotropic)\n\n");
 }
 
-int
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     pArgc = &argc;
     pArgv = argv;
 
     char *ref_file = NULL;
 
 #if defined(__linux__)
-    setenv ("DISPLAY", ":0", 0);
+    setenv("DISPLAY", ":0", 0);
 #endif
 
     printf("%s Starting...\n\n", sSDKsample);
 
-    //start logs
+    // start logs
 
-    if (checkCmdLineFlag(argc, (const char **)argv, "help"))
-    {
+    if (checkCmdLineFlag(argc, (const char **)argv, "help")) {
         printHelp();
         exit(EXIT_SUCCESS);
     }
 
-    if (checkCmdLineFlag(argc, (const char **)argv, "file"))
-    {
+    if (checkCmdLineFlag(argc, (const char **)argv, "file")) {
         fpsLimit = frameCheckNumber;
         getCmdLineArgumentString(argc, (const char **)argv, "file", &ref_file);
     }
 
     int device = findCudaDevice(argc, (const char **)argv);
 
-    if (!ref_file)
-    {
+    if (!ref_file) {
         initGL(&argc, argv);
     }
 
@@ -796,12 +723,9 @@ main(int argc, char **argv)
         "  ';' and ''' to modify transfer function offset\n"
         "  '.' and ',' to modify transfer function scale\n\n");
 
-    if (ref_file)
-    {
+    if (ref_file) {
         runSingleTest(ref_file, argv[0]);
-    }
-    else
-    {
+    } else {
         // This is the normal rendering path for VolumeRender
         glutDisplayFunc(display);
         glutKeyboardFunc(keyboard);
@@ -812,7 +736,7 @@ main(int argc, char **argv)
 
         initPixelBuffer();
 
-#if defined (__APPLE__) || defined(MACOSX)
+#if defined(__APPLE__) || defined(MACOSX)
         atexit(cleanup);
 #else
         glutCloseFunc(cleanup);

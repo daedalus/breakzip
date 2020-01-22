@@ -9,7 +9,6 @@
  *
  */
 
-
 #include <cuda_runtime.h>
 
 #include <helper_cuda.h>
@@ -17,34 +16,34 @@
 
 #include "scan_common.h"
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     printf("%s Starting...\n\n", argv[0]);
 
-    //Use command-line specified CUDA device, otherwise use device with highest Gflops/s
+    // Use command-line specified CUDA device, otherwise use device with highest
+    // Gflops/s
     findCudaDevice(argc, (const char **)argv);
 
     uint *d_Input, *d_Output;
     uint *h_Input, *h_OutputCPU, *h_OutputGPU;
-    StopWatchInterface  *hTimer = NULL;
+    StopWatchInterface *hTimer = NULL;
     const uint N = 13 * 1048576 / 2;
 
     printf("Allocating and initializing host arrays...\n");
     sdkCreateTimer(&hTimer);
-    h_Input     = (uint *)malloc(N * sizeof(uint));
+    h_Input = (uint *)malloc(N * sizeof(uint));
     h_OutputCPU = (uint *)malloc(N * sizeof(uint));
     h_OutputGPU = (uint *)malloc(N * sizeof(uint));
     srand(2009);
 
-    for (uint i = 0; i < N; i++)
-    {
+    for (uint i = 0; i < N; i++) {
         h_Input[i] = rand();
     }
 
     printf("Allocating and initializing CUDA arrays...\n");
     checkCudaErrors(cudaMalloc((void **)&d_Input, N * sizeof(uint)));
     checkCudaErrors(cudaMalloc((void **)&d_Output, N * sizeof(uint)));
-    checkCudaErrors(cudaMemcpy(d_Input, h_Input, N * sizeof(uint), cudaMemcpyHostToDevice));
+    checkCudaErrors(
+        cudaMemcpy(d_Input, h_Input, N * sizeof(uint), cudaMemcpyHostToDevice));
 
     printf("Initializing CUDA-C scan...\n\n");
     initScan();
@@ -52,18 +51,22 @@ int main(int argc, char **argv)
     int globalFlag = 1;
     size_t szWorkgroup;
     const int iCycles = 100;
-    printf("*** Running GPU scan for short arrays (%d identical iterations)...\n\n", iCycles);
+    printf(
+        "*** Running GPU scan for short arrays (%d identical "
+        "iterations)...\n\n",
+        iCycles);
 
-    for (uint arrayLength = MIN_SHORT_ARRAY_SIZE; arrayLength <= MAX_SHORT_ARRAY_SIZE; arrayLength <<= 1)
-    {
-        printf("Running scan for %u elements (%u arrays)...\n", arrayLength, N / arrayLength);
+    for (uint arrayLength = MIN_SHORT_ARRAY_SIZE;
+         arrayLength <= MAX_SHORT_ARRAY_SIZE; arrayLength <<= 1) {
+        printf("Running scan for %u elements (%u arrays)...\n", arrayLength,
+               N / arrayLength);
         checkCudaErrors(cudaDeviceSynchronize());
         sdkResetTimer(&hTimer);
         sdkStartTimer(&hTimer);
 
-        for (int i = 0; i < iCycles; i++)
-        {
-            szWorkgroup = scanExclusiveShort(d_Output, d_Input, N / arrayLength, arrayLength);
+        for (int i = 0; i < iCycles; i++) {
+            szWorkgroup = scanExclusiveShort(d_Output, d_Input, N / arrayLength,
+                                             arrayLength);
         }
 
         checkCudaErrors(cudaDeviceSynchronize());
@@ -72,50 +75,56 @@ int main(int argc, char **argv)
 
         printf("Validating the results...\n");
         printf("...reading back GPU results\n");
-        checkCudaErrors(cudaMemcpy(h_OutputGPU, d_Output, N * sizeof(uint), cudaMemcpyDeviceToHost));
+        checkCudaErrors(cudaMemcpy(h_OutputGPU, d_Output, N * sizeof(uint),
+                                   cudaMemcpyDeviceToHost));
 
         printf(" ...scanExclusiveHost()\n");
         scanExclusiveHost(h_OutputCPU, h_Input, N / arrayLength, arrayLength);
 
-        // Compare GPU results with CPU results and accumulate error for this test
+        // Compare GPU results with CPU results and accumulate error for this
+        // test
         printf(" ...comparing the results\n");
         int localFlag = 1;
 
-        for (uint i = 0; i < N; i++)
-        {
-            if (h_OutputCPU[i] != h_OutputGPU[i])
-            {
+        for (uint i = 0; i < N; i++) {
+            if (h_OutputCPU[i] != h_OutputGPU[i]) {
                 localFlag = 0;
                 break;
             }
         }
 
         // Log message on individual test result, then accumulate to global flag
-        printf(" ...Results %s\n\n", (localFlag == 1) ? "Match" : "DON'T Match !!!");
+        printf(" ...Results %s\n\n",
+               (localFlag == 1) ? "Match" : "DON'T Match !!!");
         globalFlag = globalFlag && localFlag;
 
         // Data log
-        if (arrayLength == MAX_SHORT_ARRAY_SIZE)
-        {
+        if (arrayLength == MAX_SHORT_ARRAY_SIZE) {
             printf("\n");
-            printf("scan, Throughput = %.4f MElements/s, Time = %.5f s, Size = %u Elements, NumDevsUsed = %u, Workgroup = %u\n",
-                   (1.0e-6 * (double)arrayLength/timerValue), timerValue, (unsigned int)arrayLength, 1, (unsigned int)szWorkgroup);
+            printf(
+                "scan, Throughput = %.4f MElements/s, Time = %.5f s, Size = %u "
+                "Elements, NumDevsUsed = %u, Workgroup = %u\n",
+                (1.0e-6 * (double)arrayLength / timerValue), timerValue,
+                (unsigned int)arrayLength, 1, (unsigned int)szWorkgroup);
             printf("\n");
         }
     }
 
-    printf("***Running GPU scan for large arrays (%u identical iterations)...\n\n", iCycles);
+    printf(
+        "***Running GPU scan for large arrays (%u identical iterations)...\n\n",
+        iCycles);
 
-    for (uint arrayLength = MIN_LARGE_ARRAY_SIZE; arrayLength <= MAX_LARGE_ARRAY_SIZE; arrayLength <<= 1)
-    {
-        printf("Running scan for %u elements (%u arrays)...\n", arrayLength, N / arrayLength);
+    for (uint arrayLength = MIN_LARGE_ARRAY_SIZE;
+         arrayLength <= MAX_LARGE_ARRAY_SIZE; arrayLength <<= 1) {
+        printf("Running scan for %u elements (%u arrays)...\n", arrayLength,
+               N / arrayLength);
         checkCudaErrors(cudaDeviceSynchronize());
         sdkResetTimer(&hTimer);
         sdkStartTimer(&hTimer);
 
-        for (int i = 0; i < iCycles; i++)
-        {
-            szWorkgroup = scanExclusiveLarge(d_Output, d_Input, N / arrayLength, arrayLength);
+        for (int i = 0; i < iCycles; i++) {
+            szWorkgroup = scanExclusiveLarge(d_Output, d_Input, N / arrayLength,
+                                             arrayLength);
         }
 
         checkCudaErrors(cudaDeviceSynchronize());
@@ -124,38 +133,40 @@ int main(int argc, char **argv)
 
         printf("Validating the results...\n");
         printf("...reading back GPU results\n");
-        checkCudaErrors(cudaMemcpy(h_OutputGPU, d_Output, N * sizeof(uint), cudaMemcpyDeviceToHost));
+        checkCudaErrors(cudaMemcpy(h_OutputGPU, d_Output, N * sizeof(uint),
+                                   cudaMemcpyDeviceToHost));
 
         printf("...scanExclusiveHost()\n");
         scanExclusiveHost(h_OutputCPU, h_Input, N / arrayLength, arrayLength);
 
-        // Compare GPU results with CPU results and accumulate error for this test
+        // Compare GPU results with CPU results and accumulate error for this
+        // test
         printf(" ...comparing the results\n");
         int localFlag = 1;
 
-        for (uint i = 0; i < N; i++)
-        {
-            if (h_OutputCPU[i] != h_OutputGPU[i])
-            {
+        for (uint i = 0; i < N; i++) {
+            if (h_OutputCPU[i] != h_OutputGPU[i]) {
                 localFlag = 0;
                 break;
             }
         }
 
         // Log message on individual test result, then accumulate to global flag
-        printf(" ...Results %s\n\n", (localFlag == 1) ? "Match" : "DON'T Match !!!");
+        printf(" ...Results %s\n\n",
+               (localFlag == 1) ? "Match" : "DON'T Match !!!");
         globalFlag = globalFlag && localFlag;
 
         // Data log
-        if (arrayLength == MAX_LARGE_ARRAY_SIZE)
-        {
+        if (arrayLength == MAX_LARGE_ARRAY_SIZE) {
             printf("\n");
-            printf("scan, Throughput = %.4f MElements/s, Time = %.5f s, Size = %u Elements, NumDevsUsed = %u, Workgroup = %u\n",
-                   (1.0e-6 * (double)arrayLength/timerValue), timerValue, (unsigned int)arrayLength, 1, (unsigned int)szWorkgroup);
+            printf(
+                "scan, Throughput = %.4f MElements/s, Time = %.5f s, Size = %u "
+                "Elements, NumDevsUsed = %u, Workgroup = %u\n",
+                (1.0e-6 * (double)arrayLength / timerValue), timerValue,
+                (unsigned int)arrayLength, 1, (unsigned int)szWorkgroup);
             printf("\n");
         }
     }
-
 
     printf("Shutting down...\n");
     closeScan();

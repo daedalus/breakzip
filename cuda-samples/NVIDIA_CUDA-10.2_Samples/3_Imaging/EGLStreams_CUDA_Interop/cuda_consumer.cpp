@@ -16,8 +16,8 @@
 //
 
 #include "cuda_consumer.h"
-#include "eglstrm_common.h"
 #include <helper_cuda_drvapi.h>
+#include "eglstrm_common.h"
 
 #if defined(EXTENSION_LIST)
 EXTENSION_LIST(EXTLST_EXTERN)
@@ -25,8 +25,7 @@ EXTENSION_LIST(EXTLST_EXTERN)
 
 int checkbuf(FILE *fp1, FILE *fp2);
 
-CUresult cudaConsumerTest (test_cuda_consumer_s *data, char *fileName)
-{
+CUresult cudaConsumerTest(test_cuda_consumer_s *data, char *fileName) {
     CUresult cuStatus = CUDA_SUCCESS;
     CUarray cudaArr = NULL;
     CUeglFrame cudaEgl;
@@ -36,66 +35,64 @@ CUresult cudaConsumerTest (test_cuda_consumer_s *data, char *fileName)
     FILE *pInFile1 = NULL, *pInFile2 = NULL, *file_p = NULL;
     EGLint streamState = 0;
 
-    if(!data) {
+    if (!data) {
         printf("%s: Bad parameter\n", __func__);
         goto done;
     }
 
-    if(!eglQueryStreamKHR(
-                g_display,
-                eglStream,
-                EGL_STREAM_STATE_KHR,
-                &streamState)) {
-        printf("Cuda consumer, eglQueryStreamKHR EGL_STREAM_STATE_KHR failed\n");
+    if (!eglQueryStreamKHR(g_display, eglStream, EGL_STREAM_STATE_KHR,
+                           &streamState)) {
+        printf(
+            "Cuda consumer, eglQueryStreamKHR EGL_STREAM_STATE_KHR failed\n");
     }
-    if(streamState == EGL_STREAM_STATE_DISCONNECTED_KHR) {
+    if (streamState == EGL_STREAM_STATE_DISCONNECTED_KHR) {
         printf("CUDA Consumer: - EGL_STREAM_STATE_DISCONNECTED_KHR received\n");
     }
 
-    if (streamState == EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR)
-    {
-        cuStatus = cuEGLStreamConsumerAcquireFrame(&(data->cudaConn), &cudaResource, NULL, 16000);
-
+    if (streamState == EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR) {
+        cuStatus = cuEGLStreamConsumerAcquireFrame(&(data->cudaConn),
+                                                   &cudaResource, NULL, 16000);
 
         if (cuStatus == CUDA_SUCCESS) {
             CUdeviceptr pDevPtr = 0;
             int bufferSize;
             unsigned char *pCudaCopyMem = NULL;
-            unsigned int copyWidthInBytes=0, copyHeight=0;
+            unsigned int copyWidthInBytes = 0, copyHeight = 0;
 
             file_p = fopen(fileName, "wb+");
-            if(!file_p) {
+            if (!file_p) {
                 printf("WriteFrame: file open failed %s\n", fileName);
                 cuStatus = CUDA_ERROR_UNKNOWN;
                 goto done;
             }
-            cuStatus = cuGraphicsResourceGetMappedEglFrame(&cudaEgl, cudaResource,0,0);
+            cuStatus = cuGraphicsResourceGetMappedEglFrame(&cudaEgl,
+                                                           cudaResource, 0, 0);
             if (cuStatus != CUDA_SUCCESS) {
                 printf("Cuda get resource failed with %d\n", cuStatus);
                 goto done;
             }
             cuStatus = cuCtxSynchronize();
             if (cuStatus != CUDA_SUCCESS) {
-                printf ("cuCtxSynchronize failed \n");
+                printf("cuCtxSynchronize failed \n");
                 goto done;
             }
-            if (!(cudaEgl.planeCount >= 1 && cudaEgl.planeCount <= 3))
-            {
+            if (!(cudaEgl.planeCount >= 1 && cudaEgl.planeCount <= 3)) {
                 printf("Plane count is invalid\nExiting\n");
                 goto done;
             }
 
-            for (i=0; i < cudaEgl.planeCount; i++) {
+            for (i = 0; i < cudaEgl.planeCount; i++) {
                 if (cudaEgl.frameType == CU_EGL_FRAME_TYPE_PITCH) {
-                    pDevPtr =(CUdeviceptr) cudaEgl.frame.pPitch[i];
+                    pDevPtr = (CUdeviceptr)cudaEgl.frame.pPitch[i];
                     if (cudaEgl.planeCount == 1) {
                         bufferSize = cudaEgl.pitch * cudaEgl.height;
                         copyWidthInBytes = cudaEgl.pitch;
                         copyHeight = data->height;
-                    } else if (i == 1 && cudaEgl.planeCount == 2) { //YUV 420 semi-planar
+                    } else if (i == 1 && cudaEgl.planeCount ==
+                                             2) {  // YUV 420 semi-planar
                         bufferSize = cudaEgl.pitch * cudaEgl.height / 2;
                         copyWidthInBytes = cudaEgl.pitch;
-                        copyHeight = data->height/2;
+                        copyHeight = data->height / 2;
                     } else {
                         bufferSize = data->width * data->height;
                         copyWidthInBytes = data->width;
@@ -109,13 +106,14 @@ CUresult cudaConsumerTest (test_cuda_consumer_s *data, char *fileName)
                 } else {
                     cudaArr = cudaEgl.frame.pArray[i];
                     if (cudaEgl.planeCount == 1) {
-                        bufferSize = data->width * data->height *4;
+                        bufferSize = data->width * data->height * 4;
                         copyWidthInBytes = data->width * 4;
                         copyHeight = data->height;
-                    } else if (i == 1 && cudaEgl.planeCount == 2) { //YUV 420 semi-planar
+                    } else if (i == 1 && cudaEgl.planeCount ==
+                                             2) {  // YUV 420 semi-planar
                         bufferSize = data->width * data->height / 2;
                         copyWidthInBytes = data->width;
-                        copyHeight = data->height/2;
+                        copyHeight = data->height / 2;
                     } else {
                         bufferSize = data->width * data->height;
                         copyWidthInBytes = data->width;
@@ -137,35 +135,45 @@ CUresult cudaConsumerTest (test_cuda_consumer_s *data, char *fileName)
                 memset(pCudaCopyMem, 0, bufferSize);
                 if (data->pitchLinearOutput) {
                     cuStatus = cuMemcpyDtoH(pCudaCopyMem, pDevPtr, bufferSize);
-                    if(cuStatus != CUDA_SUCCESS) {
-                        printf("cuda_consumer: pitch linear Memcpy failed, bufferSize =%d\n", bufferSize);
+                    if (cuStatus != CUDA_SUCCESS) {
+                        printf(
+                            "cuda_consumer: pitch linear Memcpy failed, "
+                            "bufferSize =%d\n",
+                            bufferSize);
                         goto done;
                     }
                     cuStatus = cuCtxSynchronize();
                     if (cuStatus != CUDA_SUCCESS) {
-                        printf ("cuda_consumer: cuCtxSynchronize failed after memcpy \n");
+                        printf(
+                            "cuda_consumer: cuCtxSynchronize failed after "
+                            "memcpy \n");
                         goto done;
                     }
                 } else {
                     CUDA_MEMCPY3D cpdesc;
                     memset(&cpdesc, 0, sizeof(cpdesc));
-                    cpdesc.srcXInBytes = cpdesc.srcY = cpdesc.srcZ = cpdesc.srcLOD = 0;
+                    cpdesc.srcXInBytes = cpdesc.srcY = cpdesc.srcZ =
+                        cpdesc.srcLOD = 0;
                     cpdesc.srcMemoryType = CU_MEMORYTYPE_ARRAY;
                     cpdesc.srcArray = cudaArr;
-                    cpdesc.dstXInBytes = cpdesc.dstY = cpdesc.dstZ = cpdesc.dstLOD = 0;
+                    cpdesc.dstXInBytes = cpdesc.dstY = cpdesc.dstZ =
+                        cpdesc.dstLOD = 0;
                     cpdesc.dstMemoryType = CU_MEMORYTYPE_HOST;
                     cpdesc.dstHost = (void *)pCudaCopyMem;
-                    cpdesc.WidthInBytes = copyWidthInBytes; //data->width * 4;
-                    cpdesc.Height = copyHeight; //data->height;
+                    cpdesc.WidthInBytes = copyWidthInBytes;  // data->width * 4;
+                    cpdesc.Height = copyHeight;              // data->height;
                     cpdesc.Depth = 1;
-    
+
                     cuStatus = cuMemcpy3D(&cpdesc);
                     if (cuStatus != CUDA_SUCCESS) {
-                        printf("Cuda consumer: cuMemCpy3D failed,  copyWidthInBytes=%d, copyHight=%d\n", copyWidthInBytes, copyHeight);
+                        printf(
+                            "Cuda consumer: cuMemCpy3D failed,  "
+                            "copyWidthInBytes=%d, copyHight=%d\n",
+                            copyWidthInBytes, copyHeight);
                     }
                     cuStatus = cuCtxSynchronize();
                     if (cuStatus != CUDA_SUCCESS) {
-                        printf ("cuCtxSynchronize failed after memcpy \n");
+                        printf("cuCtxSynchronize failed after memcpy \n");
                     }
                 }
                 if (cuStatus == CUDA_SUCCESS) {
@@ -177,28 +185,28 @@ CUresult cudaConsumerTest (test_cuda_consumer_s *data, char *fileName)
                 }
             }
             pInFile1 = fopen(data->fileName1, "rb");
-            if(!pInFile1) {
-                printf("Failed to open file :%s\n", data->fileName1); 
+            if (!pInFile1) {
+                printf("Failed to open file :%s\n", data->fileName1);
                 goto done;
             }
             pInFile2 = fopen(data->fileName2, "rb");
-            if(!pInFile2) {
-                printf("Failed to open file :%s\n", data->fileName2); 
+            if (!pInFile2) {
+                printf("Failed to open file :%s\n", data->fileName2);
                 goto done;
             }
             rewind(file_p);
             check_result = checkbuf(file_p, pInFile1);
             if (check_result == -1) {
-                rewind (file_p);
+                rewind(file_p);
                 check_result = checkbuf(file_p, pInFile2);
                 if (check_result == -1) {
-                    printf("Frame received does not match any valid image: FAILED\n");
-                }
-                else {
+                    printf(
+                        "Frame received does not match any valid image: "
+                        "FAILED\n");
+                } else {
                     printf("Frame check Passed\n");
                 }
-            }
-            else {
+            } else {
                 printf("Frame check Passed\n");
             }
             if (pCudaCopyMem) {
@@ -206,13 +214,15 @@ CUresult cudaConsumerTest (test_cuda_consumer_s *data, char *fileName)
                 pCudaCopyMem = NULL;
             }
             cuStatus = cuEGLStreamConsumerReleaseFrame(&data->cudaConn,
-                    cudaResource, NULL);
+                                                       cudaResource, NULL);
             if (cuStatus != CUDA_SUCCESS) {
-                printf("cuEGLStreamConsumerReleaseFrame failed with cuStatus = %d\n", cuStatus);
+                printf(
+                    "cuEGLStreamConsumerReleaseFrame failed with cuStatus = "
+                    "%d\n",
+                    cuStatus);
                 goto done;
             }
-        } 
-        else {
+        } else {
             printf("cuda AcquireFrame FAILED with  cuStatus=%d\n", cuStatus);
             goto done;
         }
@@ -252,16 +262,15 @@ int checkbuf(FILE *fp1, FILE *fp2) {
         }
         if (ch1 == ch2) {
             match = 1;
-        }
-        else if (ch1 != ch2) {
+        } else if (ch1 != ch2) {
             match = -1;
         }
     }
     return match;
 }
 
-CUresult cudaDeviceCreateConsumer(test_cuda_consumer_s *cudaConsumer, CUdevice device)
-{
+CUresult cudaDeviceCreateConsumer(test_cuda_consumer_s *cudaConsumer,
+                                  CUdevice device) {
     CUresult status = CUDA_SUCCESS;
     if (CUDA_SUCCESS != (status = cuInit(0))) {
         printf("Failed to initialize CUDA\n");
@@ -270,12 +279,18 @@ CUresult cudaDeviceCreateConsumer(test_cuda_consumer_s *cudaConsumer, CUdevice d
 
     int major = 0, minor = 0;
     char deviceName[256];
-    checkCudaErrors(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
-    checkCudaErrors(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
+    checkCudaErrors(cuDeviceGetAttribute(
+        &major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
+    checkCudaErrors(cuDeviceGetAttribute(
+        &minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
     checkCudaErrors(cuDeviceGetName(deviceName, 256, device));
-    printf("CUDA Consumer on GPU Device %d: \"%s\" with compute capability %d.%d\n\n", device, deviceName, major, minor);
+    printf(
+        "CUDA Consumer on GPU Device %d: \"%s\" with compute capability "
+        "%d.%d\n\n",
+        device, deviceName, major, minor);
 
-    if (CUDA_SUCCESS !=  (status = cuCtxCreate(&cudaConsumer->context, 0, device)) ) {
+    if (CUDA_SUCCESS !=
+        (status = cuCtxCreate(&cudaConsumer->context, 0, device))) {
         printf("failed to create CUDA context\n");
         return status;
     }
@@ -283,8 +298,7 @@ CUresult cudaDeviceCreateConsumer(test_cuda_consumer_s *cudaConsumer, CUdevice d
     return status;
 }
 
-void cuda_consumer_init(test_cuda_consumer_s *cudaConsumer, TestArgs *args)
-{
+void cuda_consumer_init(test_cuda_consumer_s *cudaConsumer, TestArgs *args) {
     cudaConsumer->pitchLinearOutput = args->pitchLinearOutput;
     cudaConsumer->width = args->inputWidth;
     cudaConsumer->height = args->inputHeight;
@@ -295,8 +309,6 @@ void cuda_consumer_init(test_cuda_consumer_s *cudaConsumer, TestArgs *args)
     cudaConsumer->outFile2 = "cuda_out2.yuv";
 }
 
-CUresult cuda_consumer_deinit(test_cuda_consumer_s *cudaConsumer)
-{
+CUresult cuda_consumer_deinit(test_cuda_consumer_s *cudaConsumer) {
     return cuEGLStreamConsumerDisconnect(&cudaConsumer->cudaConn);
 }
-

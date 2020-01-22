@@ -18,13 +18,12 @@
 #define _CUDA_PRODUCER_H_
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include "cudaEGL.h"
 #include "eglstrm_common.h"
-#include <cuda_runtime.h>
-#include <cuda.h>
 
-typedef struct _test_cuda_producer_s
-{
+typedef struct _test_cuda_producer_s {
     //  Stream params
     CUcontext context;
     CUeglStreamConnection cudaConn;
@@ -40,11 +39,15 @@ typedef struct _test_cuda_producer_s
 } test_cuda_producer_s;
 
 CUresult cudaProducerInit(test_cuda_producer_s *cudaProducer, TestArgs *args);
-CUresult cudaProducerPresentFrame(test_cuda_producer_s *parserArg, CUeglFrame cudaEgl, int t);
-CUresult cudaProducerReturnFrame(test_cuda_producer_s *parserArg, CUeglFrame cudaEgl, int t);
+CUresult cudaProducerPresentFrame(test_cuda_producer_s *parserArg,
+                                  CUeglFrame cudaEgl, int t);
+CUresult cudaProducerReturnFrame(test_cuda_producer_s *parserArg,
+                                 CUeglFrame cudaEgl, int t);
 CUresult cudaProducerDeinit(test_cuda_producer_s *cudaProducer);
 CUresult cudaDeviceCreateProducer(test_cuda_producer_s *cudaProducer);
-cudaError_t cudaProducer_filter(CUstream cStream, char *pSrc, int width, int height, char expectedVal, char newVal, int frameNumber);
-void cudaProducerPrepareFrame(CUeglFrame *cudaEgl, CUdeviceptr cudaPtr, int bufferSize);
+cudaError_t cudaProducer_filter(CUstream cStream, char *pSrc, int width,
+                                int height, char expectedVal, char newVal,
+                                int frameNumber);
+void cudaProducerPrepareFrame(CUeglFrame *cudaEgl, CUdeviceptr cudaPtr,
+                              int bufferSize);
 #endif
-

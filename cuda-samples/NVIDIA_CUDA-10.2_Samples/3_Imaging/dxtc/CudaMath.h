@@ -20,43 +20,40 @@ namespace cg = cooperative_groups;
 
 // Use power method to find the first eigenvector.
 // http://www.miislita.com/information-retrieval-tutorial/matrix-tutorial-3-eigenvalues-eigenvectors.html
-inline __device__ __host__ float3 firstEigenVector(float matrix[6])
-{
+inline __device__ __host__ float3 firstEigenVector(float matrix[6]) {
     // 8 iterations seems to be more than enough.
 
     float3 v = make_float3(1.0f, 1.0f, 1.0f);
 
-    for (int i = 0; i < 8; i++)
-    {
+    for (int i = 0; i < 8; i++) {
         float x = v.x * matrix[0] + v.y * matrix[1] + v.z * matrix[2];
         float y = v.x * matrix[1] + v.y * matrix[3] + v.z * matrix[4];
         float z = v.x * matrix[2] + v.y * matrix[4] + v.z * matrix[5];
         float m = max(max(x, y), z);
         float iv = 1.0f / m;
-        v = make_float3(x*iv, y*iv, z*iv);
+        v = make_float3(x * iv, y * iv, z * iv);
     }
 
     return v;
 }
 
-inline __device__ void colorSums(const float3 *colors, float3 *sums, cg::thread_group tile)
-{
+inline __device__ void colorSums(const float3 *colors, float3 *sums,
+                                 cg::thread_group tile) {
     const int idx = threadIdx.x;
 
     sums[idx] = colors[idx];
     cg::sync(tile);
-    sums[idx] += sums[idx^8];
+    sums[idx] += sums[idx ^ 8];
     cg::sync(tile);
-    sums[idx] += sums[idx^4];
+    sums[idx] += sums[idx ^ 4];
     cg::sync(tile);
-    sums[idx] += sums[idx^2];
+    sums[idx] += sums[idx ^ 2];
     cg::sync(tile);
-    sums[idx] += sums[idx^1];
+    sums[idx] += sums[idx ^ 1];
 }
 
-
-inline __device__ float3 bestFitLine(const float3 *colors, float3 color_sum, cg::thread_group tile)
-{
+inline __device__ float3 bestFitLine(const float3 *colors, float3 color_sum,
+                                     cg::thread_group tile) {
     // Compute covariance matrix of the given colors.
     const int idx = threadIdx.x;
 
@@ -64,9 +61,9 @@ inline __device__ float3 bestFitLine(const float3 *colors, float3 color_sum, cg:
 
     // @@ Eliminate two-way bank conflicts here.
     // @@ It seems that doing that and unrolling the reduction doesn't help...
-    __shared__ float covariance[16*6];
+    __shared__ float covariance[16 * 6];
 
-    covariance[6 * idx + 0] = diff.x * diff.x;    // 0, 6, 12, 2, 8, 14, 4, 10, 0
+    covariance[6 * idx + 0] = diff.x * diff.x;  // 0, 6, 12, 2, 8, 14, 4, 10, 0
     covariance[6 * idx + 1] = diff.x * diff.y;
     covariance[6 * idx + 2] = diff.x * diff.z;
     covariance[6 * idx + 3] = diff.y * diff.y;
@@ -74,16 +71,14 @@ inline __device__ float3 bestFitLine(const float3 *colors, float3 color_sum, cg:
     covariance[6 * idx + 5] = diff.z * diff.z;
 
     cg::sync(tile);
-    for (int d = 8; d > 0; d >>= 1)
-    {
-        if (idx < d)
-        {
-            covariance[6 * idx + 0] += covariance[6 * (idx+d) + 0];
-            covariance[6 * idx + 1] += covariance[6 * (idx+d) + 1];
-            covariance[6 * idx + 2] += covariance[6 * (idx+d) + 2];
-            covariance[6 * idx + 3] += covariance[6 * (idx+d) + 3];
-            covariance[6 * idx + 4] += covariance[6 * (idx+d) + 4];
-            covariance[6 * idx + 5] += covariance[6 * (idx+d) + 5];
+    for (int d = 8; d > 0; d >>= 1) {
+        if (idx < d) {
+            covariance[6 * idx + 0] += covariance[6 * (idx + d) + 0];
+            covariance[6 * idx + 1] += covariance[6 * (idx + d) + 1];
+            covariance[6 * idx + 2] += covariance[6 * (idx + d) + 2];
+            covariance[6 * idx + 3] += covariance[6 * (idx + d) + 3];
+            covariance[6 * idx + 4] += covariance[6 * (idx + d) + 4];
+            covariance[6 * idx + 5] += covariance[6 * (idx + d) + 5];
         }
         cg::sync(tile);
     }
@@ -92,5 +87,4 @@ inline __device__ float3 bestFitLine(const float3 *colors, float3 color_sum, cg:
     return firstEigenVector(covariance);
 }
 
-
-#endif // CUDAMATH_H
+#endif  // CUDAMATH_H

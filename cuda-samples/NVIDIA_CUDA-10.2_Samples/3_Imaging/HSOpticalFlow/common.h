@@ -13,7 +13,6 @@
  *
  */
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // Header for common includes and utility functions
 ///////////////////////////////////////////////////////////////////////////////
@@ -25,11 +24,11 @@
 // Common includes
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include <memory.h>
 #include <math.h>
+#include <memory.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include <helper_cuda.h>
 
@@ -42,10 +41,8 @@ const int StrideAlignment = 32;
 // Common functions
 ///////////////////////////////////////////////////////////////////////////////
 
-
 // Align up n to the nearest multiple of m
-inline int iAlignUp(int n, int m = StrideAlignment)
-{
+inline int iAlignUp(int n, int m = StrideAlignment) {
     int mod = n % m;
 
     if (mod)
@@ -55,15 +52,11 @@ inline int iAlignUp(int n, int m = StrideAlignment)
 }
 
 // round up n/m
-inline int iDivUp(int n, int m)
-{
-    return (n + m - 1) / m;
-}
+inline int iDivUp(int n, int m) { return (n + m - 1) / m; }
 
 // swap two values
-template<typename T>
-inline void Swap(T &a, T &b)
-{
+template <typename T>
+inline void Swap(T &a, T &b) {
     T t = a;
     a = b;
     b = t;

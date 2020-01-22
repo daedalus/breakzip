@@ -13,28 +13,27 @@
 #define TEST_H
 
 template <typename Real>
-struct Test
-{
-    Test() : pass(false) {};
+struct Test {
+    Test() : pass(false){};
 
-    int          device;
+    int device;
     unsigned int numSims;
     unsigned int threadBlockSize;
 
-    bool   pass;
+    bool pass;
     double elapsedTime;
 
     bool operator()();
 };
 
 // Defaults are arbitrary to give sensible runtime
-#define k_sims_min    100000
-#define k_sims_max    10000000
-#define k_sims_def    100000
-#define k_sims_qa     100000
-#define k_bsize_min   32
-#define k_bsize_def   128
-#define k_bsize_qa    128
+#define k_sims_min 100000
+#define k_sims_max 10000000
+#define k_sims_def 100000
+#define k_sims_qa 100000
+#define k_bsize_min 32
+#define k_bsize_def 128
+#define k_bsize_qa 128
 
 // Target value
 #define PI 3.14159265359

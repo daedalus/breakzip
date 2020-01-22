@@ -9,7 +9,6 @@
  *
  */
 
-
 //
 // DESCRIPTION:   Common egl stream functions
 //
@@ -17,8 +16,8 @@
 #include "eglstrm_common.h"
 
 EGLStreamKHR eglStream;
-EGLDisplay   g_display;
-EGLAttrib    cudaIndex;
+EGLDisplay g_display;
+EGLAttrib cudaIndex;
 
 #if defined(EXTENSION_LIST)
 EXTENSION_LIST(EXTLST_DECL)
@@ -26,10 +25,9 @@ typedef void (*extlst_fnptr_t)(void);
 static struct {
     extlst_fnptr_t *fnptr;
     char const *name;
-} extensionList[] = { EXTENSION_LIST(EXTLST_ENTRY) };
+} extensionList[] = {EXTENSION_LIST(EXTLST_ENTRY)};
 
-int eglSetupExtensions(void)
-{
+int eglSetupExtensions(void) {
     unsigned int i;
 
     for (i = 0; i < (sizeof(extensionList) / sizeof(*extensionList)); i++) {
@@ -43,9 +41,9 @@ int eglSetupExtensions(void)
     return 1;
 }
 
-int EGLStreamInit(int *cuda_device)
-{
-    static const EGLint streamAttrMailboxMode[] = { EGL_SUPPORT_REUSE_NV, EGL_FALSE, EGL_NONE };
+int EGLStreamInit(int *cuda_device) {
+    static const EGLint streamAttrMailboxMode[] = {EGL_SUPPORT_REUSE_NV,
+                                                   EGL_FALSE, EGL_NONE};
     EGLBoolean eglStatus;
 #define MAX_EGL_DEVICES 4
     EGLint numDevices = 0;
@@ -63,24 +61,25 @@ int EGLStreamInit(int *cuda_device)
     }
 
     int egl_device_id = 0;
-    for(egl_device_id = 0; egl_device_id < numDevices; egl_device_id++)
-    {
-        eglStatus = eglQueryDeviceAttribEXT(devices[egl_device_id], EGL_CUDA_DEVICE_NV, &cudaIndex);
-        if (eglStatus == EGL_TRUE)
-        {
-            *cuda_device = cudaIndex; // We select first EGL-CUDA Capable device.
-            printf("Found EGL-CUDA Capable device with CUDA Device id = %d\n", (int)cudaIndex);
+    for (egl_device_id = 0; egl_device_id < numDevices; egl_device_id++) {
+        eglStatus = eglQueryDeviceAttribEXT(devices[egl_device_id],
+                                            EGL_CUDA_DEVICE_NV, &cudaIndex);
+        if (eglStatus == EGL_TRUE) {
+            *cuda_device =
+                cudaIndex;  // We select first EGL-CUDA Capable device.
+            printf("Found EGL-CUDA Capable device with CUDA Device id = %d\n",
+                   (int)cudaIndex);
             break;
         }
     }
 
-    if (egl_device_id >= numDevices)
-    {
+    if (egl_device_id >= numDevices) {
         printf("No CUDA Capable EGL Device found.. Waiving execution\n");
         exit(EXIT_WAIVED);
     }
 
-    g_display = eglGetPlatformDisplayEXT(EGL_PLATFORM_DEVICE_EXT, (void*)devices[egl_device_id], NULL); 
+    g_display = eglGetPlatformDisplayEXT(EGL_PLATFORM_DEVICE_EXT,
+                                         (void *)devices[egl_device_id], NULL);
     if (g_display == EGL_NO_DISPLAY) {
         printf("Could not get EGL display from device. \n");
         eglStatus = EGL_FALSE;
@@ -104,20 +103,23 @@ int EGLStreamInit(int *cuda_device)
     printf("Created EGLStream %p\n", eglStream);
 
     // Set stream attribute
-    if(!eglStreamAttribKHR(g_display, eglStream, EGL_CONSUMER_LATENCY_USEC_KHR, 16000)) {
-        printf("Consumer: eglStreamAttribKHR EGL_CONSUMER_LATENCY_USEC_KHR failed\n");
+    if (!eglStreamAttribKHR(g_display, eglStream, EGL_CONSUMER_LATENCY_USEC_KHR,
+                            16000)) {
+        printf(
+            "Consumer: eglStreamAttribKHR EGL_CONSUMER_LATENCY_USEC_KHR "
+            "failed\n");
         return 0;
     }
-    if(!eglStreamAttribKHR(g_display, eglStream, EGL_CONSUMER_ACQUIRE_TIMEOUT_USEC_KHR, 16000)) {
-        printf("Consumer: eglStreamAttribKHR EGL_CONSUMER_ACQUIRE_TIMEOUT_USEC_KHR failed\n");
+    if (!eglStreamAttribKHR(g_display, eglStream,
+                            EGL_CONSUMER_ACQUIRE_TIMEOUT_USEC_KHR, 16000)) {
+        printf(
+            "Consumer: eglStreamAttribKHR "
+            "EGL_CONSUMER_ACQUIRE_TIMEOUT_USEC_KHR failed\n");
         return 0;
     }
     printf("EGLStream initialized\n");
     return 1;
 }
 
-void EGLStreamFini(void)
-{
-    eglDestroyStreamKHR(g_display, eglStream);
-}
+void EGLStreamFini(void) { eglDestroyStreamKHR(g_display, eglStream); }
 #endif

@@ -9,17 +9,16 @@
  *
  */
 
-
 /* Simple example demonstrating how to use MPI with CUDA
-*
-*  Generate some random numbers on one node.
-*  Dispatch them to all nodes.
-*  Compute their square root on each node's GPU.
-*  Compute the average of the results using MPI.
-*
-*  simpleMPI.cpp: main program, compiled with mpicxx on linux/Mac platforms
-*                 on Windows, please download the Microsoft HPC Pack SDK 2008
-*/
+ *
+ *  Generate some random numbers on one node.
+ *  Dispatch them to all nodes.
+ *  Compute their square root on each node's GPU.
+ *  Compute the average of the results using MPI.
+ *
+ *  simpleMPI.cpp: main program, compiled with mpicxx on linux/Mac platforms
+ *                 on Windows, please download the Microsoft HPC Pack SDK 2008
+ */
 
 // MPI include
 #include <mpi.h>
@@ -27,24 +26,23 @@
 // System includes
 #include <iostream>
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 
 // User include
 #include "simpleMPI.h"
 
 // Error handling macros
-#define MPI_CHECK(call) \
-    if((call) != MPI_SUCCESS) { \
-        cerr << "MPI error calling \""#call"\"\n"; \
-        my_abort(-1); }
-
+#define MPI_CHECK(call)                              \
+    if ((call) != MPI_SUCCESS) {                     \
+        cerr << "MPI error calling \"" #call "\"\n"; \
+        my_abort(-1);                                \
+    }
 
 // Host code
 // No CUDA here, only MPI
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     // Dimensions of the dataset
     int blockSize = 256;
     int gridSize = 10000;
@@ -73,19 +71,12 @@ int main(int argc, char *argv[])
     float *dataNode = new float[dataSizePerNode];
 
     // Dispatch a portion of the input data to each node
-    MPI_CHECK(MPI_Scatter(dataRoot,
-                          dataSizePerNode,
-                          MPI_FLOAT,
-                          dataNode,
-                          dataSizePerNode,
-                          MPI_FLOAT,
-                          0,
-                          MPI_COMM_WORLD));
+    MPI_CHECK(MPI_Scatter(dataRoot, dataSizePerNode, MPI_FLOAT, dataNode,
+                          dataSizePerNode, MPI_FLOAT, 0, MPI_COMM_WORLD));
 
-    if (commRank == 0)
-    {
+    if (commRank == 0) {
         // No need for root data any more
-        delete [] dataRoot;
+        delete[] dataRoot;
     }
 
     // On each node, run computation on GPU
@@ -95,20 +86,19 @@ int main(int argc, char *argv[])
     float sumNode = sum(dataNode, dataSizePerNode);
     float sumRoot;
 
-    MPI_CHECK(MPI_Reduce(&sumNode, &sumRoot, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD));
+    MPI_CHECK(MPI_Reduce(&sumNode, &sumRoot, 1, MPI_FLOAT, MPI_SUM, 0,
+                         MPI_COMM_WORLD));
 
-    if (commRank == 0)
-    {
+    if (commRank == 0) {
         float average = sumRoot / dataSizeTotal;
         cout << "Average of square roots is: " << average << endl;
     }
 
     // Cleanup
-    delete [] dataNode;
+    delete[] dataNode;
     MPI_CHECK(MPI_Finalize());
 
-    if (commRank == 0)
-    {
+    if (commRank == 0) {
         cout << "PASSED\n";
     }
 
@@ -116,8 +106,7 @@ int main(int argc, char *argv[])
 }
 
 // Shut down MPI cleanly if something goes wrong
-void my_abort(int err)
-{
+void my_abort(int err) {
     cout << "Test FAILED\n";
     MPI_Abort(MPI_COMM_WORLD, err);
 }
