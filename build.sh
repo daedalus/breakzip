@@ -15,6 +15,7 @@ BUILD_DIR="${2:-${DEF_PFX}}"
 LIBDIR="${THIRD_PARTY_BUILD}/lib"
 CMAKE_VARS="-DCMAKE_BUILD_TYPE=${BUILD:-Release} "\
 "-DCMAKE_VERBOSE_MAKEFILE:BOOL=${VERBOSE:-OFF}"
+CLANG_FORMAT="${CLANG_FORMAT:-no}"
 
 #
 # The third party libraries currently control their own versions.
@@ -46,5 +47,8 @@ cd ${BUILD_DIR}
 make package
 
 CTEST_OUTPUT_ON_FAILURE=TRUE make test
+if [ "${CLANG_FORMAT}" = "yes" ] ; then {
+    make clangformat
+} ; fi
 
 

@@ -9,6 +9,7 @@ set (WITH_TCMALLOC 0)
 include(CTest)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/Modules")
+include(clang-format)
 
 include (CheckCXXCompilerFlag)
 
