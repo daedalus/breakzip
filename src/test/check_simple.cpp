@@ -2,9 +2,9 @@
  * All right reserved.
  * Author: Nash E. Foster <leaf@pyrofex.com>
  */
-#include <check.h>
-#include <stdlib.h>
 #include <iostream>
+#include <stdlib.h>
+#include <check.h>
 #include <string>
 
 #include <gflags/gflags.h>
@@ -14,8 +14,11 @@
 using namespace breakzip;
 using namespace std;
 
-START_TEST(test_always_pass) { ck_assert(true); }
+START_TEST(test_always_pass) {
+    ck_assert(true);
+}
 END_TEST
+
 
 Suite* make_suite(const std::string name) {
     Suite* s;
@@ -32,7 +35,7 @@ Suite* make_suite(const std::string name) {
 
 int main(int argc, char* argv[]) {
     InitBreakZip(argc, argv);
-
+    
     int failed = 0;
     Suite* s = nullptr;
     SRunner* sr = nullptr;

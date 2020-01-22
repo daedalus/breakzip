@@ -6,4 +6,6 @@
 using namespace breakzip;
 using namespace std;
 
-int main(int argc, char* argv[]) { return breakzip::main(argc, argv); }
+int main(int argc, char* argv[]) {
+    return breakzip::main(argc, argv);
+}

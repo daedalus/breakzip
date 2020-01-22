@@ -47,8 +47,4 @@ cd ${BUILD_DIR}
 make package
 
 CTEST_OUTPUT_ON_FAILURE=TRUE make test
-if [ "${CLANG_FORMAT}" = "yes" ] ; then {
-    make clangformat
-} ; fi
-
 

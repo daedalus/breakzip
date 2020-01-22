@@ -84,7 +84,12 @@ set(LIBS ${LIBS} ${Readline_LIBRARY})
 message(STATUS "Linking: ${LIBS}")
 
 include_directories("${PROJECT_SOURCE_DIR}/src")
-include_directories("${PROJECT_SOURCE_DIR}/src/cuda_common/inc")
+# You must have CUDA installed in order to build some of the source
+# files. We built using CUDA 10.2. Other versions may or may not work.
+# If you get an error in compilation related to the cuda test, you
+# may need to modify this path to point to wherever you have the CUDA
+# codebase installed.
+include_directories("/usr/local/cuda/samples/common/inc")
 
 # So that cmake can find breakzip_config.h
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/src")
