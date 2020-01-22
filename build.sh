@@ -40,13 +40,6 @@ if [ ! -d ${BUILD_DIR} ] ; then {
 cd ${BUILD_DIR}
 echo "Building with CMAKE_VARS=${CMAKE_VARS}"
 cmake ${CMAKE_VARS} -B${BUILD_DIR} -H${SRCDIR}
-
-# Reformat first in case it causes any problems.
-if [ "${CLANG_FORMAT}" = "yes" ] ; then {
-    SOURCE_FILES=$(find src/ -name '*.cpp' -o -name '*.cu' -o -name '*.h')
-    clang-format -i ${SOURCE_FILES}
-} ; fi
-
 make -j 1
 
 # Build the package
