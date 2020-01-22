@@ -11,26 +11,25 @@
 
 #include "../inc/test.h"
 
-#include <sstream>
-#include <iomanip>
-#include <stdexcept>
-#include <memory>
-#include <iostream>
-#include <cassert>
-#include <typeinfo>
-#include <stdio.h>
-#include <helper_timer.h>
 #include <cuda_runtime.h>
+#include <helper_timer.h>
 #include <math.h>
+#include <stdio.h>
+#include <cassert>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <typeinfo>
 
 #include "../inc/piestimator.h"
 
 template <typename Real>
-bool Test<Real>::operator()()
-{
-    using std::stringstream;
+bool Test<Real>::operator()() {
     using std::endl;
     using std::setw;
+    using std::stringstream;
 
     StopWatchInterface *timer = NULL;
     sdkCreateTimer(&timer);
@@ -39,8 +38,7 @@ bool Test<Real>::operator()()
     struct cudaDeviceProp deviceProperties;
     cudaError_t cudaResult = cudaGetDeviceProperties(&deviceProperties, device);
 
-    if (cudaResult != cudaSuccess)
-    {
+    if (cudaResult != cudaSuccess) {
         std::string msg("Could not get device properties: ");
         msg += cudaGetErrorString(cudaResult);
         throw std::runtime_error(msg);
@@ -52,7 +50,7 @@ bool Test<Real>::operator()()
     sdkStartTimer(&timer);
     Real result = estimator();
     sdkStopTimer(&timer);
-    elapsedTime = sdkGetAverageTimerValue(&timer)/1000.0f;
+    elapsedTime = sdkGetAverageTimerValue(&timer) / 1000.0f;
 
     // Tolerance to compare result with expected
     // This is just to check that nothing has gone very wrong with the
@@ -63,7 +61,8 @@ bool Test<Real>::operator()()
     // Display results
     Real abserror = fabs(result - static_cast<float>(PI));
     Real relerror = abserror / static_cast<float>(PI);
-    printf("Precision:      %s\n", (typeid(Real) == typeid(double)) ? "double" : "single");
+    printf("Precision:      %s\n",
+           (typeid(Real) == typeid(double)) ? "double" : "single");
     printf("Number of sims: %d\n", numSims);
     printf("Tolerance:      %e\n", tolerance);
     printf("GPU result:     %e\n", result);
@@ -72,19 +71,19 @@ bool Test<Real>::operator()()
     printf("Relative error: %e\n\n", relerror);
 
     // Check result
-    if (relerror > tolerance)
-    {
-        printf("computed result (%e) does not match expected result (%e).\n", result, PI);
+    if (relerror > tolerance) {
+        printf("computed result (%e) does not match expected result (%e).\n",
+               result, PI);
         pass = false;
-    }
-    else
-    {
+    } else {
         pass = true;
     }
 
     // Print results
-    printf("MonteCarloEstimatePiP, Performance = %.2f sims/s, Time = %.2f(ms), NumDevsUsed = %u, Blocksize = %u\n",
-           numSims / elapsedTime, elapsedTime*1000.0f, 1, threadBlockSize);
+    printf(
+        "MonteCarloEstimatePiP, Performance = %.2f sims/s, Time = %.2f(ms), "
+        "NumDevsUsed = %u, Blocksize = %u\n",
+        numSims / elapsedTime, elapsedTime * 1000.0f, 1, threadBlockSize);
 
     return pass;
 }

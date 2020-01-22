@@ -18,10 +18,10 @@
 
 //#define EGL_EGLEXT_PROTOTYPES
 
+#include "cudaEGL.h"
 #include "cuda_consumer.h"
 #include "cuda_producer.h"
 #include "eglstrm_common.h"
-#include "cudaEGL.h"
 
 /* ------  globals ---------*/
 
@@ -33,15 +33,12 @@ EXTENSION_LIST(EXTLST_EXTERN)
 
 bool signal_stop = 0;
 
-static void
-sig_handler(int sig)
-{
+static void sig_handler(int sig) {
     signal_stop = 1;
     printf("Signal: %d\n", sig);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     TestArgs args;
     CUresult curesult = CUDA_SUCCESS;
     unsigned int i, j;
@@ -55,7 +52,7 @@ int main(int argc, char **argv)
 
     // Hook up Ctrl-C handler
     signal(SIGINT, sig_handler);
-    if(!eglSetupExtensions()) {
+    if (!eglSetupExtensions()) {
         printf("SetupExtentions failed \n");
         curesult = CUDA_ERROR_UNKNOWN;
         goto done;
@@ -70,7 +67,7 @@ int main(int argc, char **argv)
 
     CUdevice devId;
 
-    if(!EGLStreamInit(&devId)) {
+    if (!EGLStreamInit(&devId)) {
         printf("EGLStream Init failed.\n");
         curesult = CUDA_ERROR_UNKNOWN;
         goto done;
@@ -84,18 +81,22 @@ int main(int argc, char **argv)
         goto done;
     }
     checkCudaErrors(cuCtxPushCurrent(cudaConsumer.context));
-    if (CUDA_SUCCESS != (curesult = cuEGLStreamConsumerConnect(&(cudaConsumer.cudaConn), eglStream))) {
+    if (CUDA_SUCCESS != (curesult = cuEGLStreamConsumerConnect(
+                             &(cudaConsumer.cudaConn), eglStream))) {
         printf("FAILED Connect CUDA consumer  with error %d\n", curesult);
         goto done;
-    }
-    else {
-        printf("Connected CUDA consumer, CudaConsumer %p\n", cudaConsumer.cudaConn);
+    } else {
+        printf("Connected CUDA consumer, CudaConsumer %p\n",
+               cudaConsumer.cudaConn);
     }
     checkCudaErrors(cuCtxPopCurrent(&cudaConsumer.context));
 
     checkCudaErrors(cuCtxPushCurrent(cudaProducer.context));
-    if (CUDA_SUCCESS == (curesult = cuEGLStreamProducerConnect(&(cudaProducer.cudaConn), eglStream, WIDTH, HEIGHT))) {
-        printf("Connect CUDA producer Done, CudaProducer %p\n", cudaProducer.cudaConn);
+    if (CUDA_SUCCESS ==
+        (curesult = cuEGLStreamProducerConnect(&(cudaProducer.cudaConn),
+                                               eglStream, WIDTH, HEIGHT))) {
+        printf("Connect CUDA producer Done, CudaProducer %p\n",
+               cudaProducer.cudaConn);
     } else {
         printf("Connect CUDA producer FAILED with error %d\n", curesult);
         goto done;
@@ -105,32 +106,27 @@ int main(int argc, char **argv)
     // Initialize producer
     for (i = 0; i < NUM_TRAILS; i++) {
         if (streamState != EGL_STREAM_STATE_CONNECTING_KHR) {
-            if(!eglQueryStreamKHR(
-                    g_display,
-                    eglStream,
-                    EGL_STREAM_STATE_KHR,
-                    &streamState)) {
+            if (!eglQueryStreamKHR(g_display, eglStream, EGL_STREAM_STATE_KHR,
+                                   &streamState)) {
                 printf("main: eglQueryStreamKHR EGL_STREAM_STATE_KHR failed\n");
                 curesult = CUDA_ERROR_UNKNOWN;
                 goto done;
             }
         }
-        args.inputWidth        = WIDTH;
-        args.inputHeight       = HEIGHT;
-        if (i%2 != 0) {
-            args.isARGB        = 1;
-            args.infile1       = sdkFindFilePath("cuda_f_1.yuv", argv[0]);
-            args.infile2       = sdkFindFilePath("cuda_f_2.yuv", argv[0]);
-        }
-        else {
-            args.isARGB        = 0;
-            args.infile1       = sdkFindFilePath("cuda_yuv_f_1.yuv", argv[0]);
-            args.infile2       = sdkFindFilePath("cuda_yuv_f_2.yuv", argv[0]);
+        args.inputWidth = WIDTH;
+        args.inputHeight = HEIGHT;
+        if (i % 2 != 0) {
+            args.isARGB = 1;
+            args.infile1 = sdkFindFilePath("cuda_f_1.yuv", argv[0]);
+            args.infile2 = sdkFindFilePath("cuda_f_2.yuv", argv[0]);
+        } else {
+            args.isARGB = 0;
+            args.infile1 = sdkFindFilePath("cuda_yuv_f_1.yuv", argv[0]);
+            args.infile2 = sdkFindFilePath("cuda_yuv_f_2.yuv", argv[0]);
         }
         if ((i % 4) < 2) {
             args.pitchLinearOutput = 1;
-        }
-        else {
+        } else {
             args.pitchLinearOutput = 0;
         }
 
@@ -144,39 +140,42 @@ int main(int argc, char **argv)
 
         printf("main - Cuda Producer and Consumer Initialized.\n");
 
-        for (j = 0;  j < 2; j++) {
+        for (j = 0; j < 2; j++) {
             printf("Running for %s frame and %s input\n",
-                    args.isARGB ? "ARGB" : "YUV",
-                    args.pitchLinearOutput ? "Pitchlinear" : "BlockLinear");
+                   args.isARGB ? "ARGB" : "YUV",
+                   args.pitchLinearOutput ? "Pitchlinear" : "BlockLinear");
             if (j == 0) {
                 checkCudaErrors(cuCtxPushCurrent(cudaProducer.context));
-                curesult = cudaProducerTest(&cudaProducer, cudaProducer.fileName1);
+                curesult =
+                    cudaProducerTest(&cudaProducer, cudaProducer.fileName1);
                 if (curesult != CUDA_SUCCESS) {
-                    printf("Cuda Producer Test failed for frame = %d\n", j+1);
+                    printf("Cuda Producer Test failed for frame = %d\n", j + 1);
                     goto done;
                 }
                 checkCudaErrors(cuCtxPopCurrent(&cudaProducer.context));
                 checkCudaErrors(cuCtxPushCurrent(cudaConsumer.context));
-                curesult = cudaConsumerTest(&cudaConsumer, cudaConsumer.outFile1);
+                curesult =
+                    cudaConsumerTest(&cudaConsumer, cudaConsumer.outFile1);
                 if (curesult != CUDA_SUCCESS) {
-                    printf("Cuda Consumer Test failed for frame = %d\n", j+1);
+                    printf("Cuda Consumer Test failed for frame = %d\n", j + 1);
                     goto done;
                 }
                 checkCudaErrors(cuCtxPopCurrent(&cudaConsumer.context));
-            }
-            else {
+            } else {
                 checkCudaErrors(cuCtxPushCurrent(cudaProducer.context));
-                curesult = cudaProducerTest(&cudaProducer, cudaProducer.fileName2);
+                curesult =
+                    cudaProducerTest(&cudaProducer, cudaProducer.fileName2);
                 if (curesult != CUDA_SUCCESS) {
-                    printf("Cuda Producer Test failed for frame = %d\n", j+1);
+                    printf("Cuda Producer Test failed for frame = %d\n", j + 1);
                     goto done;
                 }
 
                 checkCudaErrors(cuCtxPopCurrent(&cudaProducer.context));
                 checkCudaErrors(cuCtxPushCurrent(cudaConsumer.context));
-                curesult = cudaConsumerTest(&cudaConsumer, cudaConsumer.outFile2);
+                curesult =
+                    cudaConsumerTest(&cudaConsumer, cudaConsumer.outFile2);
                 if (curesult != CUDA_SUCCESS) {
-                    printf("Cuda Consumer Test failed for frame = %d\n", j+1);
+                    printf("Cuda Consumer Test failed for frame = %d\n", j + 1);
                     goto done;
                 }
                 checkCudaErrors(cuCtxPopCurrent(&cudaConsumer.context));
@@ -191,16 +190,14 @@ int main(int argc, char **argv)
     }
     checkCudaErrors(cuCtxPopCurrent(&cudaProducer.context));
 
-    if(!eglQueryStreamKHR(
-                g_display,
-                eglStream,
-                EGL_STREAM_STATE_KHR,
-                &streamState)) {
-        printf("Cuda consumer, eglQueryStreamKHR EGL_STREAM_STATE_KHR failed\n");
+    if (!eglQueryStreamKHR(g_display, eglStream, EGL_STREAM_STATE_KHR,
+                           &streamState)) {
+        printf(
+            "Cuda consumer, eglQueryStreamKHR EGL_STREAM_STATE_KHR failed\n");
         curesult = CUDA_ERROR_UNKNOWN;
         goto done;
     }
-    if(streamState != EGL_STREAM_STATE_DISCONNECTED_KHR) {
+    if (streamState != EGL_STREAM_STATE_DISCONNECTED_KHR) {
         if (CUDA_SUCCESS != (curesult = cuda_consumer_deinit(&cudaConsumer))) {
             printf("Consumer Disconnect FAILED.\n");
             goto done;
@@ -209,22 +206,19 @@ int main(int argc, char **argv)
     printf("Producer and Consumer Disconnected \n");
 
 done:
-    if(!eglQueryStreamKHR(
-                g_display,
-                eglStream,
-                EGL_STREAM_STATE_KHR,
-                &streamState)) {
-        printf("Cuda consumer, eglQueryStreamKHR EGL_STREAM_STATE_KHR failed\n");
-        curesult = CUDA_ERROR_UNKNOWN; 
+    if (!eglQueryStreamKHR(g_display, eglStream, EGL_STREAM_STATE_KHR,
+                           &streamState)) {
+        printf(
+            "Cuda consumer, eglQueryStreamKHR EGL_STREAM_STATE_KHR failed\n");
+        curesult = CUDA_ERROR_UNKNOWN;
     }
-    if(streamState != EGL_STREAM_STATE_DISCONNECTED_KHR) {
+    if (streamState != EGL_STREAM_STATE_DISCONNECTED_KHR) {
         EGLStreamFini();
     }
 
     if (curesult == CUDA_SUCCESS) {
         printf("&&&& EGLStream interop test PASSED\n");
-    }
-    else {
+    } else {
         printf("&&&& EGLStream interop test FAILED\n");
     }
     return 0;

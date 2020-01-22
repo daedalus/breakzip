@@ -11,7 +11,6 @@
  *
  */
 
-
 //
 // DESCRIPTION:   Simple cuda producer header file
 //
@@ -24,15 +23,14 @@
 #include "eglstrm_common.h"
 
 extern EGLStreamKHR eglStream;
-extern EGLDisplay   g_display; 
+extern EGLDisplay g_display;
 
-typedef struct _test_cuda_producer_s
-{
+typedef struct _test_cuda_producer_s {
     //  Stream params
     char *fileName1;
     char *fileName2;
     unsigned char *pBuff;
-    int   frameCount;
+    int frameCount;
     bool isARGB;
     bool pitchLinearOutput;
     unsigned int width;
@@ -47,9 +45,10 @@ typedef struct _test_cuda_producer_s
     EGLDisplay eglDisplay;
 } test_cuda_producer_s;
 
-void cudaProducerInit(test_cuda_producer_s *cudaProducer, EGLDisplay eglDisplay, EGLStreamKHR eglStream, TestArgs *args);
+void cudaProducerInit(test_cuda_producer_s *cudaProducer, EGLDisplay eglDisplay,
+                      EGLStreamKHR eglStream, TestArgs *args);
 CUresult cudaProducerTest(test_cuda_producer_s *parserArg, char *file);
 CUresult cudaProducerDeinit(test_cuda_producer_s *cudaProducer);
-CUresult cudaDeviceCreateProducer(test_cuda_producer_s *cudaProducer, CUdevice device);
+CUresult cudaDeviceCreateProducer(test_cuda_producer_s *cudaProducer,
+                                  CUdevice device);
 #endif
-

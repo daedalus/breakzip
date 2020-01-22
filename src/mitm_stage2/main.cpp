@@ -1,31 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "mitm_stage1/mitm_stage1.h"
-#include "mitm_stage1/crc32.h"
-#include "mitm_stage2.h"
 #include "breakzip.h"
 #include "breakzip_config.h"
+#include "mitm_stage1/crc32.h"
+#include "mitm_stage1/mitm_stage1.h"
+#include "mitm_stage2.h"
 
 DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
 DEFINE_int32(shard, 0, "The shard to run on.");
 DEFINE_string(outfile, "stage2.out", "The output file prefix to use.");
-DEFINE_int32(srand_seed, 0x57700d32, "The srand seed that the file was created with.");
+DEFINE_int32(srand_seed, 0x57700d32,
+             "The srand seed that the file was created with.");
 
 namespace mitm_stage2 {
 
-    /**
-     * TODO(stay): Put your functions here.
-     */
+/**
+ * TODO(stay): Put your functions here.
+ */
 
-    const char *usage_message = R"usage(
+const char* usage_message = R"usage(
     Usage: mitm_stage2 <FILE> <OUT>
     Runs the stage2 attack using the zip file data in FILE, the shard specified
     by -shard, and writes output to the filename specified by -outfile with the
     shard number appended.
     )usage";
 
-}; // namespace
+};  // namespace mitm_stage2
 
 int main(int argc, char* argv[]) {
     using namespace mitm_stage2;
@@ -50,14 +51,14 @@ int main(int argc, char* argv[]) {
         /**
          * TODO(stay): Put test implementation here.
          */
-         printf("Not implemented yet.\n");
-         abort();
+        printf("Not implemented yet.\n");
+        abort();
     } else {
         /**
          * TODO(leaf): Put real implementation here.
          */
-         printf("Not implemented yet.\n");
-         abort();
+        printf("Not implemented yet.\n");
+        abort();
     }
 
     // TODO(stay): Close open files.

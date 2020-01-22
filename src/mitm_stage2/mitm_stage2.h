@@ -11,6 +11,5 @@ namespace mitm_stage2 {
 
 // TODO(stay): Imeplement stage2.
 
-
-}; // namespace
+};  // namespace mitm_stage2
 #endif

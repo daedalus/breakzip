@@ -14,27 +14,22 @@
 #ifndef _STRUCTS_H_
 #define _STRUCTS_H_
 
-struct InputData
-{
-
+struct InputData {
     //! host side representation of diagonal
-    float  *a;
+    float *a;
     //! host side representation superdiagonal
-    float  *b;
+    float *b;
 
     //! device side representation of diagonal
-    float  *g_a;
+    float *g_a;
     //! device side representation of superdiagonal
-    float  *g_b;
+    float *g_b;
     //! helper variable pointing to the mem allocated for g_b which provides
     //! space for one additional element of padding at the beginning
-    float  *g_b_raw;
-
+    float *g_b_raw;
 };
 
-struct ResultDataSmall
-{
-
+struct ResultDataSmall {
     //! eigenvalues (host side)
     float *eigenvalues;
 
@@ -58,14 +53,11 @@ struct ResultDataSmall
     unsigned int mat_size_f;
     unsigned int mat_size_ui;
 
-    float         *zero_f;
-    unsigned int  *zero_ui;
+    float *zero_f;
+    unsigned int *zero_ui;
 };
 
-
-struct ResultDataLarge
-{
-
+struct ResultDataLarge {
     // number of intervals containing one eigenvalue after the first step
     unsigned int *g_num_one;
 
@@ -103,11 +95,11 @@ struct ResultDataLarge
 
     //! start addresses in g_left_mult etc. of blocks of intervals containing
     //! more than one eigenvalue after the first step
-    unsigned int  *g_blocks_mult;
+    unsigned int *g_blocks_mult;
 
     //! accumulated number of intervals in g_left_mult etc. of blocks of
     //! intervals containing more than one eigenvalue after the first step
-    unsigned int  *g_blocks_mult_sum;
+    unsigned int *g_blocks_mult_sum;
 
     //! eigenvalues that have been generated in the second step from intervals
     //! that still contained multiple eigenvalues after the first step
@@ -116,8 +108,6 @@ struct ResultDataLarge
     //! eigenvalue index of intervals that have been generated in the second
     //! processing step
     unsigned int *g_pos_mult;
-
 };
 
-#endif // #ifndef _STRUCTS_H_
-
+#endif  // #ifndef _STRUCTS_H_

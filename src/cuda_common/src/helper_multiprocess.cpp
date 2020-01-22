@@ -2,16 +2,11 @@
 #include <cstdlib>
 #include <string>
 
-int sharedMemoryCreate(const char *name, size_t sz, sharedMemoryInfo *info)
-{
+int sharedMemoryCreate(const char *name, size_t sz, sharedMemoryInfo *info) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     info->size = sz;
-    info->shmHandle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                        NULL,
-                                        PAGE_READWRITE,
-                                        0,
-                                        (DWORD)sz,
-                                        name);
+    info->shmHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
+                                        PAGE_READWRITE, 0, (DWORD)sz, name);
     if (info->shmHandle == 0) {
         return GetLastError();
     }
@@ -37,7 +32,8 @@ int sharedMemoryCreate(const char *name, size_t sz, sharedMemoryInfo *info)
         return status;
     }
 
-    info->addr = mmap(0, sz, PROT_READ | PROT_WRITE, MAP_SHARED, info->shmFd, 0);
+    info->addr =
+        mmap(0, sz, PROT_READ | PROT_WRITE, MAP_SHARED, info->shmFd, 0);
     if (info->addr == NULL) {
         return errno;
     }
@@ -46,8 +42,7 @@ int sharedMemoryCreate(const char *name, size_t sz, sharedMemoryInfo *info)
 #endif
 }
 
-int sharedMemoryOpen(const char *name, size_t sz, sharedMemoryInfo *info)
-{
+int sharedMemoryOpen(const char *name, size_t sz, sharedMemoryInfo *info) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     info->size = sz;
 
@@ -70,7 +65,8 @@ int sharedMemoryOpen(const char *name, size_t sz, sharedMemoryInfo *info)
         return errno;
     }
 
-    info->addr = mmap(0, sz, PROT_READ | PROT_WRITE, MAP_SHARED, info->shmFd, 0);
+    info->addr =
+        mmap(0, sz, PROT_READ | PROT_WRITE, MAP_SHARED, info->shmFd, 0);
     if (info->addr == NULL) {
         return errno;
     }
@@ -79,8 +75,7 @@ int sharedMemoryOpen(const char *name, size_t sz, sharedMemoryInfo *info)
 #endif
 }
 
-void sharedMemoryClose(sharedMemoryInfo *info)
-{
+void sharedMemoryClose(sharedMemoryInfo *info) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     if (info->addr) {
         UnmapViewOfFile(info->addr);
@@ -98,22 +93,22 @@ void sharedMemoryClose(sharedMemoryInfo *info)
 #endif
 }
 
-int spawnProcess(Process *process, const char *app, char * const *args)
-{
+int spawnProcess(Process *process, const char *app, char *const *args) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     STARTUPINFO si = {0};
     BOOL status;
     size_t arglen = 0;
     size_t argIdx = 0;
     std::string arg_string;
-	memset(process, 0, sizeof(*process));
+    memset(process, 0, sizeof(*process));
 
     while (*args) {
-		arg_string.append(*args).append(1, ' ');
-		args++;
-	}
+        arg_string.append(*args).append(1, ' ');
+        args++;
+    }
 
-    status = CreateProcess(app, LPSTR(arg_string.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &si, process);
+    status = CreateProcess(app, LPSTR(arg_string.c_str()), NULL, NULL, FALSE, 0,
+                           NULL, NULL, &si, process);
 
     return status ? 0 : GetLastError();
 #else
@@ -122,23 +117,21 @@ int spawnProcess(Process *process, const char *app, char * const *args)
         if (0 > execvp(app, args)) {
             return errno;
         }
-    }
-    else if (*process < 0) {
+    } else if (*process < 0) {
         return errno;
     }
     return 0;
 #endif
 }
 
-int waitProcess(Process *process)
-{
+int waitProcess(Process *process) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-	DWORD exitCode;
+    DWORD exitCode;
     WaitForSingleObject(process->hProcess, INFINITE);
     GetExitCodeProcess(process->hProcess, &exitCode);
     CloseHandle(process->hProcess);
     CloseHandle(process->hThread);
-	return (int)exitCode;
+    return (int)exitCode;
 #else
     int status = 0;
     do {
@@ -151,9 +144,8 @@ int waitProcess(Process *process)
 }
 
 #if defined(__linux__)
-int
-ipcCreateSocket(ipcHandle *&handle, const char *name, const std::vector<Process>& processes)
-{
+int ipcCreateSocket(ipcHandle *&handle, const char *name,
+                    const std::vector<Process> &processes) {
     int server_fd;
     struct sockaddr_un servaddr;
 
@@ -174,7 +166,8 @@ ipcCreateSocket(ipcHandle *&handle, const char *name, const std::vector<Process>
 
     size_t len = strlen(name);
     if (len > (sizeof(servaddr.sun_path) - 1)) {
-        perror("IPC failure: Cannot bind provided name to socket. Name too large");
+        perror(
+            "IPC failure: Cannot bind provided name to socket. Name too large");
         return -1;
     }
 
@@ -185,15 +178,13 @@ ipcCreateSocket(ipcHandle *&handle, const char *name, const std::vector<Process>
         return -1;
     }
 
-    handle->socketName = new char[strlen(name)+1];
+    handle->socketName = new char[strlen(name) + 1];
     strcpy(handle->socketName, name);
     handle->socket = server_fd;
     return 0;
 }
 
-int
-ipcOpenSocket(ipcHandle *&handle)
-{
+int ipcOpenSocket(ipcHandle *&handle) {
     int sock = 0;
     struct sockaddr_un cliaddr;
 
@@ -219,30 +210,28 @@ ipcOpenSocket(ipcHandle *&handle)
     }
 
     handle->socket = sock;
-    handle->socketName = new char[strlen(temp)+1];
+    handle->socketName = new char[strlen(temp) + 1];
     strcpy(handle->socketName, temp);
 
     return 0;
 }
 
-int ipcCloseSocket(ipcHandle *handle)
-{
+int ipcCloseSocket(ipcHandle *handle) {
     if (!handle) {
         return -1;
     }
 
     if (handle->socketName) {
         unlink(handle->socketName);
-        delete [] handle->socketName;
+        delete[] handle->socketName;
     }
     close(handle->socket);
     delete handle;
     return 0;
 }
 
-int ipcRecvShareableHandle(ipcHandle *handle, ShareableHandle *shHandle)
-{
-    struct msghdr msg = { 0 };
+int ipcRecvShareableHandle(ipcHandle *handle, ShareableHandle *shHandle) {
+    struct msghdr msg = {0};
     struct iovec iov[1];
     struct cmsghdr cm;
 
@@ -281,21 +270,20 @@ int ipcRecvShareableHandle(ipcHandle *handle, ShareableHandle *shHandle)
 
         memmove(&receivedfd, CMSG_DATA(cmptr), sizeof(receivedfd));
         *(int *)shHandle = receivedfd;
-    }
-    else {
+    } else {
         return -1;
     }
 
     return 0;
 }
 
-int ipcRecvDataFromClient(ipcHandle *serverHandle, void *data, size_t size)
-{
+int ipcRecvDataFromClient(ipcHandle *serverHandle, void *data, size_t size) {
     ssize_t readResult;
     struct sockaddr_un cliaddr;
     socklen_t len = sizeof(cliaddr);
 
-    readResult = recvfrom(serverHandle->socket, data, size, 0, (struct sockaddr *)&cliaddr, &len);
+    readResult = recvfrom(serverHandle->socket, data, size, 0,
+                          (struct sockaddr *)&cliaddr, &len);
     if (readResult == -1) {
         perror("IPC failure: Receiving data over socket failed");
         return -1;
@@ -303,9 +291,8 @@ int ipcRecvDataFromClient(ipcHandle *serverHandle, void *data, size_t size)
     return 0;
 }
 
-int
-ipcSendDataToServer(ipcHandle *handle, const char *serverName, const void *data, size_t size)
-{
+int ipcSendDataToServer(ipcHandle *handle, const char *serverName,
+                        const void *data, size_t size) {
     ssize_t sendResult;
     struct sockaddr_un serveraddr;
 
@@ -313,7 +300,8 @@ ipcSendDataToServer(ipcHandle *handle, const char *serverName, const void *data,
     serveraddr.sun_family = AF_UNIX;
     strncpy(serveraddr.sun_path, serverName, sizeof(serveraddr.sun_path) - 1);
 
-    sendResult = sendto(handle->socket, data, size, 0, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+    sendResult = sendto(handle->socket, data, size, 0,
+                        (struct sockaddr *)&serveraddr, sizeof(serveraddr));
     if (sendResult <= 0) {
         perror("IPC failure: Sending data over socket failed");
     }
@@ -321,9 +309,9 @@ ipcSendDataToServer(ipcHandle *handle, const char *serverName, const void *data,
     return 0;
 }
 
-int
-ipcSendShareableHandle(ipcHandle *handle, const std::vector<ShareableHandle>& shareableHandles, Process process, int data)
-{
+int ipcSendShareableHandle(ipcHandle *handle,
+                           const std::vector<ShareableHandle> &shareableHandles,
+                           Process process, int data) {
     struct msghdr msg;
     struct iovec iov[1];
 
@@ -351,7 +339,7 @@ ipcSendShareableHandle(ipcHandle *handle, const std::vector<ShareableHandle>& sh
     msg.msg_control = control_un.control;
     msg.msg_controllen = sizeof(control_un.control);
 
-    cmptr =  CMSG_FIRSTHDR(&msg);
+    cmptr = CMSG_FIRSTHDR(&msg);
     cmptr->cmsg_len = CMSG_LEN(sizeof(int));
     cmptr->cmsg_level = SOL_SOCKET;
     cmptr->cmsg_type = SCM_RIGHTS;
@@ -375,30 +363,28 @@ ipcSendShareableHandle(ipcHandle *handle, const std::vector<ShareableHandle>& sh
     return 0;
 }
 
-int
-ipcSendShareableHandles(ipcHandle *handle, const std::vector<ShareableHandle>& shareableHandles, const std::vector<Process>& processes)
-{
+int ipcSendShareableHandles(
+    ipcHandle *handle, const std::vector<ShareableHandle> &shareableHandles,
+    const std::vector<Process> &processes) {
     // Send all shareable handles to every single process.
     for (int i = 0; i < shareableHandles.size(); i++) {
         for (int j = 0; j < processes.size(); j++) {
-            checkIpcErrors(ipcSendShareableHandle(handle, shareableHandles, processes[j], i));
+            checkIpcErrors(ipcSendShareableHandle(handle, shareableHandles,
+                                                  processes[j], i));
         }
     }
     return 0;
 }
 
-int
-ipcRecvShareableHandles(ipcHandle *handle, std::vector<ShareableHandle>& shareableHandles)
-{
+int ipcRecvShareableHandles(ipcHandle *handle,
+                            std::vector<ShareableHandle> &shareableHandles) {
     for (int i = 0; i < shareableHandles.size(); i++) {
         checkIpcErrors(ipcRecvShareableHandle(handle, &shareableHandles[i]));
     }
     return 0;
 }
 
-int
-ipcCloseShareableHandle(ShareableHandle shHandle)
-{
+int ipcCloseShareableHandle(ShareableHandle shHandle) {
     return close(shHandle);
 }
 
@@ -406,9 +392,8 @@ ipcCloseShareableHandle(ShareableHandle shHandle)
 // Generic name to build individual Mailslot names by appending process ids.
 LPTSTR SlotName = (LPTSTR)TEXT("\\\\.\\mailslot\\sample_mailslot_");
 
-int
-ipcCreateSocket(ipcHandle *&handle, const char *name, const std::vector<Process>& processes)
-{
+int ipcCreateSocket(ipcHandle *&handle, const char *name,
+                    const std::vector<Process> &processes) {
     handle = new ipcHandle;
     handle->hMailslot.resize(processes.size());
 
@@ -419,15 +404,14 @@ ipcCreateSocket(ipcHandle *&handle, const char *name, const std::vector<Process>
         _itoa_s(processes[i].dwProcessId, tempBuf, 10);
         childSlotName += TEXT(tempBuf);
 
-        HANDLE hFile = CreateFile(TEXT(childSlotName.c_str()),
-                                  GENERIC_WRITE,
-                                  FILE_SHARE_READ,
-                                  (LPSECURITY_ATTRIBUTES)NULL,
-                                  OPEN_EXISTING,
-                                  FILE_ATTRIBUTE_NORMAL,
-                                  (HANDLE)NULL);
+        HANDLE hFile =
+            CreateFile(TEXT(childSlotName.c_str()), GENERIC_WRITE,
+                       FILE_SHARE_READ, (LPSECURITY_ATTRIBUTES)NULL,
+                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, (HANDLE)NULL);
         if (hFile == INVALID_HANDLE_VALUE) {
-            printf("IPC failure: Opening Mailslot by CreateFile failed with %d\n", GetLastError());
+            printf(
+                "IPC failure: Opening Mailslot by CreateFile failed with %d\n",
+                GetLastError());
             return -1;
         }
         handle->hMailslot[i] = hFile;
@@ -435,9 +419,7 @@ ipcCreateSocket(ipcHandle *&handle, const char *name, const std::vector<Process>
     return 0;
 }
 
-int
-ipcOpenSocket(ipcHandle *&handle)
-{
+int ipcOpenSocket(ipcHandle *&handle) {
     handle = new ipcHandle;
     HANDLE hSlot;
 
@@ -446,9 +428,11 @@ ipcOpenSocket(ipcHandle *&handle)
     _itoa_s(GetCurrentProcessId(), tempBuf, 10);
     clientSlotName += TEXT(tempBuf);
 
-    hSlot = CreateMailslot((LPSTR)clientSlotName.c_str(), 0, MAILSLOT_WAIT_FOREVER, (LPSECURITY_ATTRIBUTES)NULL);
+    hSlot = CreateMailslot((LPSTR)clientSlotName.c_str(), 0,
+                           MAILSLOT_WAIT_FOREVER, (LPSECURITY_ATTRIBUTES)NULL);
     if (hSlot == INVALID_HANDLE_VALUE) {
-        printf("IPC failure: CreateMailslot failed for client with %d\n", GetLastError());
+        printf("IPC failure: CreateMailslot failed for client with %d\n",
+               GetLastError());
         return -1;
     }
 
@@ -456,13 +440,12 @@ ipcOpenSocket(ipcHandle *&handle)
     return 0;
 }
 
-int
-ipcSendData(HANDLE mailslot, const void *data, size_t sz)
-{
+int ipcSendData(HANDLE mailslot, const void *data, size_t sz) {
     BOOL result;
     DWORD cbWritten;
 
-    result = WriteFile(mailslot, data, (DWORD)sz, &cbWritten, (LPOVERLAPPED)NULL);
+    result =
+        WriteFile(mailslot, data, (DWORD)sz, &cbWritten, (LPOVERLAPPED)NULL);
     if (!result) {
         printf("IPC failure: WriteFile failed with %d.\n", GetLastError());
         return -1;
@@ -470,9 +453,7 @@ ipcSendData(HANDLE mailslot, const void *data, size_t sz)
     return 0;
 }
 
-int
-ipcRecvData(ipcHandle *handle, void *data, size_t sz)
-{
+int ipcRecvData(ipcHandle *handle, void *data, size_t sz) {
     DWORD cbMessage, cMessage, cbRead;
     BOOL fResult;
 
@@ -480,9 +461,11 @@ ipcRecvData(ipcHandle *handle, void *data, size_t sz)
     HANDLE mailslot = handle->hMailslot[0];
 
 pollMailSlot:
-    fResult = GetMailslotInfo(mailslot, (LPDWORD)NULL, &cbMessage, &cMessage, (LPDWORD)NULL);
+    fResult = GetMailslotInfo(mailslot, (LPDWORD)NULL, &cbMessage, &cMessage,
+                              (LPDWORD)NULL);
     if (!fResult) {
-        printf("IPC failure: GetMailslotInfo failed with %d.\n", GetLastError());
+        printf("IPC failure: GetMailslotInfo failed with %d.\n",
+               GetLastError());
         return -1;
     }
 
@@ -497,21 +480,24 @@ pollMailSlot:
             return -1;
         }
 
-        fResult = GetMailslotInfo(mailslot, (LPDWORD)NULL, &cbMessage, &cMessage, (LPDWORD)NULL);
+        fResult = GetMailslotInfo(mailslot, (LPDWORD)NULL, &cbMessage,
+                                  &cMessage, (LPDWORD)NULL);
         if (!fResult) {
-            printf("IPC failure: GetMailslotInfo failed (%d)\n", GetLastError());
+            printf("IPC failure: GetMailslotInfo failed (%d)\n",
+                   GetLastError());
             return -1;
         }
     }
     return 0;
 }
 
-int
-ipcSendShareableHandles(ipcHandle *handle, const std::vector<ShareableHandle>& shareableHandles, const std::vector<Process>& processes)
-{
+int ipcSendShareableHandles(
+    ipcHandle *handle, const std::vector<ShareableHandle> &shareableHandles,
+    const std::vector<Process> &processes) {
     // Send all shareable handles to every single process.
     for (int i = 0; i < processes.size(); i++) {
-        HANDLE hProcess = OpenProcess(PROCESS_DUP_HANDLE, FALSE, processes[i].dwProcessId);
+        HANDLE hProcess =
+            OpenProcess(PROCESS_DUP_HANDLE, FALSE, processes[i].dwProcessId);
         if (hProcess == INVALID_HANDLE_VALUE) {
             printf("IPC failure: OpenProcess failed (%d)\n", GetLastError());
             return -1;
@@ -520,29 +506,31 @@ ipcSendShareableHandles(ipcHandle *handle, const std::vector<ShareableHandle>& s
         for (int j = 0; j < shareableHandles.size(); j++) {
             HANDLE hDup = INVALID_HANDLE_VALUE;
             // Duplicate the handle into the target process's space
-            if (!DuplicateHandle(GetCurrentProcess(), shareableHandles[j], hProcess, &hDup, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
-                printf("IPC failure: DuplicateHandle failed (%d)\n", GetLastError());
+            if (!DuplicateHandle(GetCurrentProcess(), shareableHandles[j],
+                                 hProcess, &hDup, 0, FALSE,
+                                 DUPLICATE_SAME_ACCESS)) {
+                printf("IPC failure: DuplicateHandle failed (%d)\n",
+                       GetLastError());
                 return -1;
             }
-            checkIpcErrors(ipcSendData(handle->hMailslot[i], &hDup, sizeof(HANDLE)));
+            checkIpcErrors(
+                ipcSendData(handle->hMailslot[i], &hDup, sizeof(HANDLE)));
         }
         CloseHandle(hProcess);
     }
     return 0;
 }
 
-int
-ipcRecvShareableHandles(ipcHandle *handle, std::vector<ShareableHandle>& shareableHandles)
-{
-    for (int i = 0 ; i < shareableHandles.size(); i++) {
-        checkIpcErrors(ipcRecvData(handle, &shareableHandles[i], sizeof(shareableHandles[i])));
+int ipcRecvShareableHandles(ipcHandle *handle,
+                            std::vector<ShareableHandle> &shareableHandles) {
+    for (int i = 0; i < shareableHandles.size(); i++) {
+        checkIpcErrors(ipcRecvData(handle, &shareableHandles[i],
+                                   sizeof(shareableHandles[i])));
     }
     return 0;
 }
 
-int
-ipcCloseSocket(ipcHandle *handle)
-{
+int ipcCloseSocket(ipcHandle *handle) {
     for (int i = 0; i < handle->hMailslot.size(); i++) {
         CloseHandle(handle->hMailslot[i]);
     }
@@ -550,9 +538,7 @@ ipcCloseSocket(ipcHandle *handle)
     return 0;
 }
 
-int
-ipcCloseShareableHandle(ShareableHandle shHandle)
-{
+int ipcCloseShareableHandle(ShareableHandle shHandle) {
     CloseHandle(shHandle);
     return 0;
 }

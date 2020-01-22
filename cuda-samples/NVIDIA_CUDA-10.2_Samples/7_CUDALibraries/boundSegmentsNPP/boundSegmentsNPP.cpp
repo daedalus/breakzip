@@ -11,16 +11,16 @@
  */
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-#  define WINDOWS_LEAN_AND_MEAN
-#  define NOMINMAX
-#  include <windows.h>
-#  pragma warning(disable:4819)
+#define WINDOWS_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#pragma warning(disable : 4819)
 #endif
 
+#include <Exceptions.h>
+#include <ImageIO.h>
 #include <ImagesCPU.h>
 #include <ImagesNPP.h>
-#include <ImageIO.h>
-#include <Exceptions.h>
 
 #include <string.h>
 #include <fstream>
@@ -29,31 +29,31 @@
 #include <cuda_runtime.h>
 #include <npp.h>
 
-#include <helper_string.h>
 #include <helper_cuda.h>
+#include <helper_string.h>
 
-bool printfNPPinfo(int argc, char *argv[])
-{
-    const NppLibraryVersion *libVer   = nppGetLibVersion();
+bool printfNPPinfo(int argc, char *argv[]) {
+    const NppLibraryVersion *libVer = nppGetLibVersion();
 
-    printf("NPP Library Version %d.%d.%d\n", libVer->major, libVer->minor, libVer->build);
+    printf("NPP Library Version %d.%d.%d\n", libVer->major, libVer->minor,
+           libVer->build);
 
     int driverVersion, runtimeVersion;
     cudaDriverGetVersion(&driverVersion);
     cudaRuntimeGetVersion(&runtimeVersion);
 
-    printf("  CUDA Driver  Version: %d.%d\n", driverVersion/1000, (driverVersion%100)/10);
-    printf("  CUDA Runtime Version: %d.%d\n", runtimeVersion/1000, (runtimeVersion%100)/10);
+    printf("  CUDA Driver  Version: %d.%d\n", driverVersion / 1000,
+           (driverVersion % 100) / 10);
+    printf("  CUDA Runtime Version: %d.%d\n", runtimeVersion / 1000,
+           (runtimeVersion % 100) / 10);
 
     return true;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     printf("%s Starting...\n\n", argv[0]);
 
-    try
-    {
+    try {
         std::string sFilename;
         char *filePath;
 
@@ -61,50 +61,44 @@ int main(int argc, char *argv[])
 
         cudaDeviceProp deviceProp;
         cudaGetDeviceProperties(&deviceProp, dev);
-        std::cerr << "cudaSetDevice GPU" << dev << " = " << deviceProp.name << std::endl;
+        std::cerr << "cudaSetDevice GPU" << dev << " = " << deviceProp.name
+                  << std::endl;
 
-        if (printfNPPinfo(argc, argv) == false)
-        {
+        if (printfNPPinfo(argc, argv) == false) {
             exit(EXIT_SUCCESS);
         }
 
-        if (checkCmdLineFlag(argc, (const char **)argv, "file"))
-        {
-            getCmdLineArgumentString(argc, (const char **)argv, "file", &filePath);
-        }
-        else
-        {
+        if (checkCmdLineFlag(argc, (const char **)argv, "file")) {
+            getCmdLineArgumentString(argc, (const char **)argv, "file",
+                                     &filePath);
+        } else {
             filePath = sdkFindFilePath("Lena.pgm", argv[0]);
         }
 
-        if (filePath)
-        {
+        if (filePath) {
             sFilename = filePath;
-        }
-        else
-        {
+        } else {
             sFilename = "Lena.pgm";
         }
 
-        // if we specify the filename at the command line, then we only test sFilename[0].
+        // if we specify the filename at the command line, then we only test
+        // sFilename[0].
         int file_errors = 0;
         std::ifstream infile(sFilename.data(), std::ifstream::in);
 
-        if (infile.good())
-        {
-            std::cout << "boundSegmentsNPP opened: <" << sFilename.data() << "> successfully!" << std::endl;
+        if (infile.good()) {
+            std::cout << "boundSegmentsNPP opened: <" << sFilename.data()
+                      << "> successfully!" << std::endl;
             file_errors = 0;
             infile.close();
-        }
-        else
-        {
-            std::cout << "boundSegmentsNPP unable to open: <" << sFilename.data() << ">" << std::endl;
+        } else {
+            std::cout << "boundSegmentsNPP unable to open: <"
+                      << sFilename.data() << ">" << std::endl;
             file_errors++;
             infile.close();
         }
 
-        if (file_errors > 0)
-        {
+        if (file_errors > 0) {
             exit(EXIT_FAILURE);
         }
 
@@ -112,17 +106,16 @@ int main(int argc, char *argv[])
 
         std::string::size_type dot = sResultFilename.rfind('.');
 
-        if (dot != std::string::npos)
-        {
+        if (dot != std::string::npos) {
             sResultFilename = sResultFilename.substr(0, dot);
         }
 
         sResultFilename += "_boundSegments.pgm";
 
-        if (checkCmdLineFlag(argc, (const char **)argv, "output"))
-        {
+        if (checkCmdLineFlag(argc, (const char **)argv, "output")) {
             char *outputFilePath;
-            getCmdLineArgumentString(argc, (const char **)argv, "output", &outputFilePath);
+            getCmdLineArgumentString(argc, (const char **)argv, "output",
+                                     &outputFilePath);
             sResultFilename = outputFilePath;
         }
 
@@ -138,73 +131,80 @@ int main(int argc, char *argv[])
         NppiPoint oSrcOffset = {0, 0};
 
         // create struct with ROI size
-        NppiSize oSizeROI = {(int)oDeviceSrc.width() , (int)oDeviceSrc.height() };
+        NppiSize oSizeROI = {(int)oDeviceSrc.width(), (int)oDeviceSrc.height()};
         // allocate device image of appropriately reduced size
         npp::ImageNPP_8u_C1 oDeviceDst8u(oSizeROI.width, oSizeROI.height);
         npp::ImageNPP_32s_C1 oDeviceDst32u(oSizeROI.width, oSizeROI.height);
 
         int nBufferSize = 0;
-        Npp8u * pScratchBufferNPP = 0;
+        Npp8u *pScratchBufferNPP = 0;
 
-        // get necessary scratch buffer size and allocate that much device memory
-        NPP_CHECK_NPP (
-                           nppiLabelMarkersGetBufferSize_8u32u_C1R(oSizeROI, &nBufferSize) );
+        // get necessary scratch buffer size and allocate that much device
+        // memory
+        NPP_CHECK_NPP(
+            nppiLabelMarkersGetBufferSize_8u32u_C1R(oSizeROI, &nBufferSize));
 
         cudaMalloc((void **)&pScratchBufferNPP, nBufferSize);
 
         // Now generate label markers using 8 way search mode (nppiNormInf).
-        // For this particular sample image, any pixel value below 165 will be considered outside of any connected region and will be labeled 0.
-        // The 8u32u version of the function is used because for this particular image the maximum number of generated labels is larger than 8-bit (256)
-        // so an 8 bit per pixel output image cannot contain accurate labeling results.
+        // For this particular sample image, any pixel value below 165 will be
+        // considered outside of any connected region and will be labeled 0. The
+        // 8u32u version of the function is used because for this particular
+        // image the maximum number of generated labels is larger than 8-bit
+        // (256) so an 8 bit per pixel output image cannot contain accurate
+        // labeling results.
         int maxLabel = 0;
 
-        if ((nBufferSize > 0) && (pScratchBufferNPP != 0))
-        {
-            NPP_CHECK_NPP (
-                               nppiLabelMarkers_8u32u_C1R(oDeviceSrc.data(), oDeviceSrc.pitch(), 
-                                                          reinterpret_cast<Npp32u *>(oDeviceDst32u.data()), oDeviceDst32u.pitch(), oSizeROI,
-                                                          165, nppiNormInf, &maxLabel, pScratchBufferNPP) );
+        if ((nBufferSize > 0) && (pScratchBufferNPP != 0)) {
+            NPP_CHECK_NPP(nppiLabelMarkers_8u32u_C1R(
+                oDeviceSrc.data(), oDeviceSrc.pitch(),
+                reinterpret_cast<Npp32u *>(oDeviceDst32u.data()),
+                oDeviceDst32u.pitch(), oSizeROI, 165, nppiNormInf, &maxLabel,
+                pScratchBufferNPP));
         }
-
 
         // free scratch buffer memory
         cudaFree(pScratchBufferNPP);
 
-        // The generated list of labels is likely to be very sparsely populated so it might be possible to compress them into a label list that
-        // will fit into 8 bits.
-        // 
-        // Get necessary scratch buffer size and allocate that much device memory
-        NPP_CHECK_NPP (
-                           nppiCompressMarkerLabelsGetBufferSize_32u8u_C1R(maxLabel, &nBufferSize) );
+        // The generated list of labels is likely to be very sparsely populated
+        // so it might be possible to compress them into a label list that will
+        // fit into 8 bits.
+        //
+        // Get necessary scratch buffer size and allocate that much device
+        // memory
+        NPP_CHECK_NPP(nppiCompressMarkerLabelsGetBufferSize_32u8u_C1R(
+            maxLabel, &nBufferSize));
 
         cudaMalloc((void **)&pScratchBufferNPP, nBufferSize);
 
-        if ((nBufferSize > 0) && (pScratchBufferNPP != 0))
-        {
-
-            NPP_CHECK_NPP (
-                               nppiCompressMarkerLabels_32u8u_C1R(reinterpret_cast<Npp32u *>(oDeviceDst32u.data()), oDeviceDst32u.pitch(),
-                                                                  oDeviceDst8u.data(), oDeviceDst8u.pitch(), oSizeROI, maxLabel,
-                                                                  &maxLabel, pScratchBufferNPP) );
+        if ((nBufferSize > 0) && (pScratchBufferNPP != 0)) {
+            NPP_CHECK_NPP(nppiCompressMarkerLabels_32u8u_C1R(
+                reinterpret_cast<Npp32u *>(oDeviceDst32u.data()),
+                oDeviceDst32u.pitch(), oDeviceDst8u.data(),
+                oDeviceDst8u.pitch(), oSizeROI, maxLabel, &maxLabel,
+                pScratchBufferNPP));
         }
 
         // free scratch buffer memory
         cudaFree(pScratchBufferNPP);
 
-        // Since the maximum label value after label compression is less than 256 then the label pixels were succesfully compressed from 32u in data size
-        // back down to 8u in size.
+        // Since the maximum label value after label compression is less than
+        // 256 then the label pixels were succesfully compressed from 32u in
+        // data size back down to 8u in size.
 
-        // Add segment boundaries to the final resulting labeled segments using pixel value 255 as a boundary value.
-        NPP_CHECK_NPP (
-                           nppiBoundSegments_8u_C1IR(oDeviceDst8u.data(), oDeviceDst8u.pitch(), oSizeROI, 255 ) );
+        // Add segment boundaries to the final resulting labeled segments using
+        // pixel value 255 as a boundary value.
+        NPP_CHECK_NPP(nppiBoundSegments_8u_C1IR(
+            oDeviceDst8u.data(), oDeviceDst8u.pitch(), oSizeROI, 255));
 
-        // Scale the final label values to improve contrast in visibility of the various connected region segments in this particular result image.
-        NPP_CHECK_NPP (
-                           nppiMulC_8u_C1IRSfs(2, oDeviceDst8u.data(), oDeviceDst8u.pitch(), oSizeROI, 0) );
+        // Scale the final label values to improve contrast in visibility of the
+        // various connected region segments in this particular result image.
+        NPP_CHECK_NPP(nppiMulC_8u_C1IRSfs(2, oDeviceDst8u.data(),
+                                          oDeviceDst8u.pitch(), oSizeROI, 0));
 
         // Brighten everything for improved visibility
-        NPP_CHECK_NPP (
-                           nppiAddC_8u_C1IRSfs(96, oDeviceDst8u.data(), oDeviceDst8u.pitch(), oSizeROI, 0 ) );
+        NPP_CHECK_NPP(nppiAddC_8u_C1IRSfs(96, oDeviceDst8u.data(),
+                                          oDeviceDst8u.pitch(), oSizeROI, 0));
 
         // Declare a host image for the result
         npp::ImageCPU_8u_C1 oHostDst8u(oDeviceDst8u.size());
@@ -219,17 +219,13 @@ int main(int argc, char *argv[])
         nppiFree(oDeviceDst8u.data());
 
         exit(EXIT_SUCCESS);
-    }
-    catch (npp::Exception &rException)
-    {
+    } catch (npp::Exception &rException) {
         std::cerr << "Program error! The following exception occurred: \n";
         std::cerr << rException << std::endl;
         std::cerr << "Aborting." << std::endl;
 
         exit(EXIT_FAILURE);
-    }
-    catch (...)
-    {
+    } catch (...) {
         std::cerr << "Program error! An unknow type of exception occurred. \n";
         std::cerr << "Aborting." << std::endl;
 

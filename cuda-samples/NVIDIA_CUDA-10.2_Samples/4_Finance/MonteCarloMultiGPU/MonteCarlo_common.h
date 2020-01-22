@@ -11,14 +11,13 @@
 
 #ifndef MONTECARLO_COMMON_H
 #define MONTECARLO_COMMON_H
-#include "realtype.h"
 #include "curand_kernel.h"
+#include "realtype.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Global types
 ////////////////////////////////////////////////////////////////////////////////
-typedef struct
-{
+typedef struct {
     float S;
     float X;
     float T;
@@ -27,62 +26,57 @@ typedef struct
 } TOptionData;
 
 typedef struct
-        //#ifdef __CUDACC__
-        //__align__(8)
-        //#endif
+//#ifdef __CUDACC__
+//__align__(8)
+//#endif
 {
     float Expected;
     float Confidence;
 } TOptionValue;
 
-//GPU outputs before CPU postprocessing
-typedef struct
-{
+// GPU outputs before CPU postprocessing
+typedef struct {
     real Expected;
     real Confidence;
 } __TOptionValue;
 
-
-
-typedef struct
-{
-    //Device ID for multi-GPU version
+typedef struct {
+    // Device ID for multi-GPU version
     int device;
-    //Option count for this plan
+    // Option count for this plan
     int optionCount;
 
-    //Host-side data source and result destination
-    TOptionData  *optionData;
+    // Host-side data source and result destination
+    TOptionData *optionData;
     TOptionValue *callValue;
 
-    //Temporary Host-side pinned memory for async + faster data transfers
+    // Temporary Host-side pinned memory for async + faster data transfers
     __TOptionValue *h_CallValue;
 
     // Device- and host-side option data
-    void * d_OptionData;
-    void * h_OptionData;
+    void *d_OptionData;
+    void *h_OptionData;
 
     // Device-side option values
-    void * d_CallValue;
+    void *d_CallValue;
 
-    //Intermediate device-side buffers
+    // Intermediate device-side buffers
     void *d_Buffer;
 
-    //random number generator states
+    // random number generator states
     curandState *rngStates;
 
-    //Pseudorandom samples count
+    // Pseudorandom samples count
     int pathN;
 
-    //Time stamp
+    // Time stamp
     float time;
 
     int gridSize;
 } TOptionPlan;
 
-
 extern "C" void initMonteCarloGPU(TOptionPlan *plan);
-extern "C" void MonteCarloGPU(TOptionPlan *plan, cudaStream_t stream=0);
+extern "C" void MonteCarloGPU(TOptionPlan *plan, cudaStream_t stream = 0);
 extern "C" void closeMonteCarloGPU(TOptionPlan *plan);
 
 #endif

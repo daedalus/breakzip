@@ -13,9 +13,8 @@
 #define ASIANOPTION_H
 
 template <typename Real>
-struct AsianOption
-{
-    enum CallPut {Call, Put};
+struct AsianOption {
+    enum CallPut { Call, Put };
 
     // Parameters
     Real spot;

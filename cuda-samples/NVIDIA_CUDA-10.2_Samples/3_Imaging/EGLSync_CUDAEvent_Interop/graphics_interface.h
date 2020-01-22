@@ -12,151 +12,143 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 
 Display *display;
 int screen;
-Window win = 0; 
+Window win = 0;
 
-void error_exit(const char* format, ... )
-{
+void error_exit(const char *format, ...) {
     va_list args;
-    va_start( args, format );
-    vfprintf( stderr, format, args );
-    va_end( args );
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
     exit(1);
 }
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#define GET_GLERROR(ret)\
-{                                       \
-    GLenum err = glGetError();           \
-    if (err != GL_NO_ERROR) \
-      {                      \
-    fprintf(stderr, "[%s line %d] OpenGL Error: 0x%x\n", __FILE__, __LINE__, err);  \
-    fflush(stderr);			\
-    \
-    switch (err)\
-    { \
-      case GL_INVALID_ENUM: printf("GL_INVALID_ENUM\n"); break;	\
-      case GL_INVALID_VALUE: printf("GL_INVALID_VALUE\n"); break;	\
-      case GL_INVALID_OPERATION: printf("GL_INVALID_OPERATION\n"); break; \
-      case GL_OUT_OF_MEMORY: printf("GL_OUT_OF_MEMORY\n"); break;	\
-      case GL_INVALID_FRAMEBUFFER_OPERATION: printf("GL_INVALID_FRAMEBUFFER_OPERATION\n"); break; \
-      default: printf("UKNOWN OPENGL ERROR CODE 0x%x\n", err);	\
-      };\
-      }\
-}
+#define GET_GLERROR(ret)                                                   \
+    {                                                                      \
+        GLenum err = glGetError();                                         \
+        if (err != GL_NO_ERROR) {                                          \
+            fprintf(stderr, "[%s line %d] OpenGL Error: 0x%x\n", __FILE__, \
+                    __LINE__, err);                                        \
+            fflush(stderr);                                                \
+                                                                           \
+            switch (err) {                                                 \
+                case GL_INVALID_ENUM:                                      \
+                    printf("GL_INVALID_ENUM\n");                           \
+                    break;                                                 \
+                case GL_INVALID_VALUE:                                     \
+                    printf("GL_INVALID_VALUE\n");                          \
+                    break;                                                 \
+                case GL_INVALID_OPERATION:                                 \
+                    printf("GL_INVALID_OPERATION\n");                      \
+                    break;                                                 \
+                case GL_OUT_OF_MEMORY:                                     \
+                    printf("GL_OUT_OF_MEMORY\n");                          \
+                    break;                                                 \
+                case GL_INVALID_FRAMEBUFFER_OPERATION:                     \
+                    printf("GL_INVALID_FRAMEBUFFER_OPERATION\n");          \
+                    break;                                                 \
+                default:                                                   \
+                    printf("UKNOWN OPENGL ERROR CODE 0x%x\n", err);        \
+            };                                                             \
+        }                                                                  \
+    }
 
 EGLDisplay eglDisplay = EGL_NO_DISPLAY;
 EGLSurface eglSurface = EGL_NO_SURFACE;
 EGLContext eglContext = EGL_NO_CONTEXT;
 
-int graphics_setup_window(int xpos, int ypos, int width, int height, const char *windowname)
-{
+int graphics_setup_window(int xpos, int ypos, int width, int height,
+                          const char *windowname) {
     EGLint configAttrs[] = {
-        EGL_RED_SIZE,        1,
-        EGL_GREEN_SIZE,      1,
-        EGL_BLUE_SIZE,       1,
-        EGL_DEPTH_SIZE,     16,
-        EGL_SAMPLE_BUFFERS,  0,
-        EGL_SAMPLES,         0,
-	//EGL_CONFORMANT,      EGL_OPENGL_BIT,
-	    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,  //3_BIT_KHR,
-        EGL_NONE
-    };
-    EGLint contextAttrs[] = {
-      EGL_CONTEXT_CLIENT_VERSION, 3,
-      EGL_NONE
-    };
+        EGL_RED_SIZE, 1, EGL_GREEN_SIZE, 1, EGL_BLUE_SIZE, 1, EGL_DEPTH_SIZE,
+        16, EGL_SAMPLE_BUFFERS, 0, EGL_SAMPLES, 0,
+        // EGL_CONFORMANT,      EGL_OPENGL_BIT,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,  // 3_BIT_KHR,
+        EGL_NONE};
+    EGLint contextAttrs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
 
-    EGLConfig* configList = NULL;
-    EGLint     configCount;
+    EGLConfig *configList = NULL;
+    EGLint configCount;
 
     display = XOpenDisplay(NULL);
-    if (!display) 
-      error_exit("Error opening X display.\n");
+    if (!display) error_exit("Error opening X display.\n");
 
     screen = DefaultScreen(display);
 
     eglDisplay = eglGetDisplay(0);
 
     if (eglDisplay == EGL_NO_DISPLAY)
-      error_exit("EGL failed to obtain display\n");
+        error_exit("EGL failed to obtain display\n");
 
     if (!eglInitialize(eglDisplay, 0, 0))
-      error_exit("EGL failed to initialize\n");
+        error_exit("EGL failed to initialize\n");
 
-    if (!eglChooseConfig(eglDisplay, configAttrs,
-                         NULL, 0, &configCount) || !configCount)
-      error_exit("EGL failed to return any matching configurations\n");
+    if (!eglChooseConfig(eglDisplay, configAttrs, NULL, 0, &configCount) ||
+        !configCount)
+        error_exit("EGL failed to return any matching configurations\n");
 
-    configList = (EGLConfig*)malloc(configCount * sizeof(EGLConfig));
+    configList = (EGLConfig *)malloc(configCount * sizeof(EGLConfig));
 
-    if (!eglChooseConfig(eglDisplay, configAttrs,
-                         configList, configCount, &configCount) || !configCount)
+    if (!eglChooseConfig(eglDisplay, configAttrs, configList, configCount,
+                         &configCount) ||
+        !configCount)
         error_exit("EGL failed to populate configuration list\n");
 
-    Window xRootWindow  = DefaultRootWindow(display);
+    Window xRootWindow = DefaultRootWindow(display);
     XSetWindowAttributes xCreateWindowAttributes;
     xCreateWindowAttributes.event_mask = ExposureMask;
-    win = XCreateWindow(
-        display,
-        xRootWindow,
-        0,
-        0,
-        width,
-        height,
-        0,
-        CopyFromParent,
-        InputOutput,
-        CopyFromParent,
-        CWEventMask,
-        &xCreateWindowAttributes);
+    win = XCreateWindow(display, xRootWindow, 0, 0, width, height, 0,
+                        CopyFromParent, InputOutput, CopyFromParent,
+                        CWEventMask, &xCreateWindowAttributes);
     XMapWindow(display, win);
-
 
     Atom netWmStateAtom = XInternAtom(display, "_NET_WM_STATE", false);
     XEvent xEvent;
     memset(&xEvent, 0, sizeof(xEvent));
-    xEvent.type                 = ClientMessage;
-    xEvent.xclient.window       = win;
+    xEvent.type = ClientMessage;
+    xEvent.xclient.window = win;
     xEvent.xclient.message_type = netWmStateAtom;
-    xEvent.xclient.format       = 32;
-    xEvent.xclient.data.l[0]    = 1;
-    xEvent.xclient.data.l[1]    = false;
-    XSendEvent(        display,        xRootWindow,        false,        SubstructureNotifyMask, &xEvent);
+    xEvent.xclient.format = 32;
+    xEvent.xclient.data.l[0] = 1;
+    xEvent.xclient.data.l[1] = false;
+    XSendEvent(display, xRootWindow, false, SubstructureNotifyMask, &xEvent);
 
-    XStoreName( display, win, windowname);
-    
-    XSelectInput(display, win, ExposureMask |  KeyPressMask | ButtonPressMask | ButtonReleaseMask | 
-                          KeyReleaseMask | VisibilityChangeMask | PointerMotionMask );
+    XStoreName(display, win, windowname);
 
-    EGLint windowAttrs[] =  {EGL_NONE};
+    XSelectInput(display, win,
+                 ExposureMask | KeyPressMask | ButtonPressMask |
+                     ButtonReleaseMask | KeyReleaseMask | VisibilityChangeMask |
+                     PointerMotionMask);
 
-    eglSurface = eglCreateWindowSurface(eglDisplay, configList[0], (EGLNativeWindowType) win, windowAttrs);
+    EGLint windowAttrs[] = {EGL_NONE};
 
-    if (!eglSurface) 
-      error_exit("EGL couldn't create window\n");
+    eglSurface = eglCreateWindowSurface(eglDisplay, configList[0],
+                                        (EGLNativeWindowType)win, windowAttrs);
+
+    if (!eglSurface) error_exit("EGL couldn't create window\n");
 
     eglBindAPI(EGL_OPENGL_ES_API);
 
-    eglContext = eglCreateContext(eglDisplay, configList[0], NULL, contextAttrs);
-    if (!eglContext) 
-      error_exit("EGL couldn't create context\n");
-    
-    if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) 
-      error_exit("EGL couldn't make context/surface current\n");
+    eglContext =
+        eglCreateContext(eglDisplay, configList[0], NULL, contextAttrs);
+    if (!eglContext) error_exit("EGL couldn't create context\n");
+
+    if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
+        error_exit("EGL couldn't make context/surface current\n");
 
     EGLint Context_RendererType;
-    eglQueryContext(eglDisplay, eglContext,EGL_CONTEXT_CLIENT_TYPE, &Context_RendererType);
-    
-    switch (Context_RendererType)
-    {
+    eglQueryContext(eglDisplay, eglContext, EGL_CONTEXT_CLIENT_TYPE,
+                    &Context_RendererType);
+
+    switch (Context_RendererType) {
         case EGL_OPENGL_API:
             printf("Using OpenGL API is not supported\n");
             exit(EXIT_FAILURE);
@@ -173,21 +165,16 @@ int graphics_setup_window(int xpos, int ypos, int width, int height, const char 
     return 1;
 }
 
-void graphics_set_windowtitle(const char *windowname)
-{
-    XStoreName( display, win, windowname);
+void graphics_set_windowtitle(const char *windowname) {
+    XStoreName(display, win, windowname);
 }
 
-void graphics_swap_buffers()
-{
-    eglSwapBuffers(eglDisplay, eglSurface);
-}
+void graphics_swap_buffers() { eglSwapBuffers(eglDisplay, eglSurface); }
 
-void graphics_close_window()
-{
-    if (eglDisplay != EGL_NO_DISPLAY)
-    {
-        eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+void graphics_close_window() {
+    if (eglDisplay != EGL_NO_DISPLAY) {
+        eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE,
+                       EGL_NO_CONTEXT);
 
         if (eglContext != EGL_NO_CONTEXT)
             eglDestroyContext(eglDisplay, eglContext);
@@ -198,9 +185,7 @@ void graphics_close_window()
         eglTerminate(eglDisplay);
     }
 
-    if (win)
-        XDestroyWindow(display, win);
+    if (win) XDestroyWindow(display, win);
 
-    XCloseDisplay(display); 
+    XCloseDisplay(display);
 }
-

@@ -9,31 +9,18 @@
  *
  */
 
-
-
 #include "convolutionTexture_common.h"
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Reference row convolution filter
 ////////////////////////////////////////////////////////////////////////////////
-extern "C" void convolutionRowsCPU(
-    float *h_Dst,
-    float *h_Src,
-    float *h_Kernel,
-    int imageW,
-    int imageH,
-    int kernelR
-)
-{
+extern "C" void convolutionRowsCPU(float *h_Dst, float *h_Src, float *h_Kernel,
+                                   int imageW, int imageH, int kernelR) {
     for (int y = 0; y < imageH; y++)
-        for (int x = 0; x < imageW; x++)
-        {
+        for (int x = 0; x < imageW; x++) {
             float sum = 0;
 
-            for (int k = -kernelR; k <= kernelR; k++)
-            {
+            for (int k = -kernelR; k <= kernelR; k++) {
                 int d = x + k;
 
                 if (d < 0) d = 0;
@@ -47,27 +34,17 @@ extern "C" void convolutionRowsCPU(
         }
 }
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // Reference column convolution filter
 ////////////////////////////////////////////////////////////////////////////////
-extern "C" void convolutionColumnsCPU(
-    float *h_Dst,
-    float *h_Src,
-    float *h_Kernel,
-    int imageW,
-    int imageH,
-    int kernelR
-)
-{
+extern "C" void convolutionColumnsCPU(float *h_Dst, float *h_Src,
+                                      float *h_Kernel, int imageW, int imageH,
+                                      int kernelR) {
     for (int y = 0; y < imageH; y++)
-        for (int x = 0; x < imageW; x++)
-        {
+        for (int x = 0; x < imageW; x++) {
             float sum = 0;
 
-            for (int k = -kernelR; k <= kernelR; k++)
-            {
+            for (int k = -kernelR; k <= kernelR; k++) {
                 int d = y + k;
 
                 if (d < 0) d = 0;
