@@ -46,7 +46,7 @@ const uint32_t crc32tab[256] = {
     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
 
 uint32_t crc32(uint32_t x, uint8_t y) {
-    return (x >> 8) ^ crc32tab[y] ^ crc32tab[x & 0xff];
+  return (x >> 8) ^ crc32tab[y] ^ crc32tab[x & 0xff];
 }
 
 // crcinvtab[(crc32tab[i] >> 3) & 0xff] == i

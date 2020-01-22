@@ -12,40 +12,47 @@
 #ifndef PERMUTATIONS_H
 #define PERMUTATIONS_H
 
-#include <helper_cuda.h>  // assert
+#include <helper_cuda.h> // assert
 
-static void computePermutations(uint permutations[1024]) {
+static void computePermutations(uint permutations[1024])
+{
     int indices[16];
     int num = 0;
 
     // 3 element permutations:
 
     // first cluster [0,i) is at the start
-    for (int m = 0; m < 16; ++m) {
+    for (int m = 0; m < 16; ++m)
+    {
         indices[m] = 0;
     }
 
     const int imax = 15;
 
-    for (int i = imax; i >= 0; --i) {
+    for (int i = imax; i >= 0; --i)
+    {
         // second cluster [i,j) is half along
-        for (int m = i; m < 16; ++m) {
+        for (int m = i; m < 16; ++m)
+        {
             indices[m] = 2;
         }
 
         const int jmax = (i == 0) ? 15 : 16;
 
-        for (int j = jmax; j >= i; --j) {
+        for (int j = jmax; j >= i; --j)
+        {
             // last cluster [j,k) is at the end
-            if (j < 16) {
+            if (j < 16)
+            {
                 indices[j] = 1;
             }
 
             uint permutation = 0;
 
-            for (int p = 0; p < 16; p++) {
+            for (int p = 0; p < 16; p++)
+            {
                 permutation |= indices[p] << (p * 2);
-                // permutation |= indices[15-p] << (p * 2);
+                //permutation |= indices[15-p] << (p * 2);
             }
 
             permutations[num] = permutation;
@@ -56,7 +63,8 @@ static void computePermutations(uint permutations[1024]) {
 
     assert(num == 151);
 
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 9; i++)
+    {
         permutations[num] = 0x000AA555;
         num++;
     }
@@ -66,29 +74,36 @@ static void computePermutations(uint permutations[1024]) {
     // Append 4 element permutations:
 
     // first cluster [0,i) is at the start
-    for (int m = 0; m < 16; ++m) {
+    for (int m = 0; m < 16; ++m)
+    {
         indices[m] = 0;
     }
 
-    for (int i = imax; i >= 0; --i) {
+    for (int i = imax; i >= 0; --i)
+    {
         // second cluster [i,j) is one third along
-        for (int m = i; m < 16; ++m) {
+        for (int m = i; m < 16; ++m)
+        {
             indices[m] = 2;
         }
 
         const int jmax = (i == 0) ? 15 : 16;
 
-        for (int j = jmax; j >= i; --j) {
+        for (int j = jmax; j >= i; --j)
+        {
             // third cluster [j,k) is two thirds along
-            for (int m = j; m < 16; ++m) {
+            for (int m = j; m < 16; ++m)
+            {
                 indices[m] = 3;
             }
 
             int kmax = (j == 0) ? 15 : 16;
 
-            for (int k = kmax; k >= j; --k) {
+            for (int k = kmax; k >= j; --k)
+            {
                 // last cluster [k,n) is at the end
-                if (k < 16) {
+                if (k < 16)
+                {
                     indices[k] = 1;
                 }
 
@@ -96,14 +111,16 @@ static void computePermutations(uint permutations[1024]) {
 
                 bool hasThree = false;
 
-                for (int p = 0; p < 16; p++) {
+                for (int p = 0; p < 16; p++)
+                {
                     permutation |= indices[p] << (p * 2);
-                    // permutation |= indices[15-p] << (p * 2);
+                    //permutation |= indices[15-p] << (p * 2);
 
                     if (indices[p] == 3) hasThree = true;
                 }
 
-                if (hasThree) {
+                if (hasThree)
+                {
                     permutations[num] = permutation;
                     num++;
                 }
@@ -116,7 +133,8 @@ static void computePermutations(uint permutations[1024]) {
     // 1024 - 969 - 7 = 48 extra elements
 
     // It would be nice to set these extra elements with better values...
-    for (int i = 0; i < 49; i++) {
+    for (int i = 0; i < 49; i++)
+    {
         permutations[num] = 0x00AAFF55;
         num++;
     }
@@ -124,4 +142,5 @@ static void computePermutations(uint permutations[1024]) {
     assert(num == 1024);
 }
 
-#endif  // PERMUTATIONS_H
+
+#endif // PERMUTATIONS_H

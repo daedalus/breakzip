@@ -48,35 +48,41 @@
  * is strictly prohibited.
  *
  */
-
+ 
 #define HELPERGL_EXTERN_GL_FUNC_IMPLEMENTATION
-#include "framebufferObject.h"
 #include <helper_gl.h>
+#include "framebufferObject.h"
 #include <iostream>
 using namespace std;
 
 FramebufferObject::FramebufferObject()
-    : m_fboId(_GenerateFboId()), m_savedFboId(0) {
+    : m_fboId(_GenerateFboId()),
+      m_savedFboId(0)
+{
     // Bind this FBO so that it actually gets created now
     _GuardedBind();
     _GuardedUnbind();
 }
 
-FramebufferObject::~FramebufferObject() {
+FramebufferObject::~FramebufferObject()
+{
     glDeleteFramebuffersEXT(1, &m_fboId);
 }
 
-void FramebufferObject::Bind() {
+void FramebufferObject::Bind()
+{
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fboId);
 }
 
-void FramebufferObject::Disable() {
+void FramebufferObject::Disable()
+{
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 }
 
-void FramebufferObject::AttachTexture(GLenum texTarget, GLuint texId,
-                                      GLenum attachment, int mipLevel,
-                                      int zSlice) {
+void
+FramebufferObject::AttachTexture(GLenum texTarget, GLuint texId,
+                                 GLenum attachment, int mipLevel, int zSlice)
+{
     _GuardedBind();
 
     /*
@@ -85,7 +91,8 @@ void FramebufferObject::AttachTexture(GLenum texTarget, GLuint texId,
     #endif
     */
 
-    _FramebufferTextureND(attachment, texTarget, texId, mipLevel, zSlice);
+    _FramebufferTextureND(attachment, texTarget,
+                          texId, mipLevel, zSlice);
 
     /*
     #ifndef NDEBUG
@@ -101,30 +108,37 @@ void FramebufferObject::AttachTexture(GLenum texTarget, GLuint texId,
     _GuardedUnbind();
 }
 
-void FramebufferObject::AttachTextures(int numTextures, GLenum texTarget[],
-                                       GLuint texId[], GLenum attachment[],
-                                       int mipLevel[], int zSlice[]) {
-    for (int i = 0; i < numTextures; ++i) {
-        AttachTexture(
-            texTarget[i], texId[i],
-            attachment ? attachment[i] : (GL_COLOR_ATTACHMENT0_EXT + i),
-            mipLevel ? mipLevel[i] : 0, zSlice ? zSlice[i] : 0);
+void
+FramebufferObject::AttachTextures(int numTextures, GLenum texTarget[], GLuint texId[],
+                                  GLenum attachment[], int mipLevel[], int zSlice[])
+{
+    for (int i = 0; i < numTextures; ++i)
+    {
+        AttachTexture(texTarget[i], texId[i],
+                      attachment ? attachment[i] : (GL_COLOR_ATTACHMENT0_EXT + i),
+                      mipLevel ? mipLevel[i] : 0,
+                      zSlice ? zSlice[i] : 0);
     }
 }
 
-void FramebufferObject::AttachRenderBuffer(GLuint buffId, GLenum attachment) {
+void
+FramebufferObject::AttachRenderBuffer(GLuint buffId, GLenum attachment)
+{
     _GuardedBind();
 
 #ifndef NDEBUG
 
-    if (GetAttachedId(attachment) != buffId) {
+    if (GetAttachedId(attachment) != buffId)
+    {
 #endif
 
         glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, attachment,
                                      GL_RENDERBUFFER_EXT, buffId);
 
 #ifndef NDEBUG
-    } else {
+    }
+    else
+    {
         cerr << "FramebufferObject::AttachRenderBuffer PERFORMANCE WARNING:\n"
              << "\tRedundant bind of Renderbuffer (id = " << buffId << ")\n"
              << "\tHINT : Compile with -DNDEBUG to remove this warning.\n";
@@ -135,20 +149,24 @@ void FramebufferObject::AttachRenderBuffer(GLuint buffId, GLenum attachment) {
     _GuardedUnbind();
 }
 
-void FramebufferObject::AttachRenderBuffers(int numBuffers, GLuint buffId[],
-                                            GLenum attachment[]) {
-    for (int i = 0; i < numBuffers; ++i) {
-        AttachRenderBuffer(buffId[i], attachment
-                                          ? attachment[i]
-                                          : (GL_COLOR_ATTACHMENT0_EXT + i));
+void
+FramebufferObject::AttachRenderBuffers(int numBuffers, GLuint buffId[], GLenum attachment[])
+{
+    for (int i = 0; i < numBuffers; ++i)
+    {
+        AttachRenderBuffer(buffId[i],
+                           attachment ? attachment[i] : (GL_COLOR_ATTACHMENT0_EXT + i));
     }
 }
 
-void FramebufferObject::Unattach(GLenum attachment) {
+void
+FramebufferObject::Unattach(GLenum attachment)
+{
     _GuardedBind();
     GLenum type = GetAttachedType(attachment);
 
-    switch (type) {
+    switch (type)
+    {
         case GL_NONE:
             break;
 
@@ -161,67 +179,83 @@ void FramebufferObject::Unattach(GLenum attachment) {
             break;
 
         default:
-            cerr << "FramebufferObject::unbind_attachment ERROR: Unknown "
-                    "attached resource type\n";
+            cerr << "FramebufferObject::unbind_attachment ERROR: Unknown attached resource type\n";
     }
 
     _GuardedUnbind();
 }
 
-void FramebufferObject::UnattachAll() {
+void
+FramebufferObject::UnattachAll()
+{
     int numAttachments = GetMaxColorAttachments();
 
-    for (int i = 0; i < numAttachments; ++i) {
+    for (int i = 0; i < numAttachments; ++i)
+    {
         Unattach(GL_COLOR_ATTACHMENT0_EXT + i);
     }
 }
 
-int FramebufferObject::GetMaxColorAttachments() {
+int FramebufferObject::GetMaxColorAttachments()
+{
     GLint maxAttach = 0;
     glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS_EXT, &maxAttach);
     return maxAttach;
 }
 
-GLuint FramebufferObject::_GenerateFboId() {
+GLuint FramebufferObject::_GenerateFboId()
+{
     GLuint id = 0;
     glGenFramebuffersEXT(1, &id);
     return id;
 }
 
-void FramebufferObject::_GuardedBind() {
+void FramebufferObject::_GuardedBind()
+{
     // Only binds if m_fboId is different than the currently bound FBO
     glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &m_savedFboId);
 
-    if (m_fboId != (GLuint)m_savedFboId) {
+    if (m_fboId != (GLuint)m_savedFboId)
+    {
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fboId);
     }
 }
 
-void FramebufferObject::_GuardedUnbind() {
+void FramebufferObject::_GuardedUnbind()
+{
     // Returns FBO binding to the previously enabled FBO
-    if (m_fboId != (GLuint)m_savedFboId) {
+    if (m_fboId != (GLuint)m_savedFboId)
+    {
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, (GLuint)m_savedFboId);
     }
 }
 
-void FramebufferObject::_FramebufferTextureND(GLenum attachment,
-                                              GLenum texTarget, GLuint texId,
-                                              int mipLevel, int zSlice) {
-    if (texTarget == GL_TEXTURE_1D) {
-        glFramebufferTexture1DEXT(GL_FRAMEBUFFER_EXT, attachment, GL_TEXTURE_1D,
-                                  texId, mipLevel);
-    } else if (texTarget == GL_TEXTURE_3D) {
-        glFramebufferTexture3DEXT(GL_FRAMEBUFFER_EXT, attachment, GL_TEXTURE_3D,
-                                  texId, mipLevel, zSlice);
-    } else {
+void
+FramebufferObject::_FramebufferTextureND(GLenum attachment, GLenum texTarget,
+                                         GLuint texId, int mipLevel,
+                                         int zSlice)
+{
+    if (texTarget == GL_TEXTURE_1D)
+    {
+        glFramebufferTexture1DEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                  GL_TEXTURE_1D, texId, mipLevel);
+    }
+    else if (texTarget == GL_TEXTURE_3D)
+    {
+        glFramebufferTexture3DEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                  GL_TEXTURE_3D, texId, mipLevel, zSlice);
+    }
+    else
+    {
         // Default is GL_TEXTURE_2D, GL_TEXTURE_RECTANGLE_ARB, or cube faces
-        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, attachment, texTarget,
-                                  texId, mipLevel);
+        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                  texTarget, texId, mipLevel);
     }
 }
 
 #ifndef NDEBUG
-bool FramebufferObject::IsValid(ostream &ostr) {
+bool FramebufferObject::IsValid(ostream &ostr)
+{
     _GuardedBind();
 
     bool isOK = false;
@@ -229,8 +263,9 @@ bool FramebufferObject::IsValid(ostream &ostr) {
     GLenum status;
     status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 
-    switch (status) {
-        case GL_FRAMEBUFFER_COMPLETE_EXT:  // Everything's OK
+    switch (status)
+    {
+        case GL_FRAMEBUFFER_COMPLETE_EXT: // Everything's OK
             isOK = true;
             break;
 
@@ -285,56 +320,64 @@ bool FramebufferObject::IsValid(ostream &ostr) {
     _GuardedUnbind();
     return isOK;
 }
-#endif  // NDEBUG
+#endif // NDEBUG
 
 /// Accessors
-GLenum FramebufferObject::GetAttachedType(GLenum attachment) {
+GLenum FramebufferObject::GetAttachedType(GLenum attachment)
+{
     // Returns GL_RENDERBUFFER_EXT or GL_TEXTURE
     _GuardedBind();
     GLint type = 0;
-    glGetFramebufferAttachmentParameterivEXT(
-        GL_FRAMEBUFFER_EXT, attachment,
-        GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT, &type);
+    glGetFramebufferAttachmentParameterivEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                             GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT,
+                                             &type);
     _GuardedUnbind();
     return GLenum(type);
 }
 
-GLuint FramebufferObject::GetAttachedId(GLenum attachment) {
+GLuint FramebufferObject::GetAttachedId(GLenum attachment)
+{
     _GuardedBind();
     GLint id = 0;
-    glGetFramebufferAttachmentParameterivEXT(
-        GL_FRAMEBUFFER_EXT, attachment,
-        GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT, &id);
+    glGetFramebufferAttachmentParameterivEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                             GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT,
+                                             &id);
     _GuardedUnbind();
     return GLuint(id);
 }
 
-GLint FramebufferObject::GetAttachedMipLevel(GLenum attachment) {
+GLint FramebufferObject::GetAttachedMipLevel(GLenum attachment)
+{
     _GuardedBind();
     GLint level = 0;
-    glGetFramebufferAttachmentParameterivEXT(
-        GL_FRAMEBUFFER_EXT, attachment,
-        GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL_EXT, &level);
+    glGetFramebufferAttachmentParameterivEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                             GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL_EXT,
+                                             &level);
     _GuardedUnbind();
     return level;
 }
 
-GLint FramebufferObject::GetAttachedCubeFace(GLenum attachment) {
+GLint FramebufferObject::GetAttachedCubeFace(GLenum attachment)
+{
     _GuardedBind();
     GLint level = 0;
-    glGetFramebufferAttachmentParameterivEXT(
-        GL_FRAMEBUFFER_EXT, attachment,
-        GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE_EXT, &level);
+    glGetFramebufferAttachmentParameterivEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                             GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE_EXT,
+                                             &level);
     _GuardedUnbind();
     return level;
 }
 
-GLint FramebufferObject::GetAttachedZSlice(GLenum attachment) {
+GLint FramebufferObject::GetAttachedZSlice(GLenum attachment)
+{
     _GuardedBind();
     GLint slice = 0;
-    glGetFramebufferAttachmentParameterivEXT(
-        GL_FRAMEBUFFER_EXT, attachment,
-        GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET_EXT, &slice);
+    glGetFramebufferAttachmentParameterivEXT(GL_FRAMEBUFFER_EXT, attachment,
+                                             GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET_EXT,
+                                             &slice);
     _GuardedUnbind();
     return slice;
 }
+
+
+

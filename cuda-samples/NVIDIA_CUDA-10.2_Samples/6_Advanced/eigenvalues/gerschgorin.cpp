@@ -11,13 +11,13 @@
 
 /* Computation of Gerschgorin interval for symmetric, tridiagonal matrix */
 
-#include <cfloat>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
+#include <cfloat>
 
-#include "gerschgorin.h"
 #include "util.h"
+#include "gerschgorin.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //! Compute Gerschgorin interval for symmetric, tridiagonal matrix
@@ -27,15 +27,19 @@
 //! @param  lg  lower limit of Gerschgorin interval
 //! @param  ug  upper limit of Gerschgorin interval
 ////////////////////////////////////////////////////////////////////////////////
-void computeGerschgorin(float *d, float *s, unsigned int n, float &lg,
-                        float &ug) {
+void
+computeGerschgorin(float *d, float *s, unsigned int n, float &lg, float &ug)
+{
+
     lg = FLT_MAX;
     ug = -FLT_MAX;
 
     // compute bounds
-    for (unsigned int i = 1; i < (n - 1); ++i) {
+    for (unsigned int i = 1; i < (n - 1); ++i)
+    {
+
         // sum over the absolute values of all elements of row i
-        float sum_abs_ni = fabsf(s[i - 1]) + fabsf(s[i]);
+        float sum_abs_ni = fabsf(s[i-1]) + fabsf(s[i]);
 
         lg = min(lg, d[i] - sum_abs_ni);
         ug = max(ug, d[i] + sum_abs_ni);
@@ -48,8 +52,8 @@ void computeGerschgorin(float *d, float *s, unsigned int n, float &lg,
     ug = max(ug, d[0] + fabsf(s[0]));
 
     // last row
-    lg = min(lg, d[n - 1] - fabsf(s[n - 2]));
-    ug = max(ug, d[n - 1] + fabsf(s[n - 2]));
+    lg = min(lg, d[n-1] - fabsf(s[n-2]));
+    ug = max(ug, d[n-1] + fabsf(s[n-2]));
 
     // increase interval to avoid side effects of fp arithmetic
     float bnorm = max(fabsf(ug), fabsf(lg));
@@ -64,3 +68,4 @@ void computeGerschgorin(float *d, float *s, unsigned int n, float &lg,
 
     ug = max(lg, ug);
 }
+

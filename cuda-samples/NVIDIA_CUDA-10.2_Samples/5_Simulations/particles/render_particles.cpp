@@ -9,19 +9,21 @@
  *
  */
 
-#include <assert.h>
+
 #include <math.h>
+#include <assert.h>
 #include <stdio.h>
 
 // OpenGL Graphics includes
 #define HELPERGL_EXTERN_GL_FUNC_IMPLEMENTATION
 #include <helper_gl.h>
 
+
 #include "render_particles.h"
 #include "shaders.h"
 
 #ifndef M_PI
-#define M_PI 3.1415926535897932384626433832795
+#define M_PI    3.1415926535897932384626433832795
 #endif
 
 ParticleRenderer::ParticleRenderer()
@@ -31,40 +33,52 @@ ParticleRenderer::ParticleRenderer()
       m_particleRadius(0.125f * 0.5f),
       m_program(0),
       m_vbo(0),
-      m_colorVBO(0) {
+      m_colorVBO(0)
+{
     _initGL();
 }
 
-ParticleRenderer::~ParticleRenderer() { m_pos = 0; }
+ParticleRenderer::~ParticleRenderer()
+{
+    m_pos = 0;
+}
 
-void ParticleRenderer::setPositions(float *pos, int numParticles) {
+void ParticleRenderer::setPositions(float *pos, int numParticles)
+{
     m_pos = pos;
     m_numParticles = numParticles;
 }
 
-void ParticleRenderer::setVertexBuffer(unsigned int vbo, int numParticles) {
+void ParticleRenderer::setVertexBuffer(unsigned int vbo, int numParticles)
+{
     m_vbo = vbo;
     m_numParticles = numParticles;
 }
 
-void ParticleRenderer::_drawPoints() {
-    if (!m_vbo) {
+void ParticleRenderer::_drawPoints()
+{
+    if (!m_vbo)
+    {
         glBegin(GL_POINTS);
         {
             int k = 0;
 
-            for (int i = 0; i < m_numParticles; ++i) {
+            for (int i = 0; i < m_numParticles; ++i)
+            {
                 glVertex3fv(&m_pos[k]);
                 k += 4;
             }
         }
         glEnd();
-    } else {
+    }
+    else
+    {
         glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
         glVertexPointer(4, GL_FLOAT, 0, 0);
         glEnableClientState(GL_VERTEX_ARRAY);
 
-        if (m_colorVBO) {
+        if (m_colorVBO)
+        {
             glBindBuffer(GL_ARRAY_BUFFER, m_colorVBO);
             glColorPointer(4, GL_FLOAT, 0, 0);
             glEnableClientState(GL_COLOR_ARRAY);
@@ -78,8 +92,10 @@ void ParticleRenderer::_drawPoints() {
     }
 }
 
-void ParticleRenderer::display(DisplayMode mode /* = PARTICLE_POINTS */) {
-    switch (mode) {
+void ParticleRenderer::display(DisplayMode mode /* = PARTICLE_POINTS */)
+{
+    switch (mode)
+    {
         case PARTICLE_POINTS:
             glColor3f(1, 1, 1);
             glPointSize(m_pointSize);
@@ -95,10 +111,8 @@ void ParticleRenderer::display(DisplayMode mode /* = PARTICLE_POINTS */) {
             glEnable(GL_DEPTH_TEST);
 
             glUseProgram(m_program);
-            glUniform1f(glGetUniformLocation(m_program, "pointScale"),
-                        m_window_h / tanf(m_fov * 0.5f * (float)M_PI / 180.0f));
-            glUniform1f(glGetUniformLocation(m_program, "pointRadius"),
-                        m_particleRadius);
+            glUniform1f(glGetUniformLocation(m_program, "pointScale"), m_window_h / tanf(m_fov*0.5f*(float)M_PI/180.0f));
+            glUniform1f(glGetUniformLocation(m_program, "pointRadius"), m_particleRadius);
 
             glColor3f(1, 1, 1);
             _drawPoints();
@@ -109,8 +123,9 @@ void ParticleRenderer::display(DisplayMode mode /* = PARTICLE_POINTS */) {
     }
 }
 
-GLuint ParticleRenderer::_compileProgram(const char *vsource,
-                                         const char *fsource) {
+GLuint
+ParticleRenderer::_compileProgram(const char *vsource, const char *fsource)
+{
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
@@ -131,7 +146,8 @@ GLuint ParticleRenderer::_compileProgram(const char *vsource,
     GLint success = 0;
     glGetProgramiv(program, GL_LINK_STATUS, &success);
 
-    if (!success) {
+    if (!success)
+    {
         char temp[256];
         glGetProgramInfoLog(program, 256, 0, temp);
         printf("Failed to link program:\n%s\n", temp);
@@ -142,7 +158,8 @@ GLuint ParticleRenderer::_compileProgram(const char *vsource,
     return program;
 }
 
-void ParticleRenderer::_initGL() {
+void ParticleRenderer::_initGL()
+{
     m_program = _compileProgram(vertexShader, spherePixelShader);
 
 #if !defined(__APPLE__) && !defined(MACOSX)

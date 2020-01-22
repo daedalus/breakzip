@@ -17,14 +17,18 @@
 // include OS specific policy
 #ifdef WIN32
 #include "StopWatchWin.h"
-namespace npp {
-typedef StopWatchBase<StopWatchWin> StopWatch;
-}  // namespace npp
+namespace npp
+{
+    typedef StopWatchBase<StopWatchWin>  StopWatch;
+} // npp namesapce
 #else
 #include "StopWatchLinux.h"
-namespace npp {
-typedef StopWatchBase<StopWatchLinux> StopWatch;
-}  // namespace npp
+namespace npp
+{
+    typedef StopWatchBase<StopWatchLinux>  StopWatch;
+} // npp namesapce
 #endif
 
-#endif  // NV_STOPWATCH_H
+
+#endif // NV_STOPWATCH_H
+

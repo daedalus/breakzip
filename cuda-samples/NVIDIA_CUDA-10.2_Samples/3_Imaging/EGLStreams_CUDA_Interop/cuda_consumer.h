@@ -11,6 +11,7 @@
  *
  */
 
+
 //
 // DESCRIPTION:   CUDA consumer header file
 //
@@ -25,9 +26,10 @@
 #include "eglstrm_common.h"
 
 extern EGLStreamKHR eglStream;
-extern EGLDisplay g_display;
+extern EGLDisplay   g_display; 
 
-typedef struct _test_cuda_consumer_s {
+typedef struct _test_cuda_consumer_s
+{
     CUcontext context;
     CUeglStreamConnection cudaConn;
     bool pitchLinearOutput;
@@ -42,7 +44,7 @@ typedef struct _test_cuda_consumer_s {
 
 void cuda_consumer_init(test_cuda_consumer_s *cudaConsumer, TestArgs *args);
 CUresult cuda_consumer_deinit(test_cuda_consumer_s *cudaConsumer);
-CUresult cudaConsumerTest(test_cuda_consumer_s *data, char *outFile);
-CUresult cudaDeviceCreateConsumer(test_cuda_consumer_s *cudaConsumer,
-                                  CUdevice device);
+CUresult cudaConsumerTest (test_cuda_consumer_s *data, char *outFile);
+CUresult cudaDeviceCreateConsumer(test_cuda_consumer_s *cudaConsumer, CUdevice device);
 #endif
+

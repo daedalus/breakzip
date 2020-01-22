@@ -4,20 +4,21 @@ EXTENSION_LIST(EXTLST_EXTERN)
 #endif
 #include <cuda.h>
 
-int parseCmdLine(int argc, char *argv[], TestArgs *args);
-void printUsage(void);
-int NUMTRIALS = 10;
-int profileAPIs = 0;
+int     parseCmdLine(int argc, char *argv[], TestArgs *args);
+void    printUsage(void);
+int     NUMTRIALS = 10;
+int     profileAPIs = 0;
 
 bool verbose = 0;
 bool isCrossDevice = 0;
 
 // Parse the command line options. Returns FAILURE on a parse error, SUCCESS
 // otherwise.
-int parseCmdLine(int argc, char *argv[], TestArgs *args) {
+int parseCmdLine(int argc, char *argv[], TestArgs *args)
+{
     int i;
 
-    for (i = 1; i < argc; i++) {
+    for(i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0) {
             printUsage();
             exit(0);
@@ -25,7 +26,7 @@ int parseCmdLine(int argc, char *argv[], TestArgs *args) {
             ++i;
             if (sscanf(argv[i], "%d", &NUMTRIALS) != 1 || NUMTRIALS <= 0) {
                 printf("Invalid trial count: %s should be > 0\n", argv[i]);
-                return -1;
+                return -1 ;
             }
         } else if (strcmp(argv[i], "-profile") == 0) {
             profileAPIs = 1;
@@ -39,40 +40,46 @@ int parseCmdLine(int argc, char *argv[], TestArgs *args) {
             }
         } else if (strcmp(argv[i], "-height") == 0) {
             ++i;
-            if (sscanf(argv[i], "%d", &HEIGHT) != 1 || (HEIGHT <= 0)) {
+            if (sscanf(argv[i], "%d", &HEIGHT) != 1 || (HEIGHT<= 0)) {
                 printf("Width should be greater than 0\n");
                 return -1;
             }
         } else if (0 == strcmp(&argv[i][1], "proctype")) {
             ++i;
             if (!strcasecmp(argv[i], "prod")) {
-                args->isProducer = 1;
+                        args->isProducer = 1;
             } else if (!strcasecmp(argv[i], "cons")) {
                 args->isProducer = 0;
-            } else {
-                printf("%s: Bad Process Type: %s\n", __func__, argv[i]);
+            }
+            else {
+                printf("%s: Bad Process Type: %s\n",__func__, argv[i]);
                 return 1;
             }
-        } else if (strcmp(argv[i], "-v") == 0) {
+        }
+        else if (strcmp(argv[i], "-v") == 0) {
             verbose = 1;
-        } else {
+        }
+        else {
             printf("Unknown option: %s\n", argv[i]);
             return -1;
         }
     }
 
-    if (isCrossDevice) {
+    if (isCrossDevice)
+    {
         int deviceCount = 0;
 
         CUresult error_id = cuInit(0);
-        if (error_id != CUDA_SUCCESS) {
+        if (error_id != CUDA_SUCCESS)
+        {
             printf("cuInit(0) returned %d\n", error_id);
             printf("Result = FAIL\n");
             exit(EXIT_FAILURE);
         }
-
+    
         error_id = cuDeviceGetCount(&deviceCount);
-        if (error_id != CUDA_SUCCESS) {
+        if (error_id != CUDA_SUCCESS)
+        {
             printf("cuDeviceGetCount returned %d\n", (int)error_id);
             printf("Result = FAIL\n");
             exit(EXIT_FAILURE);
@@ -80,27 +87,27 @@ int parseCmdLine(int argc, char *argv[], TestArgs *args) {
 
         int iGPUexists = 0;
         CUdevice dev;
-        for (dev = 0; dev < deviceCount; ++dev) {
+        for (dev = 0; dev < deviceCount; ++dev)
+        {
             int integrated = 0;
-            CUresult error_result = cuDeviceGetAttribute(
-                &integrated, CU_DEVICE_ATTRIBUTE_INTEGRATED, dev);
+            CUresult error_result = cuDeviceGetAttribute(&integrated, CU_DEVICE_ATTRIBUTE_INTEGRATED, dev);
 
-            if (error_result != CUDA_SUCCESS) {
-                printf("cuDeviceGetAttribute returned error : %d\n",
-                       (int)error_result);
+            if (error_result != CUDA_SUCCESS)
+            {
+                printf("cuDeviceGetAttribute returned error : %d\n", (int)error_result);
                 exit(EXIT_FAILURE);
             }
 
-            if (integrated) {
+            if (integrated)
+            {
                 iGPUexists = 1;
             }
         }
 
-        if (!iGPUexists) {
+        if (!iGPUexists)
+        {
             printf("No Integrated GPU found in the system.\n");
-            printf(
-                "-crossdev option is only supported on systems with an "
-                "Integrated GPU and a Discrete GPU\n");
+            printf("-crossdev option is only supported on systems with an Integrated GPU and a Discrete GPU\n");
             printf("Waiving the execution\n");
             exit(EXIT_SUCCESS);
         }
@@ -113,8 +120,7 @@ int parseCmdLine(int argc, char *argv[], TestArgs *args) {
 #define MAX_EGL_DEVICES 4
     EGLDeviceEXT devices[MAX_EGL_DEVICES];
     EGLint numDevices = 0;
-    EGLBoolean eglStatus =
-        eglQueryDevicesEXT(MAX_EGL_DEVICES, devices, &numDevices);
+    EGLBoolean eglStatus = eglQueryDevicesEXT(MAX_EGL_DEVICES, devices, &numDevices);
     if (eglStatus != EGL_TRUE) {
         printf("Error querying EGL devices\n");
         exit(EXIT_FAILURE);
@@ -123,31 +129,31 @@ int parseCmdLine(int argc, char *argv[], TestArgs *args) {
     if (numDevices == 0) {
         printf("No EGL devices found\n");
         eglStatus = EGL_FALSE;
-        exit(2);  // EXIT_WAIVED
+        exit(2); // EXIT_WAIVED
     }
 
     int egl_device_id = 0;
-    for (egl_device_id = 0; egl_device_id < numDevices; egl_device_id++) {
+    for(egl_device_id = 0; egl_device_id < numDevices; egl_device_id++)
+    {
         EGLAttrib cuda_device;
-        eglStatus = eglQueryDeviceAttribEXT(devices[egl_device_id],
-                                            EGL_CUDA_DEVICE_NV, &cuda_device);
-        if (eglStatus == EGL_TRUE) {
+        eglStatus = eglQueryDeviceAttribEXT(devices[egl_device_id], EGL_CUDA_DEVICE_NV, &cuda_device);
+        if (eglStatus == EGL_TRUE)
+        {
             break;
         }
     }
 
-    if (egl_device_id >= numDevices) {
+    if (egl_device_id >= numDevices)
+    {
         printf("No CUDA Capable EGL Device found.. Waiving execution\n");
-        exit(2);  // EXIT_WAIVED
+        exit(2); // EXIT_WAIVED
     }
 
     if (isCrossDevice) {
         if (numDevices == 1) {
-            printf(
-                "Found only one EGL device, cannot setup cross GPU streams. "
-                "Waiving\n");
+            printf("Found only one EGL device, cannot setup cross GPU streams. Waiving\n");
             eglStatus = EGL_FALSE;
-            exit(2);  // EXIT_WAIVED
+            exit(2); // EXIT_WAIVED
         }
     }
 
@@ -156,23 +162,24 @@ int parseCmdLine(int argc, char *argv[], TestArgs *args) {
         char argsProducer[1024];
         char str[256];
 
-        strcpy(argsProducer, "./EGLStream_CUDA_CrossGPU -proctype prod ");
+        strcpy(argsProducer,"./EGLStream_CUDA_CrossGPU -proctype prod ");
 
-        if (isCrossDevice) {
-            sprintf(str, "-crossdev ");
-            strcat(argsProducer, str);
+        if (isCrossDevice)
+        {
+            sprintf(str,"-crossdev ");
+            strcat(argsProducer,str);
         }
 
-        if (verbose) {
-            sprintf(str, "-v ");
-            strcat(argsProducer, str);
+        if (verbose)
+        {
+            sprintf(str,"-v ");
+            strcat(argsProducer,str);
         }
 
         /*Make the process run in bg*/
-        strcat(argsProducer, "& ");
+        strcat(argsProducer,"& ");
 
-        printf("\n%s: Crossproc Producer command: %s \n", __func__,
-               argsProducer);
+        printf("\n%s: Crossproc Producer command: %s \n", __func__, argsProducer);
 
         /*Create crossproc Producer*/
         system(argsProducer);
@@ -184,14 +191,13 @@ int parseCmdLine(int argc, char *argv[], TestArgs *args) {
     return 0;
 }
 
-void printUsage(void) {
+
+void printUsage(void)
+{
     printf("Usage:\n");
     printf("  -h           Print this help message\n");
-    printf(
-        "  -n n         Exit after running n trials. Set to 10 by default\n");
-    printf(
-        "  -profile     Profile time taken by ReleaseAPI. Not set by "
-        "default\n");
+    printf("  -n n         Exit after running n trials. Set to 10 by default\n");
+    printf("  -profile     Profile time taken by ReleaseAPI. Not set by default\n");
     printf("  -crossdev    Run with producer on idgpu and consumer on dgpu\n");
     printf("  -dgpu        (same as -crossdev, deprecated)\n");
     printf("  -v           verbose output\n");

@@ -10,8 +10,8 @@
  */
 
 // CUDA Runtime
-#include <cuda.h>
 #include <cuda_runtime.h>
+#include <cuda.h>
 
 // Utilities and system includes
 #include <helper_functions.h>
@@ -25,23 +25,27 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 extern "C" void initQuasirandomGenerator(
-    unsigned int table[QRNG_DIMENSIONS][QRNG_RESOLUTION]);
+    unsigned int table[QRNG_DIMENSIONS][QRNG_RESOLUTION]
+);
 
 extern "C" float getQuasirandomValue(
-    unsigned int table[QRNG_DIMENSIONS][QRNG_RESOLUTION], int i, int dim);
+    unsigned int table[QRNG_DIMENSIONS][QRNG_RESOLUTION],
+    int i,
+    int dim
+);
 
 extern "C" double getQuasirandomValue63(INT64 i, int dim);
 extern "C" double MoroInvCNDcpu(unsigned int p);
 
 const int N = 1048576;
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     // Start logs
     printf("%s Starting...\n\n", argv[0]);
 
     // Compile the kernels
-    char *kernel_file =
-        sdkFindFilePath("quasirandomGenerator_kernel.cu", argv[0]);
+    char *kernel_file = sdkFindFilePath("quasirandomGenerator_kernel.cu", argv[0]);
     compileFileToPTX(kernel_file, argc, argv, &ptx, &ptxSize, 0);
     module = loadPTX(ptx, argc, argv);
 
@@ -54,7 +58,8 @@ int main(int argc, char **argv) {
 
     StopWatchInterface *hTimer = NULL;
 
-    if (sizeof(INT64) != 8) {
+    if (sizeof(INT64) != 8)
+    {
         printf("sizeof(INT64) != 8\n");
         return 0;
     }
@@ -74,13 +79,14 @@ int main(int argc, char **argv) {
 
     printf("Testing QRNG...\n\n");
 
-    checkCudaErrors(
-        cuMemsetD8(d_Output, 0, QRNG_DIMENSIONS * N * sizeof(float)));
+    checkCudaErrors(cuMemsetD8(d_Output, 0, QRNG_DIMENSIONS * N * sizeof(float)));
 
     int numIterations = 20;
 
-    for (int i = -1; i < numIterations; i++) {
-        if (i == 0) {
+    for (int i = -1; i < numIterations; i++)
+    {
+        if (i == 0)
+        {
             sdkResetTimer(&hTimer);
             sdkStartTimer(&hTimer);
         }
@@ -89,39 +95,37 @@ int main(int argc, char **argv) {
     }
 
     sdkStopTimer(&hTimer);
-    gpuTime = sdkGetTimerValue(&hTimer) / (double)numIterations * 1e-3;
-    printf(
-        "quasirandomGenerator, Throughput = %.4f GNumbers/s, Time = %.5f s, "
-        "Size = %u Numbers, NumDevsUsed = %u, Workgroup = %u\n",
-        (double)QRNG_DIMENSIONS * (double)N * 1.0E-9 / gpuTime, gpuTime,
-        QRNG_DIMENSIONS * N, 1, 128 * QRNG_DIMENSIONS);
+    gpuTime = sdkGetTimerValue(&hTimer)/(double)numIterations*1e-3;
+    printf("quasirandomGenerator, Throughput = %.4f GNumbers/s, Time = %.5f s, Size = %u Numbers, NumDevsUsed = %u, Workgroup = %u\n",
+           (double)QRNG_DIMENSIONS * (double)N * 1.0E-9 / gpuTime, gpuTime, QRNG_DIMENSIONS*N, 1, 128*QRNG_DIMENSIONS);
 
     printf("\nReading GPU results...\n");
 
-    checkCudaErrors(cuMemcpyDtoH(h_OutputGPU, d_Output,
-                                 QRNG_DIMENSIONS * N * sizeof(float)));
+    checkCudaErrors(cuMemcpyDtoH(h_OutputGPU, d_Output, QRNG_DIMENSIONS * N * sizeof(float)));
 
     printf("Comparing to the CPU results...\n\n");
     sumDelta = 0;
     sumRef = 0;
 
     for (dim = 0; dim < QRNG_DIMENSIONS; dim++)
-        for (pos = 0; pos < N; pos++) {
-            ref = getQuasirandomValue63(pos, dim);
-            delta = (double)h_OutputGPU[dim * N + pos] - ref;
+        for (pos = 0; pos < N; pos++)
+        {
+            ref       = getQuasirandomValue63(pos, dim);
+            delta     = (double)h_OutputGPU[dim * N + pos] - ref;
             sumDelta += fabs(delta);
-            sumRef += fabs(ref);
+            sumRef   += fabs(ref);
         }
 
     printf("L1 norm: %E\n", sumDelta / sumRef);
 
     printf("\nTesting inverseCNDgpu()...\n\n");
 
-    checkCudaErrors(
-        cuMemsetD8(d_Output, 0, QRNG_DIMENSIONS * N * sizeof(float)));
+    checkCudaErrors(cuMemsetD8(d_Output, 0, QRNG_DIMENSIONS * N * sizeof(float)));
 
-    for (int i = -1; i < numIterations; i++) {
-        if (i == 0) {
+    for (int i = -1; i < numIterations; i++)
+    {
+        if (i == 0)
+        {
             sdkResetTimer(&hTimer);
             sdkStartTimer(&hTimer);
         }
@@ -130,16 +134,12 @@ int main(int argc, char **argv) {
     }
 
     sdkStopTimer(&hTimer);
-    gpuTime = sdkGetTimerValue(&hTimer) / (double)numIterations * 1e-3;
-    printf(
-        "quasirandomGenerator-inverse, Throughput = %.4f GNumbers/s, Time = "
-        "%.5f s, Size = %u Numbers, NumDevsUsed = %u, Workgroup = %u\n",
-        (double)QRNG_DIMENSIONS * (double)N * 1E-9 / gpuTime, gpuTime,
-        QRNG_DIMENSIONS * N, 1, 128);
+    gpuTime = sdkGetTimerValue(&hTimer)/(double)numIterations*1e-3;
+    printf("quasirandomGenerator-inverse, Throughput = %.4f GNumbers/s, Time = %.5f s, Size = %u Numbers, NumDevsUsed = %u, Workgroup = %u\n",
+           (double)QRNG_DIMENSIONS * (double)N * 1E-9 / gpuTime, gpuTime, QRNG_DIMENSIONS*N, 1, 128);
 
     printf("Reading GPU results...\n");
-    checkCudaErrors(cuMemcpyDtoH(h_OutputGPU, d_Output,
-                                 QRNG_DIMENSIONS * N * sizeof(float)));
+    checkCudaErrors(cuMemcpyDtoH(h_OutputGPU, d_Output, QRNG_DIMENSIONS * N * sizeof(float)));
 
     printf("\nComparing to the CPU results...\n");
 
@@ -147,12 +147,13 @@ int main(int argc, char **argv) {
     sumRef = 0;
     unsigned int distance = ((unsigned int)-1) / (QRNG_DIMENSIONS * N + 1);
 
-    for (pos = 0; pos < QRNG_DIMENSIONS * N; pos++) {
+    for (pos = 0; pos < QRNG_DIMENSIONS * N; pos++)
+    {
         unsigned int d = (pos + 1) * distance;
-        ref = MoroInvCNDcpu(d);
-        delta = (double)h_OutputGPU[pos] - ref;
+        ref       = MoroInvCNDcpu(d);
+        delta     = (double)h_OutputGPU[pos] - ref;
         sumDelta += fabs(delta);
-        sumRef += fabs(ref);
+        sumRef   += fabs(ref);
     }
 
     printf("L1 norm: %E\n\n", L1norm = sumDelta / sumRef);

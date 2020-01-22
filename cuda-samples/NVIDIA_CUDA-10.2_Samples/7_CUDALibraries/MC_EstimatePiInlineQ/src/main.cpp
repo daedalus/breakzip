@@ -22,12 +22,13 @@
 // to Test.operator() in test.cpp.
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <cuda_runtime.h>
-#include <helper_cuda.h>
-#include <helper_timer.h>
-#include <iomanip>
+
 #include <iostream>
+#include <iomanip>
 #include <stdexcept>
+#include <cuda_runtime.h>
+#include <helper_timer.h>
+#include <helper_cuda.h>
 
 #include <math.h>
 #include "../inc/test.h"
@@ -37,7 +38,8 @@ void showHelp(const int argc, const char **argv);
 template <typename Real>
 void runTest(int argc, const char **argv);
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     using std::invalid_argument;
     using std::string;
 
@@ -46,38 +48,44 @@ int main(int argc, char **argv) {
     printf("==========================================\n\n");
 
     // If help flag is set, display help and exit immediately
-    if (checkCmdLineFlag(argc, (const char **)argv, "help")) {
+    if (checkCmdLineFlag(argc, (const char **)argv, "help"))
+    {
         printf("Displaying help on console\n");
         showHelp(argc, (const char **)argv);
         exit(EXIT_SUCCESS);
     }
 
     // Check the precision (checked against the device capability later)
-    try {
+    try
+    {
         char *value;
 
-        if (getCmdLineArgumentString(argc, (const char **)argv, "precision",
-                                     &value)) {
+        if (getCmdLineArgumentString(argc, (const char **)argv, "precision", &value))
+        {
             // Check requested precision is valid
             string prec(value);
 
-            if (prec.compare("single") == 0 ||
-                prec.compare("\"single\"") == 0) {
+            if (prec.compare("single") == 0 || prec.compare("\"single\"") == 0)
+            {
                 runTest<float>(argc, (const char **)argv);
-            } else if (prec.compare("double") == 0 ||
-                       prec.compare("\"double\"") == 0) {
+            }
+            else if (prec.compare("double") == 0 || prec.compare("\"double\"") == 0)
+            {
                 runTest<double>(argc, (const char **)argv);
-            } else {
-                printf(
-                    "specified precision (%s) is invalid, must be \"single\" "
-                    "or \"double\".\n",
-                    value);
+            }
+            else
+            {
+                printf("specified precision (%s) is invalid, must be \"single\" or \"double\".\n", value);
                 throw invalid_argument("precision");
             }
-        } else {
+        }
+        else
+        {
             runTest<float>(argc, (const char **)argv);
         }
-    } catch (invalid_argument &e) {
+    }
+    catch (invalid_argument &e)
+    {
         printf("invalid command line argument (%s)\n", e.what());
         exit(EXIT_FAILURE);
     }
@@ -87,134 +95,134 @@ int main(int argc, char **argv) {
 }
 
 template <typename Real>
-void runTest(int argc, const char **argv) {
+void runTest(int argc, const char **argv)
+{
     using std::invalid_argument;
     using std::runtime_error;
 
     StopWatchInterface *timer = NULL;
 
-    try {
+    try
+    {
         Test<Real> test;
         int deviceCount = 0;
-        cudaError_t cudaResult = cudaSuccess;
+        cudaError_t cudaResult  = cudaSuccess;
 
         // by default specify GPU Device == 0
-        test.device = 0;
+        test.device             = 0;
 
         // Get number of available devices
         cudaResult = cudaGetDeviceCount(&deviceCount);
 
-        if (cudaResult != cudaSuccess) {
+        if (cudaResult != cudaSuccess)
+        {
             printf("could not get device count.\n");
             throw runtime_error("cudaGetDeviceCount");
         }
 
         // (default parameters)
-        test.numSims = k_sims_qa;
+        test.numSims         = k_sims_qa;
         test.threadBlockSize = k_bsize_qa;
 
         {
             char *value = 0;
 
-            if (getCmdLineArgumentString(argc, argv, "device", &value)) {
+            if (getCmdLineArgumentString(argc, argv, "device", &value))
+            {
                 test.device = (int)atoi(value);
 
-                if (test.device >= deviceCount) {
-                    printf(
-                        "invalid target device specified on command line "
-                        "(device %d does not exist).\n",
-                        test.device);
+                if (test.device >= deviceCount)
+                {
+                    printf("invalid target device specified on command line (device %d does not exist).\n", test.device);
                     throw invalid_argument("device");
                 }
-            } else {
+            }
+            else
+            {
                 test.device = gpuGetMaxGflopsDeviceId();
             }
 
-            if (getCmdLineArgumentString(argc, argv, "sims", &value)) {
+            if (getCmdLineArgumentString(argc, argv, "sims", &value))
+            {
                 test.numSims = (unsigned int)atoi(value);
 
-                if (test.numSims < k_sims_min || test.numSims > k_sims_max) {
-                    printf(
-                        "specified number of simulations (%d) is invalid, must "
-                        "be between %d and %d.\n",
-                        test.numSims, k_sims_min, k_sims_max);
+                if (test.numSims < k_sims_min || test.numSims > k_sims_max)
+                {
+                    printf("specified number of simulations (%d) is invalid, must be between %d and %d.\n", test.numSims, k_sims_min, k_sims_max);
                     throw invalid_argument("sims");
                 }
-            } else {
+            }
+            else
+            {
                 test.numSims = k_sims_def;
             }
 
-            if (getCmdLineArgumentString(argc, argv, "block-size", &value)) {
+            if (getCmdLineArgumentString(argc, argv, "block-size", &value))
+            {
                 // Determine max threads per block
                 cudaDeviceProp deviceProperties;
-                cudaResult =
-                    cudaGetDeviceProperties(&deviceProperties, test.device);
+                cudaResult = cudaGetDeviceProperties(&deviceProperties, test.device);
 
-                if (cudaResult != cudaSuccess) {
-                    printf("cound not get device properties for device %d.\n",
-                           test.device);
+                if (cudaResult != cudaSuccess)
+                {
+                    printf("cound not get device properties for device %d.\n", test.device);
                     throw runtime_error("cudaGetDeviceProperties");
                 }
 
                 // Check requested size is valid
                 test.threadBlockSize = (unsigned int)atoi(value);
 
-                if (test.threadBlockSize < k_bsize_min ||
-                    test.threadBlockSize >
-                        static_cast<unsigned int>(
-                            deviceProperties.maxThreadsPerBlock)) {
-                    printf(
-                        "specified block size (%d) is invalid, must be between "
-                        "%d and %d for device %d.\n",
-                        test.threadBlockSize, k_bsize_min,
-                        deviceProperties.maxThreadsPerBlock, test.device);
+                if (test.threadBlockSize < k_bsize_min || test.threadBlockSize > static_cast<unsigned int>(deviceProperties.maxThreadsPerBlock))
+                {
+                    printf("specified block size (%d) is invalid, must be between %d and %d for device %d.\n", test.threadBlockSize, k_bsize_min, deviceProperties.maxThreadsPerBlock, test.device);
                     throw invalid_argument("block-size");
                 }
 
-                if (test.threadBlockSize & test.threadBlockSize - 1) {
-                    printf(
-                        "specified block size (%d) is invalid, must be a power "
-                        "of two (see reduction function).\n",
-                        test.threadBlockSize);
+                if (test.threadBlockSize & test.threadBlockSize-1)
+                {
+                    printf("specified block size (%d) is invalid, must be a power of two (see reduction function).\n", test.threadBlockSize);
                     throw invalid_argument("block-size");
                 }
-            } else {
+            }
+            else
+            {
                 test.threadBlockSize = k_bsize_def;
             }
         }
         // Execute
         test();
-    } catch (invalid_argument &e) {
+    }
+    catch (invalid_argument &e)
+    {
         printf("invalid command line argument (%s)\n", e.what());
         exit(EXIT_FAILURE);
-    } catch (runtime_error &e) {
+    }
+    catch (runtime_error &e)
+    {
         printf("runtime error (%s)\n", e.what());
         exit(EXIT_FAILURE);
     }
 }
 
-void showHelp(int argc, const char **argv) {
+void showHelp(int argc, const char **argv)
+{
     using std::cout;
     using std::endl;
     using std::left;
     using std::setw;
 
-    if (argc > 0) {
+    if (argc > 0)
+    {
         cout << endl << argv[0] << endl;
     }
 
     cout << endl << "Syntax:" << endl;
     cout << left;
-    cout << "    " << setw(20) << "--device=<device>"
-         << "Specify device to use for execution" << endl;
-    cout << "    " << setw(20) << "--sims=<N>"
-         << "Specify number of Monte Carlo simulations" << endl;
-    cout << "    " << setw(20) << "--block-size=<N>"
-         << "Specify number of threads per block" << endl;
-    cout << "    " << setw(20) << "--precision=<P>"
-         << "Specify the precision (\"single\" or \"double\")" << endl;
+    cout << "    " << setw(20) << "--device=<device>" << "Specify device to use for execution" << endl;
+    cout << "    " << setw(20) << "--sims=<N>" << "Specify number of Monte Carlo simulations" << endl;
+    cout << "    " << setw(20) << "--block-size=<N>" << "Specify number of threads per block" << endl;
+    cout << "    " << setw(20) << "--precision=<P>" << "Specify the precision (\"single\" or \"double\")" << endl;
     cout << endl;
-    cout << "    " << setw(20) << "--noprompt"
-         << "Skip prompt before exit" << endl;
+    cout << "    " << setw(20) << "--noprompt" << "Skip prompt before exit" << endl;
     cout << endl;
 }

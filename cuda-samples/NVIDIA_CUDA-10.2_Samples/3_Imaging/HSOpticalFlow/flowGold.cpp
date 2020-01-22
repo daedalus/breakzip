@@ -13,8 +13,8 @@
  *
  */
 
-#include "flowGold.h"
 #include "common.h"
+#include "flowGold.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /// \brief host texture fetch
@@ -29,7 +29,8 @@
 /// \param[in]  y   y coord of the point to fetch value at
 /// \return fetched value
 ///////////////////////////////////////////////////////////////////////////////
-inline float Tex2D(const float *t, int w, int h, int s, float x, float y) {
+inline float Tex2D(const float *t, int w, int h, int s, float x, float y)
+{
     // integer parts in floating point format
     float intPartX, intPartY;
 
@@ -59,7 +60,8 @@ inline float Tex2D(const float *t, int w, int h, int s, float x, float y) {
 
     if (iy1 >= h) iy1 = h * 2 - iy1 - 1;
 
-    float res = t[ix0 + iy0 * s] * (1.0f - dx) * (1.0f - dy);
+    float
+    res  = t[ix0 + iy0 * s] * (1.0f - dx) * (1.0f - dy);
     res += t[ix1 + iy0 * s] * dx * (1.0f - dy);
     res += t[ix0 + iy1 * s] * (1.0f - dx) * dy;
     res += t[ix1 + iy1 * s] * dx * dy;
@@ -80,7 +82,8 @@ inline float Tex2D(const float *t, int w, int h, int s, float x, float y) {
 /// \param[in]  y   y coord of the point to fetch value at
 /// \return fetched value
 ///////////////////////////////////////////////////////////////////////////////
-inline float Tex2Di(const float *src, int w, int h, int s, int x, int y) {
+inline float Tex2Di(const float *src, int w, int h, int s, int x, int y)
+{
     if (x < 0) x = abs(x + 1);
 
     if (y < 0) y = abs(y + 1);
@@ -103,15 +106,19 @@ inline float Tex2Di(const float *src, int w, int h, int s, int x, int y) {
 /// \param[in]  newStride   image new stride
 /// \param[out] out         downscaled image data
 ///////////////////////////////////////////////////////////////////////////////
-static void Downscale(const float *src, int width, int height, int stride,
-                      int newWidth, int newHeight, int newStride, float *out) {
-    for (int i = 0; i < newHeight; ++i) {
-        for (int j = 0; j < newWidth; ++j) {
+static
+void Downscale(const float *src, int width, int height, int stride,
+               int newWidth, int newHeight, int newStride, float *out)
+{
+    for (int i = 0; i < newHeight; ++i)
+    {
+        for (int j = 0; j < newWidth; ++j)
+        {
             const int srcX = j * 2;
             const int srcY = i * 2;
             // average 4 neighbouring pixels
             float sum;
-            sum = Tex2Di(src, width, height, stride, srcX + 0, srcY + 0);
+            sum  = Tex2Di(src, width, height, stride, srcX + 0, srcY + 0);
             sum += Tex2Di(src, width, height, stride, srcX + 0, srcY + 1);
             sum += Tex2Di(src, width, height, stride, srcX + 1, srcY + 0);
             sum += Tex2Di(src, width, height, stride, srcX + 1, srcY + 1);
@@ -134,17 +141,19 @@ static void Downscale(const float *src, int width, int height, int stride,
 /// \param[in]  scale       value scale factor (multiplier)
 /// \param[out] out         upscaled field component
 ///////////////////////////////////////////////////////////////////////////////
-static void Upscale(const float *src, int width, int height, int stride,
-                    int newWidth, int newHeight, int newStride, float scale,
-                    float *out) {
-    for (int i = 0; i < newHeight; ++i) {
-        for (int j = 0; j < newWidth; ++j) {
+static
+void Upscale(const float *src, int width, int height, int stride,
+             int newWidth, int newHeight, int newStride, float scale, float *out)
+{
+    for (int i = 0; i < newHeight; ++i)
+    {
+        for (int j = 0; j < newWidth; ++j)
+        {
             // position within smaller image
             float x = ((float)j - 0.5f) * 0.5f;
             float y = ((float)i - 0.5f) * 0.5f;
 
-            out[j + i * newStride] =
-                Tex2D(src, width, height, stride, x, y) * scale;
+            out[j + i * newStride] = Tex2D(src, width, height, stride, x, y) * scale;
         }
     }
 }
@@ -165,10 +174,14 @@ static void Upscale(const float *src, int width, int height, int stride,
 /// \param[in]  v   vertical displacement
 /// \param[out] out warped image
 ///////////////////////////////////////////////////////////////////////////////
-static void WarpImage(const float *src, int w, int h, int s, const float *u,
-                      const float *v, float *out) {
-    for (int i = 0; i < h; ++i) {
-        for (int j = 0; j < w; ++j) {
+static
+void WarpImage(const float *src, int w, int h, int s,
+               const float *u, const float *v, float *out)
+{
+    for (int i = 0; i < h; ++i)
+    {
+        for (int j = 0; j < w; ++j)
+        {
             const int pos = j + i * s;
             // warped coords
             float x = (float)j + u[pos];
@@ -190,21 +203,26 @@ static void WarpImage(const float *src, int w, int h, int s, const float *u,
 /// \param[out] Iy  y derivative
 /// \param[out] Iz  temporal derivative
 ///////////////////////////////////////////////////////////////////////////////
-static void ComputeDerivatives(const float *I0, const float *I1, int w, int h,
-                               int s, float *Ix, float *Iy, float *Iz) {
-    for (int i = 0; i < h; ++i) {
-        for (int j = 0; j < w; ++j) {
+static
+void ComputeDerivatives(const float *I0, const float *I1,
+                        int w, int h, int s,
+                        float *Ix, float *Iy, float *Iz)
+{
+    for (int i = 0; i < h; ++i)
+    {
+        for (int j = 0; j < w; ++j)
+        {
             const int pos = j + i * s;
             float t0, t1;
             // derivative filter is (1, -8, 0, 8, -1)/12
             // x derivative
-            t0 = Tex2Di(I0, w, h, s, j - 2, i);
+            t0  = Tex2Di(I0, w, h, s, j - 2, i);
             t0 -= Tex2Di(I0, w, h, s, j - 1, i) * 8.0f;
             t0 += Tex2Di(I0, w, h, s, j + 1, i) * 8.0f;
             t0 -= Tex2Di(I0, w, h, s, j + 2, i);
             t0 /= 12.0f;
 
-            t1 = Tex2Di(I1, w, h, s, j - 2, i);
+            t1  = Tex2Di(I1, w, h, s, j - 2, i);
             t1 -= Tex2Di(I1, w, h, s, j - 1, i) * 8.0f;
             t1 += Tex2Di(I1, w, h, s, j + 1, i) * 8.0f;
             t1 -= Tex2Di(I1, w, h, s, j + 2, i);
@@ -217,13 +235,13 @@ static void ComputeDerivatives(const float *I0, const float *I1, int w, int h,
             Iz[pos] = I1[pos] - I0[pos];
 
             // y derivative
-            t0 = Tex2Di(I0, w, h, s, j, i - 2);
+            t0  = Tex2Di(I0, w, h, s, j, i - 2);
             t0 -= Tex2Di(I0, w, h, s, j, i - 1) * 8.0f;
             t0 += Tex2Di(I0, w, h, s, j, i + 1) * 8.0f;
             t0 -= Tex2Di(I0, w, h, s, j, i + 2);
             t0 /= 12.0f;
 
-            t1 = Tex2Di(I1, w, h, s, j, i - 2);
+            t1  = Tex2Di(I1, w, h, s, j, i - 2);
             t1 -= Tex2Di(I1, w, h, s, j, i - 1) * 8.0f;
             t1 += Tex2Di(I1, w, h, s, j, i + 1) * 8.0f;
             t1 -= Tex2Di(I1, w, h, s, j, i + 2);
@@ -250,11 +268,15 @@ static void ComputeDerivatives(const float *I0, const float *I1, int w, int h,
 /// \param[out] du1     new horizontal displacement approximation
 /// \param[out] dv1     new vertical displacement approximation
 ///////////////////////////////////////////////////////////////////////////////
-static void SolveForUpdate(const float *du0, const float *dv0, const float *Ix,
-                           const float *Iy, const float *Iz, int w, int h,
-                           int s, float alpha, float *du1, float *dv1) {
-    for (int i = 0; i < h; ++i) {
-        for (int j = 0; j < w; ++j) {
+static
+void SolveForUpdate(const float *du0, const float *dv0, const float *Ix,
+                    const float *Iy, const float *Iz, int w, int h, int s,
+                    float alpha, float *du1, float *dv1)
+{
+    for (int i = 0; i < h; ++i)
+    {
+        for (int j = 0; j < w; ++j)
+        {
             const int pos = j + i * s;
             int left, right, up, down;
 
@@ -282,8 +304,8 @@ static void SolveForUpdate(const float *du0, const float *dv0, const float *Ix,
             float sumU = (du0[left] + du0[right] + du0[up] + du0[down]) * 0.25f;
             float sumV = (dv0[left] + dv0[right] + dv0[up] + dv0[down]) * 0.25f;
 
-            float frac = (Ix[pos] * sumU + Iy[pos] * sumV + Iz[pos]) /
-                         (Ix[pos] * Ix[pos] + Iy[pos] * Iy[pos] + alpha);
+            float frac = (Ix[pos] * sumU + Iy[pos] * sumV + Iz[pos])
+                         / (Ix[pos] * Ix[pos] + Iy[pos] * Iy[pos] + alpha);
 
             du1[pos] = sumU - Ix[pos] * frac;
             dv1[pos] = sumV - Iy[pos] * frac;
@@ -307,9 +329,11 @@ static void SolveForUpdate(const float *du0, const float *dv0, const float *Ix,
 /// \param[out] u            horizontal displacement
 /// \param[out] v            vertical displacement
 ///////////////////////////////////////////////////////////////////////////////
-void ComputeFlowGold(const float *I0, const float *I1, int width, int height,
-                     int stride, float alpha, int nLevels, int nWarpIters,
-                     int nSolverIters, float *u, float *v) {
+void ComputeFlowGold(const float *I0, const float *I1,
+                     int width, int height, int stride,
+                     float alpha, int nLevels,
+                     int nWarpIters, int nSolverIters, float *u, float *v)
+{
     printf("Computing optical flow on CPU...\n");
 
     float *u0 = u;
@@ -318,22 +342,22 @@ void ComputeFlowGold(const float *I0, const float *I1, int width, int height,
     const float **pI0 = new const float *[nLevels];
     const float **pI1 = new const float *[nLevels];
 
-    int *pW = new int[nLevels];
-    int *pH = new int[nLevels];
-    int *pS = new int[nLevels];
+    int *pW = new int [nLevels];
+    int *pH = new int [nLevels];
+    int *pS = new int [nLevels];
 
     const int pixelCountAligned = height * stride;
 
-    float *tmp = new float[pixelCountAligned];
-    float *du0 = new float[pixelCountAligned];
-    float *dv0 = new float[pixelCountAligned];
-    float *du1 = new float[pixelCountAligned];
-    float *dv1 = new float[pixelCountAligned];
-    float *Ix = new float[pixelCountAligned];
-    float *Iy = new float[pixelCountAligned];
-    float *Iz = new float[pixelCountAligned];
-    float *nu = new float[pixelCountAligned];
-    float *nv = new float[pixelCountAligned];
+    float *tmp = new float [pixelCountAligned];
+    float *du0 = new float [pixelCountAligned];
+    float *dv0 = new float [pixelCountAligned];
+    float *du1 = new float [pixelCountAligned];
+    float *dv1 = new float [pixelCountAligned];
+    float *Ix  = new float [pixelCountAligned];
+    float *Iy  = new float [pixelCountAligned];
+    float *Iz  = new float [pixelCountAligned];
+    float *nu  = new float [pixelCountAligned];
+    float *nv  = new float [pixelCountAligned];
 
     // prepare pyramid
     int currentLevel = nLevels - 1;
@@ -344,12 +368,13 @@ void ComputeFlowGold(const float *I0, const float *I1, int width, int height,
     pH[currentLevel] = height;
     pS[currentLevel] = stride;
 
-    for (; currentLevel > 0; --currentLevel) {
+    for (; currentLevel > 0; --currentLevel)
+    {
         int nw = pW[currentLevel] / 2;
         int nh = pH[currentLevel] / 2;
         int ns = iAlignUp(nw);
-        pI0[currentLevel - 1] = new float[ns * nh];
-        pI1[currentLevel - 1] = new float[ns * nh];
+        pI0[currentLevel - 1] = new float [ns * nh];
+        pI1[currentLevel - 1] = new float [ns * nh];
 
         Downscale(pI0[currentLevel], pW[currentLevel], pH[currentLevel],
                   pS[currentLevel], nw, nh, ns, (float *)pI0[currentLevel - 1]);
@@ -367,8 +392,10 @@ void ComputeFlowGold(const float *I0, const float *I1, int width, int height,
     memset(v, 0, stride * height * sizeof(float));
 
     // compute flow
-    for (; currentLevel < nLevels; ++currentLevel) {
-        for (int warpIter = 0; warpIter < nWarpIters; ++warpIter) {
+    for (; currentLevel < nLevels; ++currentLevel)
+    {
+        for (int warpIter = 0; warpIter < nWarpIters; ++warpIter)
+        {
             memset(du0, 0, pixelCountAligned * sizeof(float));
             memset(dv0, 0, pixelCountAligned * sizeof(float));
 
@@ -383,43 +410,42 @@ void ComputeFlowGold(const float *I0, const float *I1, int width, int height,
             ComputeDerivatives(pI0[currentLevel], tmp, pW[currentLevel],
                                pH[currentLevel], pS[currentLevel], Ix, Iy, Iz);
 
-            for (int iter = 0; iter < nSolverIters; ++iter) {
-                SolveForUpdate(du0, dv0, Ix, Iy, Iz, pW[currentLevel],
-                               pH[currentLevel], pS[currentLevel], alpha, du1,
-                               dv1);
+            for (int iter = 0; iter < nSolverIters; ++iter)
+            {
+                SolveForUpdate(du0, dv0, Ix, Iy, Iz, pW[currentLevel], pH[currentLevel],
+                               pS[currentLevel], alpha, du1, dv1);
                 Swap(du0, du1);
                 Swap(dv0, dv1);
             }
 
             // update u, v
-            for (int i = 0; i < pH[currentLevel] * pS[currentLevel]; ++i) {
+            for (int i = 0; i < pH[currentLevel] * pS[currentLevel]; ++i)
+            {
                 u[i] += du0[i];
                 v[i] += dv0[i];
             }
-        }  // end for (int warpIter = 0; warpIter < nWarpIters; ++warpIter)
+        } // end for (int warpIter = 0; warpIter < nWarpIters; ++warpIter)
 
-        if (currentLevel != nLevels - 1) {
+        if (currentLevel != nLevels - 1)
+        {
             // prolongate solution
-            float scaleX =
-                (float)pW[currentLevel + 1] / (float)pW[currentLevel];
+            float scaleX = (float)pW[currentLevel + 1]/(float)pW[currentLevel];
 
             Upscale(u, pW[currentLevel], pH[currentLevel], pS[currentLevel],
-                    pW[currentLevel + 1], pH[currentLevel + 1],
-                    pS[currentLevel + 1], scaleX, nu);
+                    pW[currentLevel + 1], pH[currentLevel + 1], pS[currentLevel + 1], scaleX, nu);
 
-            float scaleY =
-                (float)pH[currentLevel + 1] / (float)pH[currentLevel];
+            float scaleY = (float)pH[currentLevel + 1]/(float)pH[currentLevel];
 
             Upscale(v, pW[currentLevel], pH[currentLevel], pS[currentLevel],
-                    pW[currentLevel + 1], pH[currentLevel + 1],
-                    pS[currentLevel + 1], scaleY, nv);
+                    pW[currentLevel + 1], pH[currentLevel + 1], pS[currentLevel + 1], scaleY, nv);
 
             Swap(u, nu);
             Swap(v, nv);
         }
-    }  // end for (; currentLevel < nLevels; ++currentLevel)
+    } // end for (; currentLevel < nLevels; ++currentLevel)
 
-    if (u != u0) {
+    if (u != u0)
+    {
         // solution is not in the specified array
         // copy
         memcpy(u0, u, pixelCountAligned * sizeof(float));
@@ -431,24 +457,25 @@ void ComputeFlowGold(const float *I0, const float *I1, int width, int height,
     // cleanup
     // last level is not being freed here
     // because it refers to input images
-    for (int i = 0; i < nLevels - 1; ++i) {
-        delete[] pI0[i];
-        delete[] pI1[i];
+    for (int i = 0; i < nLevels - 1; ++i)
+    {
+        delete [] pI0[i];
+        delete [] pI1[i];
     }
 
-    delete[] pI0;
-    delete[] pI1;
-    delete[] pW;
-    delete[] pH;
-    delete[] pS;
-    delete[] tmp;
-    delete[] du0;
-    delete[] dv0;
-    delete[] du1;
-    delete[] dv1;
-    delete[] Ix;
-    delete[] Iy;
-    delete[] Iz;
-    delete[] nu;
-    delete[] nv;
+    delete [] pI0;
+    delete [] pI1;
+    delete [] pW;
+    delete [] pH;
+    delete [] pS;
+    delete [] tmp;
+    delete [] du0;
+    delete [] dv0;
+    delete [] du1;
+    delete [] dv1;
+    delete [] Ix;
+    delete [] Iy;
+    delete [] Iz;
+    delete [] nu;
+    delete [] nv;
 }
