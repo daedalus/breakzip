@@ -8,6 +8,7 @@
 
 DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
 DEFINE_string(target, "target.zip", "Name of the target ZIP file.");
+DEFINE_string(output, "target.out1", "Name of the stage1 output file.");
 DEFINE_int32(srand_seed, 0x57700d32, "The srand seed that the file was created with.");
 
 namespace mitm_stage1 {
@@ -92,8 +93,9 @@ namespace mitm_stage1 {
     }
 
     const char *usage_message = R"usage(
-    Usage: mitm_stage1 <FILE> 
-    Runs the stage1 meet-in-the-middle attack on FILE.
+    Usage: mitm_stage1 [-target <ZIPFILE>] [-output <OUTFILE>]
+    Runs the stage1 meet-in-the-middle attack on ZIPFILE, writing the data to
+    OUTFILE.
     )usage";
 
 }; // namespace
@@ -115,8 +117,7 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    const char* output_filename = argv[non_flag];
-    FILE *output_file = fopen(output_filename, "wb");
+    FILE *output_file = fopen(FLAGS_output.c_str(), "wb");
     if (nullptr == output_file) {
         perror("Can't open output file");
         exit(1);
