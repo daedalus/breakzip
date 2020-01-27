@@ -3,8 +3,8 @@
 
 #include "breakzip.h"
 #include "breakzip_config.h"
-#include "mitm_common/crc32.h"
-#include "mitm_common/mitm_common.h"
+#include "crc32.h"
+#include "mitm_common.h"
 #include "mitm_stage1/mitm_stage1.h"
 #include "mitm_stage2.h"
 

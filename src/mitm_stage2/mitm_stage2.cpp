@@ -146,26 +146,25 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
     uint32_t cyf0l = cyf0 & 0xff;
     uint32_t cxf1l = cxf1 & 0xff;
     uint32_t cyf1l = cyf1 & 0xff;
-    uint32_t k21xf0 = crc32(c1.maybek20[0]);
     for (uint16_t s2xf0 = 0; s2xf0 < 0x100; ++s2xf0) {
         uint8_t s2yf0 = s2xf0 ^ info.file[0].x[2] ^ info.file[0].h[2];
         for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
             uint16_t pxf0(preimages[s2xf0][prefix]);
 
             vector<uint8_t> firsts(0);
-            second_half_step(pxf0 ^ cyf0p, s2yf0, firsts);
+            second_half_step(pxf0 ^ cyf0p, s2yf0, firsts, preimages);
             if (!firsts.size()) {
                 continue;
             }
             for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
                 vector<uint8_t> seconds(0);
-                second_half_step(pxf0 ^ cxf1p, s2xf1, seconds);
+                second_half_step(pxf0 ^ cxf1p, s2xf1, seconds, preimages);
                 if (!seconds.size()) {
                     continue;
                 }
                 vector<uint8_t> thirds(0);
                 uint8_t s2yf1 = s2xf1 ^ info.file[1].x[2] ^ info.file[0].h[2];
-                second_half_step(pxf0 ^ cyf1p, s2yf1, thirds);
+                second_half_step(pxf0 ^ cyf1p, s2yf1, thirds, preimages);
                 if (!thirds.size()) {
                     continue;
                 }
