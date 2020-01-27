@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "mitm_common/mitm_common.h"
+#include "mitm_common/crc32.h"
 #include "mitm_stage1/mitm_stage1.h"
-#include "mitm_stage1/crc32.h"
 #include "mitm_stage2.h"
 #include "breakzip.h"
 #include "breakzip_config.h"
@@ -20,7 +21,7 @@ namespace mitm_stage2 {
 
     const char *usage_message = R"usage(
     Usage: mitm_stage2 <FILE> <OUT>
-    Runs the stage2 attack using the zip file data in FILE, the shard specified
+    Runs the stage2 attack using the stage1 data in FILE, the shard specified
     by -shard, and writes output to the filename specified by -outfile with the
     shard number appended.
     )usage";
