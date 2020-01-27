@@ -1,6 +1,8 @@
 #include "mitm_common.h"
 #include "crc32.h"
 
+#include <stdlib.h>
+
 void build_preimages(vector<vector<uint16_t>>& preimages) {
   // Build preimage lookup table
   for (uint16_t k20 = 0; k20 < 0x4000; ++k20) {

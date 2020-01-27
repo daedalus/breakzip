@@ -4,7 +4,7 @@ add_subdirectory(test)
 add_subdirectory(mitm_stage1)
 add_subdirectory(mitm_stage2)
 configure_file(breakzip_config.h.in breakzip_config.h)
-add_library(breakzipcore breakzip.cpp stages.cpp)
+add_library(breakzipcore breakzip.cpp stages.cpp crc32.cpp mitm_common.cpp)
 
 add_executable(breakzip main.cpp)
 target_link_libraries(breakzip breakzipcore ${LIBS})
