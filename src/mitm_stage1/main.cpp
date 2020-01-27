@@ -72,16 +72,23 @@ namespace mitm_stage1 {
         fputc((w >> 16) & 0xff, f);
         fputc((w >> 24) & 0xff, f);
     }
+    
+    void write_3bytes(FILE *f, uint32_t w) {
+        fputc(w & 0xff, f);
+        fputc((w >> 8) & 0xff, f);
+        fputc((w >> 16) & 0xff, f);
+    }
 
     void write_candidate(FILE *f, stage1_candidate &c) {
         uint8_t size = (uint8_t)(c.maybek20.size());
         fputc(size, f);
         for (uint16_t i = 0; i < size; ++i) {
-            write_word(f, c.maybek20[i]);
+            write_3bytes(f, c.maybek20[i]);
         }
         fputc(c.chunk2, f);
         fputc(c.chunk3, f);
         fputc(c.cb1, f);
+        write_word(c.m1, f);
     }
 
     void write_candidates(FILE *f, vector<stage1_candidate>& candidates) {
@@ -167,7 +174,7 @@ int main(int argc, char* argv[]) {
 
         build_preimages(preimages);
         mitm_stage1a(archive, table);
-        mitm_stage1b(archive, table, candidates, output_file, preimages);
+        mitm_stage1b(archive, table, candidates, preimages);
         write_candidates(output_file, candidates);
     }
 

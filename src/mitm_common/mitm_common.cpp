@@ -1,0 +1,167 @@
+#include "mitm_common.h"
+#include "crc32.h"
+
+void build_preimages(vector<vector<uint16_t>>& preimages) {
+  // Build preimage lookup table
+  for (uint16_t k20 = 0; k20 < 0x4000; ++k20) {
+    uint16_t temp = (k20 << 2) | 3;
+    uint8_t s = ((temp * (temp ^ 1)) >> 8) & 0xff;
+    preimages[s].push_back(k20);
+  }
+}
+
+correct_guess correct(archive_info info) {
+  correct_guess result;
+
+  const uint32_t k00 = info.key[0];
+  const uint32_t k10 = info.key[1];
+  const uint32_t k20 = info.key[2];
+  const uint32_t crc32k00 = crc32(k00, 0);
+
+  result.chunk2 = (crc32k00 >> 0) & 0xff;
+  result.chunk6 = (crc32k00 >> 8) & 0xff;
+  result.chunk8 = (crc32k00 >> 16) & 0xff;
+  result.chunk10 = (crc32k00 >> 24) & 0xff;
+
+  result.chunk3 = (k10 * CRYPTCONST) >> 24;
+  result.chunk7 = (k10 * CRYPTCONST_POW2) >> 24;
+  result.chunk9 = (k10 * CRYPTCONST_POW3) >> 24;
+  result.chunk11 = (k10 * CRYPTCONST_POW4) >> 24;
+  
+  result.chunk1 = k20 & 0xffff;
+  result.chunk4 = (k20 >> 16) & 0xff;
+  result.chunk5 = k20 >> 24;
+
+  for (int f = 0; f < 2; ++f) {
+    for (int s = 0; s < 4; ++s) {
+      result.sx[f][s] = info.file[f].x[s] ^ info.file[f].y[s];
+    }
+  }
+
+  uint16_t bits = 0;
+  for (int f = 0; f < 2; ++f) {
+    for (int xy = 0; xy < 2; ++xy) {
+      const uint8_t *bytes = xy ? info.file[f].y : info.file[f].x;
+      const uint8_t *encrypted = xy ? info.file[f].h : info.file[f].y;
+      uint32_t bound = 0;
+      uint32_t k0n = k00;
+      uint32_t k1cn = k10;
+      uint32_t k1 = k10;
+      uint32_t k2n = k20;
+      uint8_t sn = get_s0(k20 & 0xffff);
+      // stage_1 should be thought of as "stage - 1"
+      for (int stage_1 = 0; stage_1 < 4; ++stage_1) {
+        fprintf(stderr, "f-xy-st: %x-%x-%x\n", f, xy, stage_1 + 1);
+        fprintf(stderr, "  old k0: %08x\n", k0n);
+        fprintf(stderr, "  crc32tab[lsb k0]: %02x\n", crc32tab[k0n & 0xff]);
+        fprintf(stderr, "  x: %02x, crc32tab[x]: %08x\n", bytes[stage_1],
+                crc32tab[bytes[stage_1]]);
+        k0n = crc32(k0n, bytes[stage_1]);
+        fprintf(stderr, "  new k0: %08x\n", k0n);
+        uint8_t lsbk0n = k0n & 0xff;
+        fprintf(stderr, "  old k1: %08x\n", k1);
+        fprintf(stderr, "  old bound: %08x\n", bound);
+        bound = (bound + lsbk0n) * CRYPTCONST + 1;
+        fprintf(stderr, "  new bound: %08x\n", bound);
+        fprintf(stderr, "  old k1cn: %08x\n", k1cn);
+        k1cn = k1cn * CRYPTCONST;
+        fprintf(stderr, "  new k1cn: %08x\n", k1cn);
+        k1 = (k1 + lsbk0n) * CRYPTCONST + 1;
+        fprintf(stderr, "  new k1: %08x\n", k1);
+        if (k1 != k1cn + bound) {
+          fprintf(stderr, "k1 mismatch!!\n");
+        }
+        uint8_t carry_bit =
+            ((k1cn & 0xffffff) + (bound & 0xffffff)) > 0x01000000;
+        fprintf(stderr, "  carry: %08x\n", carry_bit);
+        bits |= carry_bit << (((3 - stage_1) * 4) + f * 2 + xy);
+        fprintf(stderr, "  old k2: %08x\n", k2n);
+        k2n = crc32(k2n, k1 >> 24);
+        fprintf(stderr, "  new k2: %08x\n", k2n);
+        if ((bytes[stage_1] ^ sn) != encrypted[stage_1]) {
+          fprintf(
+              stderr,
+              "Something's wrong: f=%d, xy=%d, stage_1=%d, bytes[stage_1]=%02x,"
+              "\n\tsn=%02x, encrypted[stage_1]=%02x, bytes[stage_1]^sn=%02x\n",
+              f, xy, stage_1, bytes[stage_1], sn, encrypted[stage_1],
+              bytes[stage_1] ^ sn);
+          abort();
+        }
+        sn = get_s0(k2n & 0xffff);
+        fprintf(stderr, "  s: %02x\n", sn);
+      }
+    }
+  }
+  result.carries = bits;
+  return result;  
+}
+
+uint8_t get_s0(uint16_t k20) {
+  uint16_t temp = k20 | 3;
+  return (temp * (temp ^ 1)) >> 8;
+}
+
+// Computes one step of the first half of the zip encryption
+// Supposing we're on stage n+1,
+// x is plaintext[n]
+// Set the crc_flag to false for n = 0 and true for n > 0
+// k1msb is msb(k10 * CRYPTCONST_POW<n+1>)
+// carry is the carry bit for this file and x/y pass
+// k0 is crc32(k00, 0) when n=0; gets updated to k0n
+// extra is 0 when n=0; gets updated
+// upper is the current upper bound on low24(k10*CRYPTCONST_POW<n+1>); may get updated
+// lower is the current lower bound on low24(k10*CRYPTCONST_POW<n+1>); may get updated
+uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
+                        uint32_t &k0, uint32_t &extra, uint32_t &upper,
+                        uint32_t &lower) {
+  if (crc_flag) {
+    k0 = crc32(k0, x);
+  } else {
+    k0 ^= crc32tab[x];
+  }
+  extra = (extra + (k0 & 0xff)) * CRYPTCONST + 1;
+  uint32_t bound = 0x01000000 - (extra & 0x00ffffff);
+
+  if (carry) {
+    lower = bound > lower ? bound : lower;
+  } else {
+    upper = bound < upper ? bound : upper;
+  }
+
+  return k1msb + (extra >> 24) + carry;
+}
+
+// Finds idxs such that crc32tab[idx] is the xor of offset and some prefix of
+// stream_byte. We expect one on average.
+void second_half_step(uint16_t offset, uint8_t stream_byte,
+                      vector<uint8_t> &idxs, vector<vector<uint16_t>>& preimages) {
+  for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
+    uint16_t preimage = preimages[stream_byte][prefix];
+    uint16_t xored = offset ^ preimage;
+    // For these 8 bits there's one crc32tab entry that matches them
+    uint8_t inv = (xored >> 1) & 0xff;
+    uint8_t idx = crcinvtab[inv];
+    // Check that the other 6 bits match
+    // We expect one prefix on average to work.
+    uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
+    if (match == xored) {
+      idxs.push_back(idx);
+    }
+  }
+}
+
+// Creates a 24-bit key from four 8-bit MSB's by xoring the first
+// with the other three
+uint32_t toMapKey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
+                  uint8_t msbyf1) {
+  return (msbxf0 ^ msbyf0) | (uint32_t(msbxf0 ^ msbxf1) << 8) |
+         (uint32_t(msbxf0 ^ msbyf1) << 16);
+}
+
+void fromMapKey(uint8_t msbxf0, uint32_t mapkey, uint8_t &msbyf0,
+                uint8_t &msbxf1, uint8_t &msbyf1) {
+  msbyf0 = msbxf0 ^ (mapkey & 0xff);
+  msbxf1 = msbxf0 ^ ((mapkey >> 8) & 0xff);
+  msbyf1 = msbxf0 ^ ((mapkey >> 16) & 0xff);
+}
+
