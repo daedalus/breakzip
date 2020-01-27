@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <vector>
 
+#include "crc32.h"
+#include "mitm_common.h"
+#include "mitm_stage1/mitm_stage1.h"
+
 using namespace std;
 
 namespace mitm_stage2 {
@@ -40,6 +44,7 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
                   vector<vector<stage2a>>& table,
                   vector<stage2_candidate>& candidates,
                   vector<vector<uint16_t>>& preimages,
-                  correct_guess* c = nullptr);
+                  correct_guess* c = nullptr,
+                  bool sample = false);
 
 #endif

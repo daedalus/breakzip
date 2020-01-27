@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "mitm_common/crc32.h"
-#include "mitm_common/mitm_common.h"
-#include "mitm_stage1/mitm_stage1.h"
 #include "mitm_stage2.h"
 
 // TODO: reverse a and b to have a smaller table
@@ -96,15 +93,15 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 stage2a s2a;
                 s2a.chunk6 = chunk6;
                 s2a.chunk7 = chunk7;
-                s2a.cb = cb2;
+                s2a.cb2 = cb2;
                 s2a.msbk12xf0 = msbxf0;
                 if (s2a.chunk6 == c->chunk6 && s2a.chunk7 == c->chunk7 &&
-                    s2a.cb == ((c->carries >> 8) & 0xf)) {
+                    s2a.cb2 == ((c->carries >> 8) & 0xf)) {
                     fprintf(stderr,
                             "Stage 2a correct. mk = %06x, msbk12xf0 = %02x\n",
                             mk, msbxf0);
                 }
-                table2[mk].push_back(s2a);
+                table[mk].push_back(s2a);
             }
         }
     }
@@ -113,10 +110,11 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
 void mitm_stage2b(archive_info& info, stage1_candidate& c1,
                   vector<vector<stage2a>>& table,
                   vector<stage2_candidate>& candidates,
-                  vector<vector<uint16_t>>& preimages, correct_guess* c) {
+                  vector<vector<uint16_t>>& preimages, correct_guess* c,
+                  bool sample) {
     // Second half of MITM for stage 2
     fprintf(stderr, "Stage 2b\n");
-    if (sample == 0) {
+    if (sample) {
         fprintf(stderr, "Correct stage1 candidate\n");
     }
 
@@ -148,8 +146,8 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
     uint32_t cyf0l = cyf0 & 0xff;
     uint32_t cxf1l = cxf1 & 0xff;
     uint32_t cyf1l = cyf1 & 0xff;
-    uint32_t k21xf0 =
-        crc32(c1.maybek20[0]) for (uint16_t s2xf0 = 0; s2xf0 < 0x100; ++s2xf0) {
+    uint32_t k21xf0 = crc32(c1.maybek20[0]);
+    for (uint16_t s2xf0 = 0; s2xf0 < 0x100; ++s2xf0) {
         uint8_t s2yf0 = s2xf0 ^ info.file[0].x[2] ^ info.file[0].h[2];
         for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
             uint16_t pxf0(preimages[s2xf0][prefix]);
@@ -175,16 +173,16 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
                     for (auto s : seconds) {
                         for (auto t : thirds) {
                             uint32_t mapkey((f ^ cyf0l) | ((s ^ cxf1l) << 8) |
-                                            ((t ^ cyf1l) << 16));
-                            for (auto c2 : table2[mapkey]) {
+                                    ((t ^ cyf1l) << 16));
+                            for (auto c2 : table[mapkey]) {
                                 stage2_candidate g;
 
                                 for (auto k20 : c1.maybek20) {
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
                                     if ((pxf0 & 0x3f) ==
-                                        ((crc32(k21xf0, c2.msbk12xf0 >> 24) >>
-                                          2) &
-                                         0x3f)) {
+                                            ((crc32(k21xf0, c2.msbk12xf0 >> 24) >>
+                                              2) &
+                                             0x3f)) {
                                         g.maybek20.push_back(k20);
                                     }
                                 }
@@ -197,13 +195,14 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
                                 g.m1 = c1.m1;
                                 g.m2 = mapkey ^ (c2.msbk12xf0 * 0x01010101);
 
-                if (g.chunk2 == c->chunk2 && g.chunk3 == c->chunk3 &&
-                    g.cb == (c->carries >> 8) && g.chunk6 == c->chunk6 &&
-                    g.chunk7 == c->chunk7 {
+                                if (g.chunk2 == c->chunk2 && g.chunk3 == c->chunk3 &&
+                                        g.cb == (c->carries >> 8) && g.chunk6 == c->chunk6 &&
+                                        g.chunk7 == c->chunk7) {
                                     fprintf(stderr,
                                             "Pushed back correct candidate!\n");
-                }
-                candidates.push_back(g);
+                                }
+
+                                candidates.push_back(g);
                             }
                         }
                     }
