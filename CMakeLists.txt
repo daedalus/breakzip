@@ -4,7 +4,7 @@ set (breakzip_VERSION_MAJOR 1)
 set (breakzip_VERSION_MINOR 0)
 set (breakzip_VERSION_PATCH 0)
 
-set (WITH_TCMALLOC 0)
+set (WITH_TCMALLOC 1)
 
 include(CTest)
 
