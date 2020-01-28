@@ -2,11 +2,12 @@ Welcome to breakzip! This is a collection of open source utilities for working
 with Zip files and cracking (hopefully) their encryption key. This project is
 written and maintained by:
 
-*  Mike Stay <stay@pyrofex.net>
-*  Nash Foster <leaf@pyrofex.net>
+*  Mike Stay (<stay@pyrofex.net>)
+*  Nash Foster (<leaf@pyrofex.net>)
 
-The project was generously funded by Sergey Tolmachev Tolsi, to whom we owe
-many thanks for the opportunity to work on this project.
+The project was generously funded by Sergey Tolmachev Tolsi
+(<Tolsi.ru@gmail.com>), to whom we owe many thanks for the opportunity to work
+on this project.
 
 
 # BUILD
