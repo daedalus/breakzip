@@ -2,8 +2,8 @@ Welcome to breakzip! This is a collection of open source utilities for working
 with Zip files and cracking (hopefully) their encryption key. This project is
 written and maintained by:
 
-    Mike Stay <stay@pyrofex.net>
-    Nash Foster <leaf@pyrofex.net>
+*  Mike Stay <stay@pyrofex.net>
+*  Nash Foster <leaf@pyrofex.net>
 
 The project was generously funded by Sergey Tolmachev Tolsi, to whom we owe
 many thanks for the opportunity to work on this project.
@@ -18,24 +18,24 @@ may vary.
 
 ## Dependencies
 
-    * `autotools-dev`
-    * `automake`
-    * `cmake` >= 13.0
-    * `build-essential`
-    * `debian-keyring`
-    * `doxygen`
-    * `g++-6-multilib`
-    * `g++-multilib`
-    * NVIDIA's CUDA Toolkit v10.2 or later
-    * `libgflags-dev`
-    * `libgoogle-perftools-dev` (for `tcmalloc`)
-    * `libstdc++6-6-dbg:amd64`
-    * `pkg-config`
-    * `texinfo`
+* `autotools-dev`
+* `automake`
+* `cmake` >= 13.0
+* `build-essential`
+* `debian-keyring`
+* `doxygen`
+* `g++-6-multilib`
+* `g++-multilib`
+* NVIDIA's CUDA Toolkit v10.2 or later
+* `libgflags-dev`
+* `libgoogle-perftools-dev` (for `tcmalloc`)
+* `libstdc++6-6-dbg:amd64`
+* `pkg-config`
+* `texinfo`
 
 ## Anti-dependencies
 
-    * `libsubunit`
+* `libsubunit`
 
 We don't know why `libsubunit` causes compile errors, but it does. Remove it from
 your system before proceeding. If you figure out why it's breaking and can fix it
