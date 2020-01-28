@@ -103,11 +103,6 @@ int main(int argc, char *argv[]) {
     SetUsageMessage(usage_message);
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
 
-    if (non_flag >= argc) {
-        ShowUsageWithFlags(argv[0]);
-        exit(-1);
-    }
-
     FILE *output_file = fopen(FLAGS_output.c_str(), "wb");
     if (nullptr == output_file) {
         perror("Can't open output file");
