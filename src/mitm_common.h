@@ -13,6 +13,8 @@ using namespace std;
 #define CRYPTCONST_POW4 0x1201d271
 #define CRYPTCONST_INV 0xd94fa8cd
 
+namespace mitm {
+
 typedef struct file_info {
   uint8_t x[10];
   uint8_t h[10];
@@ -25,6 +27,8 @@ typedef struct archive_info {
   // Only for tests
   uint32_t key[3];
   } archive_info;
+
+extern archive_info test[2];
 
 typedef struct correct_guess {
   uint16_t chunk1; // Bits 15..0  of key20
@@ -60,4 +64,5 @@ uint32_t toMapKey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
 void fromMapKey(uint8_t msbxf0, uint32_t mapkey, uint8_t &msbyf0,
                 uint8_t &msbxf1, uint8_t &msbyf1);
 
+}; // namespace
 #endif
