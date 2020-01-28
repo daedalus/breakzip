@@ -1,4 +1,4 @@
-Welcome to breazip! This is a collection of open source utilities for working
+Welcome to breakzip! This is a collection of open source utilities for working
 with Zip files and cracking (hopefully) their encryption key. This project is
 written and maintained by:
 
@@ -9,14 +9,14 @@ The project was generously funded by Sergey Tolmachev Tolsi, to whom we owe
 many thanks for the opportunity to work on this project.
 
 
--- BUILD
+# BUILD
 
 This project was developed on Ubuntu 19, but is known to build on Unbuntu 18.
 Patches to support other distribution version will be accepted, but the authors
 do not intend to provide explicit support for general portability. Your mileage
 may vary.
 
---- Dependencies:
+## Dependencies
 
     * `autotools-dev`
     * `automake`
@@ -33,7 +33,7 @@ may vary.
     * `pkg-config`
     * `texinfo`
 
---- Anti-dependencies
+## Anti-dependencies
 
     * `libsubunit`
 
@@ -41,7 +41,7 @@ We don't know why `libsubunit` causes compile errors, but it does. Remove it fro
 your system before proceeding. If you figure out why it's breaking and can fix it
 for us, that would be nice.
 
---- Third-party
+## Third-party
 
 Some dependencies are distributed as source code in our `third-party` directory.
 On Ubuntu machines, you should not have to build any dependencies from source.
@@ -51,7 +51,7 @@ Everything that's not distributed as a working Ubuntu package is included in
 This project is not tested using `clang`, but it may work. You're on your own,
 but if you make it work, send us a merge request.
 
--- Building the Utilities
+## Building the Project
 
 Once your system has the needed dependencies, you can build the project by simply
 running the following command in the root directory.
