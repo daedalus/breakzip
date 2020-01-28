@@ -64,7 +64,7 @@ void write_3bytes(FILE *f, uint32_t w) {
 }
 
 void write_candidate(FILE *f, stage1_candidate &c) {
-    uint8_t size = (uint8_t)(c.maybek20.size());
+    const uint8_t size = c.k20_count;
     fputc(size, f);
     for (uint16_t i = 0; i < size; ++i) {
         write_3bytes(f, c.maybek20[i]);

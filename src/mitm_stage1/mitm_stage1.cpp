@@ -204,15 +204,25 @@ void mitm_stage1b(archive_info& info, vector<vector<stage1a>>& table,
                                                   crc32tab[maybek20 & 0xff]) >>
                                                  8) &
                                                 0xff;
+
+                                            if (g.k20_count >= g.MAX_K20S) {
+                                                fprintf(stderr, "Not enough space for "
+                                                    "k20 candidate in stage1_candidate.\n");
+                                                abort();
+                                            }
+
                                             // BCD = (B << 16) | CD
-                                            g.maybek20.push_back((b << 16) |
-                                                                 maybek20);
+                                            g.maybek20[g.k20_count] =
+                                                (b << 16) | maybek20;
+                                            g.k20_count += 1;
                                         }
                                     }
                                 }
-                                if (0 == g.maybek20.size()) {
+
+                                if (0 == g.k20_count) {
                                     continue;
                                 }
+
                                 candidates.push_back(g);
 
                                 if (nullptr != c && s1xf0 == c->sx[0][1] &&
