@@ -83,3 +83,8 @@ dependencies on each build, you can accomplish this way:
 bash$ TPBUILD=no ./build.sh
 ```
 
+Our build is not very large and only takes a few seconds on our systems, but if
+for some reason you feel it needs to be faster you can increase the `make`
+parallelism by editing `build.sh`. Change the line from `make -j 1` and
+increase the number to however many cores you have.
+
