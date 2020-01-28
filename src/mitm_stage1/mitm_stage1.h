@@ -40,7 +40,7 @@ typedef struct stage1_candidate {
 void write_word(FILE *f, uint32_t w);
 void write_3bytes(FILE *f, uint32_t w);
 void write_candidate(FILE *f, stage1_candidate &c);
-void write_candidates(FILE *f, vector<stage1_candidate> &candidates);
+void write_candidates(vector<stage1_candidate> &candidates);
 
 void mitm_stage1a(mitm::archive_info& info, std::vector<std::vector<stage1a>>& table,
                   mitm::correct_guess* c = nullptr);

@@ -8,7 +8,6 @@
 
 DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
 DEFINE_string(target, "target.zip", "Name of the target ZIP file.");
-DEFINE_string(output, "target.out1", "Name of the stage1 output file.");
 DEFINE_int32(srand_seed, 0x57700d32,
              "The srand seed that the file was created with.");
 
@@ -32,12 +31,6 @@ int main(int argc, char *argv[]) {
     SetUsageMessage(usage_message);
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
 
-    FILE *output_file = fopen(FLAGS_output.c_str(), "wb");
-    if (nullptr == output_file) {
-        perror("Can't open output file");
-        exit(1);
-    }
-
     if (FLAGS_runtests) {
         correct_guess guess[2] = {
             correct(mitm::test[0]), correct(mitm::test[1])
@@ -49,7 +42,7 @@ int main(int argc, char *argv[]) {
         build_preimages(preimages);
         mitm_stage1a(test[0], table, &(guess[0]));
         mitm_stage1b(test[0], table, candidates, preimages, &(guess[0]));
-        write_candidates(output_file, candidates);
+        //write_candidates(candidates);
     } else {
         archive_info archive;
 
@@ -85,9 +78,8 @@ int main(int argc, char *argv[]) {
         build_preimages(preimages);
         mitm_stage1a(archive, table);
         mitm_stage1b(archive, table, candidates, preimages);
-        write_candidates(output_file, candidates);
+        write_candidates(candidates);
     }
 
-    fclose(output_file);
     return 0;
 }

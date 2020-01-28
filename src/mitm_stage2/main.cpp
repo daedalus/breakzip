@@ -9,7 +9,7 @@
 #include "mitm_stage2.h"
 
 DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
-DEFINE_int32(shard, 0, "The shard to run on.");
+DEFINE_string(target, "target.out.0", "The filename of the stage1 shard to run on.");
 DEFINE_string(outfile, "stage2.out", "The output file prefix to use.");
 DEFINE_int32(srand_seed, 0x57700d32,
              "The srand seed that the file was created with.");
@@ -40,19 +40,29 @@ int main(int argc, char* argv[]) {
     SetUsageMessage(usage_message);
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
 
-    if (non_flag >= argc) {
-        ShowUsageWithFlags(argv[0]);
-        exit(-1);
-    }
-
     const char* input_filename = argv[non_flag];
 
     if (FLAGS_runtests) {
-        /**
-         * TODO(stay): Put test implementation here.
-         */
-        printf("Not implemented yet.\n");
-        abort();
+        correct_guess guess[2] = {
+            correct(mitm::test[0]), correct(mitm::test[1])
+        };
+
+        vector<stage1_candidate> candidates;
+        vector<vector<stage2a>> table(0x1000000);
+
+        // TODO(leaf): find the correct guess in the input file.
+        // candidates.push_back(guess[0]);
+
+        for (auto candidate: candidates) {
+            mitm_stage2a(test[0], candidate, table, guess);
+        }
+
+        if (1 != table.size()) {
+            fprintf(stderr, "Error: correct guess did not end up "
+                "in output table.\n");
+            exit(-1);
+        }
+
     } else {
         /**
          * TODO(leaf): Put real implementation here.

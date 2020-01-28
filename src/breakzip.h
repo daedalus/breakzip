@@ -22,6 +22,7 @@
 #include <gflags/gflags.h>
 
 #include "types.h"
+#include "crc32.h"
 
 
 // Avoid structure padding

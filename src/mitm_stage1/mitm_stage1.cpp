@@ -1,8 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "crc32.h"
+#include "breakzip.h"
 #include "mitm_stage1.h"
+
+DEFINE_string(output, "stage1.out",
+    "Output file basename. Shard files will be named"
+    "BASENAME.X for shard number X.");
+DEFINE_int32(shard_size, 10000, "Size of an output shard.");
 
 using namespace std;
 using namespace mitm;
@@ -34,11 +39,48 @@ void write_candidate(FILE *f, stage1_candidate &c) {
     write_word(f, c.m1);
 }
 
-void write_candidates(FILE *f, vector<stage1_candidate> &candidates) {
-    uint32_t size = (uint32_t)candidates.size();
-    write_word(f, size);
-    for (uint32_t i = 0; i < size; ++i) {
-        write_candidate(f, candidates[i]);
+void write_candidates(vector<stage1_candidate> &candidates) {
+    size_t filename_len = FLAGS_output.length() + 16;
+    char *output_filename = (char*)::calloc(filename_len, sizeof(char));
+
+    auto num_shards = (candidates.size() / FLAGS_shard_size) + 1;
+    auto candidates_remaining = candidates.size();
+
+    printf("There are %ld candidates.\n"
+            "Shards are %d candidates long.\n"
+            "%ld shards expected.\n", candidates.size(), FLAGS_shard_size,
+            num_shards);
+
+    unsigned long int shard_index = 0;
+    while (0 < candidates_remaining) {
+        snprintf(output_filename, filename_len, "%s.%ld", FLAGS_output.c_str(), 
+            shard_index);
+        FILE *output_file = fopen(output_filename, "wb");
+        if (nullptr == output_file) {
+            fprintf(stderr, "Can't open output file %s.\n", output_filename);
+            perror("Fatal error");
+            exit(1);
+        }
+
+        uint32_t size = 0;
+        if (candidates_remaining == 0) {
+            break;
+        } else if (candidates_remaining >= FLAGS_shard_size) {
+            size = FLAGS_shard_size;
+        } else {
+            size = candidates_remaining;
+        }
+
+        write_word(output_file, size);
+        for (uint32_t i = 0; i < size; ++i) {
+            write_candidate(output_file, candidates[i]);
+        }
+
+        candidates_remaining -= size;
+        fclose(output_file);
+        printf("Finished shard %s, %ld candidates remain\n", output_filename,
+            candidates_remaining);
+        shard_index += 1; 
     }
 }
 
