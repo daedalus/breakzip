@@ -8,7 +8,7 @@
 
 #include "mitm_common.h"
 
-using namespace std;
+namespace mitm_stage1 {
 
 typedef struct stage1a {
     uint8_t s0;
@@ -37,12 +37,18 @@ typedef struct stage1_candidate {
     };
 } stage1_candidate;
 
-void mitm_stage1a(archive_info& info, vector<vector<stage1a>>& table,
-                  correct_guess* c = nullptr);
+void write_word(FILE *f, uint32_t w);
+void write_3bytes(FILE *f, uint32_t w);
+void write_candidate(FILE *f, stage1_candidate &c);
+void write_candidates(FILE *f, vector<stage1_candidate> &candidates);
 
-void mitm_stage1b(archive_info& info, vector<vector<stage1a>>& table,
-                  vector<stage1_candidate>& candidates,
-                  vector<vector<uint16_t>>& preimages,
-                  correct_guess* c = nullptr);
+void mitm_stage1a(mitm::archive_info& info, std::vector<std::vector<stage1a>>& table,
+                  mitm::correct_guess* c = nullptr);
 
+void mitm_stage1b(mitm::archive_info& info, std::vector<std::vector<stage1a>>& table,
+                  std::vector<stage1_candidate>& candidates,
+                  std::vector<vector<uint16_t>>& preimages,
+                  mitm::correct_guess* c = nullptr);
+
+}; // namespace
 #endif

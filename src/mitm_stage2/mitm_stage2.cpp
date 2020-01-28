@@ -3,6 +3,10 @@
 
 #include "mitm_stage2.h"
 
+using namespace mitm;
+using namespace mitm_stage1;
+using namespace std;
+
 // TODO: reverse a and b to have a smaller table
 void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                   vector<vector<stage2a>>& table, correct_guess* c) {

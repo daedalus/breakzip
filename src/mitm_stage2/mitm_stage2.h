@@ -38,13 +38,14 @@ typedef struct stage2_candidate {
     uint32_t m2;
 } stage2_candidate;
 
-void mitm_stage2a(archive_info& info, stage1_candidate& c1,
-                  vector<vector<stage2a>>& table, correct_guess* c = nullptr);
-void mitm_stage2b(archive_info& info, stage1_candidate& c1,
-                  vector<vector<stage2a>>& table,
-                  vector<stage2_candidate>& candidates,
-                  vector<vector<uint16_t>>& preimages,
-                  correct_guess* c = nullptr,
+void mitm_stage2a(mitm::archive_info& info, mitm_stage1::stage1_candidate& c1,
+                  std::vector<std::vector<stage2a>>& table,
+                  mitm::correct_guess* c = nullptr);
+void mitm_stage2b(mitm::archive_info& info, mitm_stage1::stage1_candidate& c1,
+                  std::vector<std::vector<stage2a>>& table,
+                  std::vector<stage2_candidate>& candidates,
+                  std::vector<std::vector<uint16_t>>& preimages,
+                  mitm::correct_guess* c = nullptr,
                   bool sample = false);
 
 #endif

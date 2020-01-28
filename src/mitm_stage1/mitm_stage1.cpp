@@ -4,6 +4,44 @@
 #include "crc32.h"
 #include "mitm_stage1.h"
 
+using namespace std;
+using namespace mitm;
+
+namespace mitm_stage1 {
+
+void write_word(FILE *f, uint32_t w) {
+    fputc(w & 0xff, f);
+    fputc((w >> 8) & 0xff, f);
+    fputc((w >> 16) & 0xff, f);
+    fputc((w >> 24) & 0xff, f);
+}
+
+void write_3bytes(FILE *f, uint32_t w) {
+    fputc(w & 0xff, f);
+    fputc((w >> 8) & 0xff, f);
+    fputc((w >> 16) & 0xff, f);
+}
+
+void write_candidate(FILE *f, stage1_candidate &c) {
+    const uint8_t size = c.k20_count;
+    fputc(size, f);
+    for (uint16_t i = 0; i < size; ++i) {
+        write_3bytes(f, c.maybek20[i]);
+    }
+    fputc(c.chunk2, f);
+    fputc(c.chunk3, f);
+    fputc(c.cb1, f);
+    write_word(f, c.m1);
+}
+
+void write_candidates(FILE *f, vector<stage1_candidate> &candidates) {
+    uint32_t size = (uint32_t)candidates.size();
+    write_word(f, size);
+    for (uint32_t i = 0; i < size; ++i) {
+        write_candidate(f, candidates[i]);
+    }
+}
+
 // info: the info about the archive to attack
 // table: vector<vector<stage1a>> table(0x01000000)
 void mitm_stage1a(archive_info& info, vector<vector<stage1a>>& table,
@@ -250,3 +288,5 @@ void mitm_stage1b(archive_info& info, vector<vector<stage1a>>& table,
     }
     fprintf(stderr, "Stage 1 candidates.size() == %04lx\n", candidates.size());
 }
+
+};  // namespace mitm_stage1

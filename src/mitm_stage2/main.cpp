@@ -14,11 +14,12 @@ DEFINE_string(outfile, "stage2.out", "The output file prefix to use.");
 DEFINE_int32(srand_seed, 0x57700d32,
              "The srand seed that the file was created with.");
 
-namespace mitm_stage2 {
-
-/**
- * TODO(stay): Put your functions here.
- */
+using namespace mitm;
+using namespace mitm_stage1;
+using namespace mitm_stage2;
+using namespace std;
+using namespace breakzip;
+using namespace google;
 
 const char* usage_message = R"usage(
     Usage: mitm_stage2 <FILE> <OUT>
@@ -26,8 +27,6 @@ const char* usage_message = R"usage(
     by -shard, and writes output to the filename specified by -outfile with the
     shard number appended.
     )usage";
-
-};  // namespace mitm_stage2
 
 int main(int argc, char* argv[]) {
     using namespace mitm_stage2;
