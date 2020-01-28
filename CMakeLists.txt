@@ -4,7 +4,7 @@ set (breakzip_VERSION_MAJOR 1)
 set (breakzip_VERSION_MINOR 0)
 set (breakzip_VERSION_PATCH 0)
 
-set (WITH_TCMALLOC 0)
+set (WITH_TCMALLOC 1)
 
 include(CTest)
 
@@ -133,6 +133,7 @@ SET(CPACK_DEBIAN_PACKAGE_DEPENDS
     g++-6-multilib (>= 6.1.1-11), \
     g++-multilib (>= 4:6.1.1-1), \
     libgflags-dev (>= 2.1.2-3), \
+    libgoogle-perftools-dev (>= 2.5) \
     libstdc++6-6-dbg:amd64 (>= 6.1.1-11), \
     pkg-config (>= 0.29-4), \
     texinfo (>= 6.3.0.dfsg.1-1+b1)")

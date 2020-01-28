@@ -11,7 +11,7 @@
 
 include(FindPackageHandleStandardArgs)
 
-set(TCMALLOC_ROOT_DIR "" CACHE PATH "Folder contains tcmalloc") 
+set(TCMALLOC_ROOT_DIR "" CACHE PATH "Folder contains Google's tcmalloc") 
 
 # We are testing only a couple of files in the include directories
 if(WIN32)
@@ -29,7 +29,7 @@ if(MSVC)
         PATH_SUFFIXES Release)
 
     find_library(TCMALLOC_LIBRARY_DEBUG
-        NAMES libtcmalloc-debug
+        NAMES libtcmalloc_debug
         PATHS ${TCMALLOC_ROOT_DIR}
         PATH_SUFFIXES Debug)
 
