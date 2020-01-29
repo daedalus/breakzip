@@ -8,6 +8,10 @@ DEFINE_string(output, "stage.out",
               "Output file basename. Shard files will be named"
               "BASENAME.X for shard number X.");
 DEFINE_int32(shard_size, 10000, "Size of an output shard.");
+DEFINE_string(target, "target.zip", "Name of the target ZIP file.");
+DEFINE_int32(srand_seed, 0x57700d32,
+             "The srand seed that the file was created with.");
+DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
 
 using namespace std;
 using namespace mitm;

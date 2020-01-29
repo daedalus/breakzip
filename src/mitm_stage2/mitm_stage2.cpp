@@ -109,7 +109,7 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                     first_half_step(info.file[0].x[1] ^ s1xf0, true, chunk7,
                                     carryy1f0, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
-                    fprintf(stderr, "ERROR: Should never happen!\n");
+                    fprintf(stderr, "FATAL: mitm_stage2a: after mxbyf0, upper1 < lower1.\n");
                     abort();
                 }
                 if (upper2 < lower2) {
@@ -124,7 +124,7 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                     first_half_step(info.file[1].x[1], true, chunk7, carryx1f1,
                                     k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
-                    fprintf(stderr, "ERROR: Should never happen!\n");
+                    fprintf(stderr, "FATAL: mitm_stage2a: after msbxf1, upper1 < lower1.\n");
                     abort();
                 }
                 if (upper2 < lower2) {
@@ -139,7 +139,7 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                     first_half_step(info.file[1].x[1] ^ s1xf1, true, chunk7,
                                     carryy1f1, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
-                    fprintf(stderr, "ERROR: Should never happen!\n");
+                    fprintf(stderr, "FATAL: mitm_stage2a: after msbyf1, upper1 < lower1.\n");
                     abort();
                 }
                 if (upper2 < lower2) {

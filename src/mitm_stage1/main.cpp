@@ -6,10 +6,9 @@
 #include "crc32.h"
 #include "mitm_stage1.h"
 
-DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
-DEFINE_string(target, "target.zip", "Name of the target ZIP file.");
-DEFINE_int32(srand_seed, 0x57700d32,
-             "The srand seed that the file was created with.");
+DECLARE_bool(runtests);
+DECLARE_string(target);
+DECLARE_int32(srand_seed);
 
 using namespace mitm;
 using namespace mitm_stage1;
