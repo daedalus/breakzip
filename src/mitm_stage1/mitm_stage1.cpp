@@ -36,10 +36,26 @@ void write_word(FILE *f, uint32_t w) {
     fputc((w >> 24) & 0xff, f);
 }
 
+void read_word(FILE *f, uint32_t &w) {
+    auto c1 = fgetc(f);
+    auto c2 = fgetc(f);
+    auto c3 = fgetc(f);
+    auto c4 = fgetc(f);
+    w = (c4 << 24) | (c3 << 16) | (c2 << 8) | c1;
+    printf("Read word: %x %x %x %x => 0x%04x\n", c4, c3, c2, c1, w);
+}
+
 void write_3bytes(FILE *f, uint32_t w) {
     fputc(w & 0xff, f);
     fputc((w >> 8) & 0xff, f);
     fputc((w >> 16) & 0xff, f);
+}
+
+void read_3bytes(FILE *f, uint32_t &w) {
+    auto c1 = fgetc(f);
+    auto c2 = fgetc(f);
+    auto c3 = fgetc(f);
+    w = (c3 << 16) | (c2 << 8) | c1;
 }
 
 void write_candidate(FILE *f, stage1_candidate &c) {
@@ -52,6 +68,34 @@ void write_candidate(FILE *f, stage1_candidate &c) {
     fputc(c.chunk3, f);
     fputc(c.cb1, f);
     write_word(f, c.m1);
+}
+
+void read_candidate(FILE *f, stage1_candidate &c) {
+    const uint8_t size = (uint8_t)fgetc(f);
+    c.k20_count = 0;
+    for (uint8_t i = 0; i < size; ++i) {
+        uint32_t maybek20 = 0;
+        read_3bytes(f, maybek20);
+        c.maybek20[i] = maybek20;
+        ++(c.k20_count);
+    }
+    c.chunk2 = (uint8_t)fgetc(f);
+    c.chunk3 = (uint8_t)fgetc(f);
+    c.cb1 = (uint8_t)fgetc(f);
+    read_word(f, c.m1);
+}
+
+void read_candidates(FILE *f, vector<stage1_candidate> &out) {
+    uint32_t num_candidates = 0;
+    read_word(f, num_candidates);
+
+    printf("read_candidates: file should contain %d candidates\n",
+           num_candidates);
+    for (int i = 0; i < num_candidates; ++i) {
+        stage1_candidate c;
+        read_candidate(f, c);
+        out.push_back(c);
+    }
 }
 
 void write_candidates(vector<stage1_candidate> &candidates,

@@ -26,14 +26,13 @@ const char* usage_message = R"usage(
     Runs the stage2 attack using the stage1 data in FILE, the shard specified
     by -shard, and writes output to the filename specified by -outfile with the
     shard number appended.
+
+    If you pass the -runtests argument, then the tests will fail unless the
+    correct guess is contained within the shard you have provided via -target.
+    Stage1 prints the name of the shard containing the correct guess.
     )usage";
 
 int main(int argc, char* argv[]) {
-    using namespace mitm_stage2;
-    using namespace breakzip;
-    using namespace google;
-    using namespace std;
-
     int my_argc = argc;
 
     SetVersionString(version_string());
@@ -42,25 +41,48 @@ int main(int argc, char* argv[]) {
 
     const char* input_filename = argv[non_flag];
 
+    // We build the preimages once for all candidates.
+    vector<vector<uint16_t>> preimages(0x100);
+    build_preimages(preimages);
+
+    // Read all the stage1 candidates into memory at once.
+    vector<stage1_candidate> candidates;
+    vector<stage2_candidate> stage2_candidates;
+
+
+    auto input_file = fopen(FLAGS_target.c_str(), "r");
+    if (nullptr == input_file) {
+        perror("Can't open input file");
+        exit(-1);
+    }
+
+    read_candidates(input_file, candidates);
+
+    if (0 == candidates.size()) {
+        fprintf(stderr, "FATAL: Read no candidates from input file.\n");
+        exit(-1);
+    }
+
+    fprintf(stdout, "Read %ld candidates from stage1.\n",
+            candidates.size());
+
     if (FLAGS_runtests) {
         correct_guess guess[2] = {
             correct(mitm::test[0]), correct(mitm::test[1])
         };
 
-        vector<stage1_candidate> candidates;
-        vector<vector<stage2a>> table(0x1000000);
-
-        // TODO(leaf): find the correct guess in the input file.
-        // candidates.push_back(guess[0]);
-
+        size_t idx = 0;
+        printf("Starting... stage2_candidates.size == %lu\n",
+               stage2_candidates.size());
         for (auto candidate: candidates) {
-            mitm_stage2a(test[0], candidate, table, guess);
-        }
+            if (++idx % 1000) {
+                printf("On stage1 candidate %ld...\n", idx);
+            }
 
-        if (1 != table.size()) {
-            fprintf(stderr, "Error: correct guess did not end up "
-                "in output table.\n");
-            exit(-1);
+            vector<vector<stage2a>> table(0x1000000);
+            mitm_stage2a(test[0], candidate, table, guess);
+            mitm_stage2b(test[0], candidate, table, stage2_candidates, preimages,
+                         guess);
         }
 
     } else {
