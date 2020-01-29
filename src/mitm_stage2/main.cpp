@@ -83,6 +83,9 @@ int main(int argc, char* argv[]) {
             mitm_stage2a(test[0], candidate, table, guess);
             mitm_stage2b(test[0], candidate, table, stage2_candidates, preimages,
                          guess);
+
+            printf("After stage1 candidate %lu, we have %lu stage2 candidates.\n",
+                   idx, stage2_candidates.size());
         }
 
     } else {

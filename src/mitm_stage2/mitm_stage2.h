@@ -27,7 +27,6 @@ typedef struct stage2a {
 typedef struct stage2_candidate {
     stage2_candidate() : k20_count(0), chunk2(0), chunk3(0), chunk6(0),
                          chunk7(0), cb(0), m1(0), m2(0) {
-        ::memset(maybek20, 0, MAX_K20S * sizeof(uint32_t));
     }
 
     static const size_t MAX_K20S = 16;
