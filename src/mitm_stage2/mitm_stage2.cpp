@@ -7,7 +7,6 @@ using namespace mitm;
 using namespace mitm_stage1;
 using namespace std;
 
-// TODO: reverse a and b to have a smaller table
 void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                   vector<vector<stage2a>>& table, correct_guess* c) {
     uint8_t cb1 = c1.cb1;
@@ -26,8 +25,8 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
     for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
         for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
             for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
-                if (chunk6 == c->chunk6 && chunk7 == c->chunk7 &&
-                    cb2 == ((c->carries >> 8) & 0xf)) {
+                if (nullptr != c && chunk6 == c->chunk6 &&
+                    chunk7 == c->chunk7 && cb2 == ((c->carries >> 8) & 0xf)) {
                     fprintf(stderr, "Stage 2a, should be on correct guess.\n");
                 }
                 uint8_t carryx1f0 = cb2 & 1;
@@ -99,7 +98,8 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 s2a.chunk7 = chunk7;
                 s2a.cb2 = cb2;
                 s2a.msbk12xf0 = msbxf0;
-                if (s2a.chunk6 == c->chunk6 && s2a.chunk7 == c->chunk7 &&
+                if (nullptr != c && s2a.chunk6 == c->chunk6 &&
+                    s2a.chunk7 == c->chunk7 &&
                     s2a.cb2 == ((c->carries >> 8) & 0xf)) {
                     fprintf(stderr,
                             "Stage 2a correct. mk = %06x, msbk12xf0 = %02x\n",
@@ -176,16 +176,16 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
                     for (auto s : seconds) {
                         for (auto t : thirds) {
                             uint32_t mapkey((f ^ cyf0l) | ((s ^ cxf1l) << 8) |
-                                    ((t ^ cyf1l) << 16));
+                                            ((t ^ cyf1l) << 16));
                             for (auto c2 : table[mapkey]) {
                                 stage2_candidate g;
 
                                 for (auto k20 : c1.maybek20) {
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
                                     if ((pxf0 & 0x3f) ==
-                                            ((crc32(k21xf0, c2.msbk12xf0 >> 24) >>
-                                              2) &
-                                             0x3f)) {
+                                        ((crc32(k21xf0, c2.msbk12xf0 >> 24) >>
+                                          2) &
+                                         0x3f)) {
                                         g.maybek20.push_back(k20);
                                     }
                                 }
@@ -198,9 +198,11 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
                                 g.m1 = c1.m1;
                                 g.m2 = mapkey ^ (c2.msbk12xf0 * 0x01010101);
 
-                                if (g.chunk2 == c->chunk2 && g.chunk3 == c->chunk3 &&
-                                        g.cb == (c->carries >> 8) && g.chunk6 == c->chunk6 &&
-                                        g.chunk7 == c->chunk7) {
+                                if (nullptr != c && g.chunk2 == c->chunk2 &&
+                                    g.chunk3 == c->chunk3 &&
+                                    g.cb == (c->carries >> 8) &&
+                                    g.chunk6 == c->chunk6 &&
+                                    g.chunk7 == c->chunk7) {
                                     fprintf(stderr,
                                             "Pushed back correct candidate!\n");
                                 }
