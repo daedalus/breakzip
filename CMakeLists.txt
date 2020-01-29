@@ -27,6 +27,9 @@ else ()
     message(STATUS "No C++11 support from compile! Get a real compiler!")
 endif ()
 
+set(CMAKE_CXX_FLAGS_DEBUG "-g -pg")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
+
 # Disable certain warnings.
 # TODO(leaf): Fix up all instances of these printf warnings.
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format")

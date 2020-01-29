@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
         size_t correct_idx = 0;
 
         build_preimages(preimages);
+        printf("Generated %ld preimages.\n", preimages.size());
         mitm_stage1a(test[0], table, &(guess[0]));
         mitm_stage1b(test[0], table, candidates, preimages, &(guess[0]), &correct_idx);
 
