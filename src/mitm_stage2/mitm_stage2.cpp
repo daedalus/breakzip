@@ -1,11 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <gflags/gflags.h>
 
 #include "mitm_stage2.h"
+
+DECLARE_string(output);
 
 using namespace mitm;
 using namespace mitm_stage1;
 using namespace std;
+
+void write_stage2_candidate(FILE* f, const stage2_candidate& candidate) {
+    write_word(f, candidate.k20_count);
+    for (uint8_t i = 0; i < candidate.k20_count; ++i) {
+        write_word(f, candidate.maybek20[i]);
+    }
+
+    fputc(candidate.chunk2, f);
+    fputc(candidate.chunk3, f);
+    fputc(candidate.chunk6, f);
+    fputc(candidate.chunk7, f);
+    fputc(candidate.cb, f);
+    fputc(candidate.m1, f);
+    fputc(candidate.m2, f);
+}
+
+void write_stage2_candidates(const stage2_candidate *const stage2_candidates,
+                             const size_t stage2_candidate_count,
+                             const size_t shard_number) {
+
+    if (0 == FLAGS_output.length()) {
+        fprintf(stderr, "Please provide a -output file basename.\n");
+        exit(-1);
+    } else {
+        fprintf(stderr, "Using output file basename: %s\n", FLAGS_output.c_str());
+    }
+
+    size_t filename_len = FLAGS_output.length() + 32;
+    char* output_filename = (char *)::calloc(filename_len, sizeof(char));
+
+    snprintf(output_filename, filename_len, "%s.%ld", FLAGS_output.c_str(),
+             shard_number);
+    
+    FILE* output_file = fopen(output_filename, "wb");
+    if (nullptr == output_file) {
+        fprintf(stderr, "Can't open output file: %s\n", output_filename);
+        perror("Fatal error");
+        exit(-1);
+    }
+
+    write_word(output_file, (uint32_t)stage2_candidate_count);
+    for (int i = 0; i < (int)stage2_candidate_count; ++i) {
+        write_stage2_candidate(output_file, stage2_candidates[i]);
+    }
+
+    fclose(output_file);
+}
 
 void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                   vector<vector<stage2a>>& table, correct_guess* c) {
@@ -117,7 +167,9 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
 void mitm_stage2b(const mitm::archive_info& info,
                   const mitm_stage1::stage1_candidate& c1,
                   const std::vector<std::vector<stage2a>>& table,
-                  std::vector<stage2_candidate>& candidates,
+                  stage2_candidate* candidates, /* output */
+                  const size_t array_size,
+                  size_t& stage2_candidate_count, /* output */
                   const std::vector<std::vector<uint16_t>>& preimages,
                   const mitm::correct_guess* c,
                   const bool sample) {
@@ -222,7 +274,14 @@ void mitm_stage2b(const mitm::archive_info& info,
                                             "Pushed back correct candidate!\n");
                                 }
 
-                                candidates.push_back(g);
+                                if (stage2_candidate_count >= array_size) {
+                                    fprintf(stderr, "Fatal Error: too many stage2 "
+                                            "candidates for output array!\n");
+                                    abort();
+                                }
+
+                                candidates[stage2_candidate_count] = g;
+                                ++stage2_candidate_count;
                             }
                         }
                     }
@@ -231,6 +290,6 @@ void mitm_stage2b(const mitm::archive_info& info,
         }
     }
 
-    printf("At end of mitm_stage2b, stage2_candidates has %lu candidates.\n",
-           candidates.size());
+    printf("mitm_stage2b: this stage1 candidate produced %lu candidates.\n",
+           stage2_candidate_count);
 }

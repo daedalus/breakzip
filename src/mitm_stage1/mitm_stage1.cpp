@@ -4,7 +4,7 @@
 #include "breakzip.h"
 #include "mitm_stage1.h"
 
-DEFINE_string(output, "stage1.out",
+DEFINE_string(output, "stage.out",
               "Output file basename. Shard files will be named"
               "BASENAME.X for shard number X.");
 DEFINE_int32(shard_size, 10000, "Size of an output shard.");
