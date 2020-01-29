@@ -37,10 +37,12 @@ typedef struct stage1_candidate {
     };
 } stage1_candidate;
 
+bool correct_candidate(const mitm::correct_guess &g, const stage1_candidate &c);
 void write_word(FILE *f, uint32_t w);
 void write_3bytes(FILE *f, uint32_t w);
 void write_candidate(FILE *f, stage1_candidate &c);
-void write_candidates(vector<stage1_candidate> &candidates);
+void write_candidates(vector<stage1_candidate> &candidates,
+                      size_t correct_index = SIZE_MAX);
 
 void mitm_stage1a(mitm::archive_info& info, std::vector<std::vector<stage1a>>& table,
                   mitm::correct_guess* c = nullptr);
@@ -48,7 +50,8 @@ void mitm_stage1a(mitm::archive_info& info, std::vector<std::vector<stage1a>>& t
 void mitm_stage1b(mitm::archive_info& info, std::vector<std::vector<stage1a>>& table,
                   std::vector<stage1_candidate>& candidates,
                   std::vector<vector<uint16_t>>& preimages,
-                  mitm::correct_guess* c = nullptr);
+                  mitm::correct_guess* c = nullptr,
+                  size_t *correct_candidate_index = nullptr);
 
 }; // namespace
 #endif
