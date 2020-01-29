@@ -57,8 +57,10 @@ uint8_t get_s0(uint16_t k20);
 uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
                         uint32_t &k0, uint32_t &extra, uint32_t &upper,
                         uint32_t &lower);
-void second_half_step(uint16_t offset, uint8_t stream_byte,
-                      vector<uint8_t> &idxs, vector<vector<uint16_t>>& preimages);
+void second_half_step(const uint16_t offset,
+                      const uint8_t stream_byte,
+                      vector<uint8_t> &idxs,
+                      const vector<vector<uint16_t>>& preimages);
 uint32_t toMapKey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
                   uint8_t msbyf1);
 void fromMapKey(uint8_t msbxf0, uint32_t mapkey, uint8_t &msbyf0,

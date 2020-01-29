@@ -60,6 +60,7 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                                     carryy1f0, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
                     fprintf(stderr, "ERROR: Should never happen!\n");
+                    abort();
                 }
                 if (upper2 < lower2) {
                     continue;
@@ -74,6 +75,7 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                                     k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
                     fprintf(stderr, "ERROR: Should never happen!\n");
+                    abort();
                 }
                 if (upper2 < lower2) {
                     continue;
@@ -88,6 +90,7 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                                     carryy1f1, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
                     fprintf(stderr, "ERROR: Should never happen!\n");
+                    abort();
                 }
                 if (upper2 < lower2) {
                     continue;
@@ -111,11 +114,13 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
     }
 }
 
-void mitm_stage2b(archive_info& info, stage1_candidate& c1,
-                  vector<vector<stage2a>>& table,
-                  vector<stage2_candidate>& candidates,
-                  vector<vector<uint16_t>>& preimages, correct_guess* c,
-                  bool sample) {
+void mitm_stage2b(const mitm::archive_info& info,
+                  const mitm_stage1::stage1_candidate& c1,
+                  const std::vector<std::vector<stage2a>>& table,
+                  std::vector<stage2_candidate>& candidates,
+                  const std::vector<std::vector<uint16_t>>& preimages,
+                  const mitm::correct_guess* c,
+                  const bool sample) {
     // Second half of MITM for stage 2
     fprintf(stderr, "Stage 2b\n");
     if (sample) {
@@ -186,7 +191,17 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
                                         ((crc32(k21xf0, c2.msbk12xf0 >> 24) >>
                                           2) &
                                          0x3f)) {
-                                        g.maybek20.push_back(k20);
+
+                                        if (g.k20_count >= g.MAX_K20S) {
+                                            fprintf(stderr, "Not enough space "
+                                                    "for k20 candidate %d in "
+                                                    "stage2_candidate.\n",
+                                                    g.k20_count);
+                                            abort();
+                                        }
+
+                                        g.maybek20[g.k20_count] = k20;
+                                        g.k20_count += 1;
                                     }
                                 }
 
@@ -215,4 +230,7 @@ void mitm_stage2b(archive_info& info, stage1_candidate& c1,
             }
         }
     }
+
+    printf("At end of mitm_stage2b, stage2_candidates has %lu candidates.\n",
+           candidates.size());
 }

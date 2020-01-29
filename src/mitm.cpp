@@ -583,6 +583,7 @@ void stage2() {
                                    carryy1f0, k0crc, extra, upper2, lower2);
           if (upper1 < lower1) {
             fprintf(stderr, "ERROR: Should never happen!\n");
+            abort();
           }
           if (upper2 < lower2) {
             continue;
@@ -596,6 +597,7 @@ void stage2() {
                                    k0crc, extra, upper2, lower2);
           if (upper1 < lower1) {
             fprintf(stderr, "ERROR: Should never happen!\n");
+            abort();
           }
           if (upper2 < lower2) {
             continue;
@@ -609,6 +611,7 @@ void stage2() {
                                    carryy1f1, k0crc, extra, upper2, lower2);
           if (upper1 < lower1) {
             fprintf(stderr, "ERROR: Should never happen!\n");
+            abort();
           }
           if (upper2 < lower2) {
             continue;
