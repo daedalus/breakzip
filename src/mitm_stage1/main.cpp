@@ -38,11 +38,23 @@ int main(int argc, char *argv[]) {
         vector<vector<stage1a>> table(0x01000000);
         vector<stage1_candidate> candidates(0);
         vector<vector<uint16_t>> preimages(0x100);
+        size_t correct_idx = 0;
 
         build_preimages(preimages);
         mitm_stage1a(test[0], table, &(guess[0]));
-        mitm_stage1b(test[0], table, candidates, preimages, &(guess[0]));
-        //write_candidates(candidates);
+        mitm_stage1b(test[0], table, candidates, preimages, &(guess[0]), &correct_idx);
+
+        if (correct_candidate(guess[0], candidates[correct_idx])) {
+            printf("The correct candidate appears in the candidates list at index "
+                   "%ld.\n", correct_idx);
+        } else {
+            printf("Unable to find correct guess in candidates vector!\n");
+            abort();
+        }
+
+        printf("\nWriting candidates to output shards...\n");
+        write_candidates(candidates, correct_idx);
+
     } else {
         archive_info archive;
 
@@ -79,6 +91,7 @@ int main(int argc, char *argv[]) {
         mitm_stage1a(archive, table);
         mitm_stage1b(archive, table, candidates, preimages);
         write_candidates(candidates);
+
     }
 
     return 0;
