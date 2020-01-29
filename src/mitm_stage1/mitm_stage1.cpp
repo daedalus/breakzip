@@ -42,7 +42,6 @@ void read_word(FILE *f, uint32_t &w) {
     auto c3 = fgetc(f);
     auto c4 = fgetc(f);
     w = (c4 << 24) | (c3 << 16) | (c2 << 8) | c1;
-    printf("Read word: %x %x %x %x => 0x%04x\n", c4, c3, c2, c1, w);
 }
 
 void write_3bytes(FILE *f, uint32_t w) {
