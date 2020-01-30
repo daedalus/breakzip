@@ -177,8 +177,6 @@ int main(int argc, char* argv[]) {
                 break;
             }
         }
-
->>>>>>> da2a11bb7fc60c7588780ddd7d72d0087bdc6d06
     }
 
     // TODO(stay): Close open files.
