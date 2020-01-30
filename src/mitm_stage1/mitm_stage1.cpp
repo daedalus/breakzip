@@ -22,12 +22,9 @@ bool correct_candidate(const mitm::correct_guess &g,
                        const stage1_candidate &c) {
     bool result = false;
     uint32_t true_k20 = (g.chunk4 << 16) | g.chunk1;
-    //printf("true_k20=0x%x ", true_k20);
     for (int i = 0; i < c.k20_count; ++i) {
-        //printf("0x%x ", c.maybek20[i]);
         result = result || (c.maybek20[i] == true_k20);
     }
-    //printf("\n");
     result = result && (c.chunk2 == g.chunk2 && c.chunk3 == g.chunk3 &&
                         c.cb1 == (g.carries >> 12));
     return result;
