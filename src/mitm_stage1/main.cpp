@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         
         if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
             (archive.file[1].x[0] != archive.file[1].h[0])) {
-            perror("Given seed does not generate the initial bytes!");
+            fprintf(stderr, "Given seed does not generate the initial bytes!");
             exit(-1);
         }
 
