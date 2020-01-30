@@ -10,6 +10,19 @@ using namespace mitm;
 using namespace mitm_stage1;
 using namespace std;
 
+bool correct_candidate(const mitm::correct_guess &g,
+                       const stage2_candidate &c) {
+    bool result = false;
+    uint32_t true_k20 = (g.chunk4 << 16) | g.chunk1;
+    for (int i = 0; i < c.k20_count; ++i) {
+        result = result || (c.maybek20[i] == true_k20);
+    }
+    result = result && (c.chunk2 == g.chunk2 && c.chunk3 == g.chunk3 &&
+                        c.chunk6 == g.chunk6 && c.chunk7 == g.chunk7 &&
+                        c.cb == (g.carries >> 8));
+    return result;
+}
+
 void write_stage2_candidate(FILE* f, const stage2_candidate& candidate) {
     write_word(f, candidate.k20_count);
     for (uint8_t i = 0; i < candidate.k20_count; ++i) {

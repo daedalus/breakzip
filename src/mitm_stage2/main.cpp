@@ -139,6 +139,12 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
+            (archive.file[1].x[0] != archive.file[1].h[0])) {
+            fprintf(stderr, "Given seed does not generate the initial bytes!");
+            exit(-1);
+        }
+
         printf("Starting stage2 for target archive `%s` and input shard `%s`...\n",
                FLAGS_target.c_str(), FLAGS_input_shard.c_str());
         for (auto candidate: candidates) {
@@ -171,7 +177,6 @@ int main(int argc, char* argv[]) {
                 break;
             }
         }
-
     }
 
     // TODO(stay): Close open files.

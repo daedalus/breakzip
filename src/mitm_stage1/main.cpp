@@ -82,6 +82,12 @@ int main(int argc, char *argv[]) {
                 archive.file[i].h[j] = crypt_header[j];
             }
         }
+        
+        if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
+            (archive.file[1].x[0] != archive.file[1].h[0])) {
+            fprintf(stderr, "Given seed does not generate the initial bytes!");
+            exit(-1);
+        }
 
         vector<vector<stage1a>> table(0x01000000);
         vector<stage1_candidate> candidates(0);
