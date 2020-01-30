@@ -8,11 +8,11 @@
 #include "mitm_stage1/mitm_stage1.h"
 #include "mitm_stage2.h"
 
-DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
-DEFINE_string(target, "target.out.0", "The filename of the stage1 shard to run on.");
-DEFINE_string(outfile, "stage2.out", "The output file prefix to use.");
-DEFINE_int32(srand_seed, 0x57700d32,
-             "The srand seed that the file was created with.");
+DECLARE_string(target);
+DECLARE_bool(runtests);
+DEFINE_string(input_shard, "target.out.0", "The filename of the stage1 shard to run on.");
+DECLARE_string(output);
+DECLARE_int32(srand_seed);
 DEFINE_int32(stop_after, -1, "If set to a positive value, the program "
              "will stop after processing <stop_after> stage1 candidates.");
 
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
     const size_t S2CANDIDATE_ARRAYSZ = 100000;
     stage2_candidate stage2_candidates[S2CANDIDATE_ARRAYSZ];
 
-    auto input_file = fopen(FLAGS_target.c_str(), "r");
+    auto input_file = fopen(FLAGS_input_shard.c_str(), "r");
     if (nullptr == input_file) {
         perror("Can't open input file");
         exit(-1);
@@ -110,20 +110,75 @@ int main(int argc, char* argv[]) {
         }
 
     } else {
-        /**
-         * TODO(leaf): Put real implementation here.
-         */
+        archive_info archive;
+        size_t idx = 0;
+        size_t stage2_candidate_total = 0;
 
-        /*
+        // Generate the x array from the seed.
+        srand(FLAGS_srand_seed);
+        for (int j = 0; j < 2; ++j) {
+            for (int i = 0; i < 10; ++i) {
+                archive.file[j].x[i] = rand();
+            }
+        }
+
+        // Acquire the h array from the file.
+        auto zfile = new ZipFile(FLAGS_target);
+        if (0 != zfile->init()) {
+            perror("Couldn't initialize target ZIP file");
+            exit(-1);
+        }
+
+        auto lfhs = zfile->local_file_headers();
+        // NB(leaf): This is a bug if the target file has more than two files
+        // because the MITM types don't support more than two.
+        for (int i = 0; i < lfhs.size(); ++i) {
+            auto crypt_header = lfhs[i]->crypt_header();
+            for (int j = 0; j < 10; ++j) {
+                archive.file[i].h[j] = crypt_header[j];
+            }
+        }
+
         if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
             (archive.file[1].x[0] != archive.file[1].h[0])) {
             perror("Given seed does not generate the initial bytes!");
             exit(-1);
         }
-        */
 
-        printf("Not implemented yet.\n");
-        abort();
+        printf("Starting stage2 for target archive `%s` and input shard `%s`...\n",
+               FLAGS_target.c_str(), FLAGS_input_shard.c_str());
+        for (auto candidate: candidates) {
+            // Clear the output array.
+            ::memset(stage2_candidates, 0,
+                    S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
+            size_t stage2_candidate_count = 0;
+
+            if (++idx % 1000) {
+                printf("On stage1 candidate %ld...\n", idx);
+            }
+
+            vector<vector<stage2a>> table(0x1000000);
+            mitm_stage2a(archive, candidate, table);
+            mitm_stage2b(archive, candidate, table,
+                    stage2_candidates, S2CANDIDATE_ARRAYSZ,
+                    stage2_candidate_count,
+                    preimages);
+
+            stage2_candidate_total += stage2_candidate_count;
+            printf("stage1[%lu] => %lu candidates, %lu total.\n",
+                    idx, stage2_candidate_count, stage2_candidate_total);
+            write_stage2_candidates(stage2_candidates,
+                    stage2_candidate_count,
+                    idx);
+
+            if (FLAGS_stop_after <= idx) {
+                fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
+                        (int)idx);
+                break;
+            }
+        }
+
+>>>>>>> da2a11bb7fc60c7588780ddd7d72d0087bdc6d06
     }
 
     // TODO(stay): Close open files.
