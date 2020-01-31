@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
         srand(FLAGS_srand_seed);
         for (int j = 0; j < 2; ++j) {
             for (int i = 0; i < 10; ++i) {
-                archive.file[j].x[i] = rand();
+                archive.file[j].x[i] = rand() >> 7;
             }
         }
 
