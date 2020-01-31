@@ -82,10 +82,21 @@ int main(int argc, char *argv[]) {
                 archive.file[i].h[j] = crypt_header[j];
             }
         }
-        
+
         if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
             (archive.file[1].x[0] != archive.file[1].h[0])) {
-            fprintf(stderr, "Given seed does not generate the initial bytes!");
+            fprintf(stderr, "Given seed does not generate the initial bytes!\n");
+            for (int f = 0; f < 2; ++f) {
+                fprintf(stderr, "file %d\nx = ", f);
+                for (int i = 0; i < 10; ++i) {
+                    fprintf(stderr, "%02x, ", archive.file[f].x[i]);
+                }
+                fprintf(stderr, "\nh = ");
+                for (int i = 0; i < 10; ++i) {
+                    fprintf(stderr, "%02x, ", archive.file[f].h[i]);
+                }
+                fprintf(stderr, "\n");
+            }
             exit(-1);
         }
 
