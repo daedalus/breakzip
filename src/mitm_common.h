@@ -50,6 +50,10 @@ typedef struct correct_guess {
   uint8_t sx[2][4];
 } correct_guess;
 
+void read_word(FILE *f, uint32_t &w);
+void write_word(FILE *f, uint32_t w);
+void write_3bytes(FILE *f, uint32_t w);
+void read_3bytes(FILE *f, uint32_t &w);
 
 void build_preimages(vector<vector<uint16_t>>& preimages);
 correct_guess correct(archive_info info);

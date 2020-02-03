@@ -137,9 +137,38 @@ correct_guess correct(archive_info info) {
   return result;  
 }
 
+void read_word(FILE *f, uint32_t &w) {
+    auto c1 = fgetc(f);
+    auto c2 = fgetc(f);
+    auto c3 = fgetc(f);
+    auto c4 = fgetc(f);
+    w = (c4 << 24) | (c3 << 16) | (c2 << 8) | c1;
+}
+
+void write_word(FILE *f, uint32_t w) {
+    fputc(w & 0xff, f);
+    fputc((w >> 8) & 0xff, f);
+    fputc((w >> 16) & 0xff, f);
+    fputc((w >> 24) & 0xff, f);
+}
+
+void write_3bytes(FILE *f, uint32_t w) {
+    fputc(w & 0xff, f);
+    fputc((w >> 8) & 0xff, f);
+    fputc((w >> 16) & 0xff, f);
+}
+
+void read_3bytes(FILE *f, uint32_t &w) {
+    auto c1 = fgetc(f);
+    auto c2 = fgetc(f);
+    auto c3 = fgetc(f);
+    w = (c3 << 16) | (c2 << 8) | c1;
+}
+
+
 uint8_t get_s0(uint16_t k20) {
-  uint16_t temp = k20 | 3;
-  return (temp * (temp ^ 1)) >> 8;
+    uint16_t temp = k20 | 3;
+    return (temp * (temp ^ 1)) >> 8;
 }
 
 // Computes one step of the first half of the zip encryption
@@ -153,59 +182,59 @@ uint8_t get_s0(uint16_t k20) {
 // upper is the current upper bound on low24(k10*CRYPTCONST_POW<n+1>); may get updated
 // lower is the current lower bound on low24(k10*CRYPTCONST_POW<n+1>); may get updated
 uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
-                        uint32_t &k0, uint32_t &extra, uint32_t &upper,
-                        uint32_t &lower) {
-  if (crc_flag) {
-    k0 = crc32(k0, x);
-  } else {
-    k0 ^= crc32tab[x];
-  }
-  extra = (extra + (k0 & 0xff)) * CRYPTCONST + 1;
-  uint32_t bound = 0x01000000 - (extra & 0x00ffffff);
+        uint32_t &k0, uint32_t &extra, uint32_t &upper,
+        uint32_t &lower) {
+    if (crc_flag) {
+        k0 = crc32(k0, x);
+    } else {
+        k0 ^= crc32tab[x];
+    }
+    extra = (extra + (k0 & 0xff)) * CRYPTCONST + 1;
+    uint32_t bound = 0x01000000 - (extra & 0x00ffffff);
 
-  if (carry) {
-    lower = bound > lower ? bound : lower;
-  } else {
-    upper = bound < upper ? bound : upper;
-  }
+    if (carry) {
+        lower = bound > lower ? bound : lower;
+    } else {
+        upper = bound < upper ? bound : upper;
+    }
 
-  return k1msb + (extra >> 24) + carry;
+    return k1msb + (extra >> 24) + carry;
 }
 
 // Finds idxs such that crc32tab[idx] is the xor of offset and some prefix of
 // stream_byte. We expect one on average.
 void second_half_step(const uint16_t offset,
-                      const uint8_t stream_byte,
-                      vector<uint8_t> &idxs,
-                      const vector<vector<uint16_t>>& preimages) {
-  for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
-    uint16_t preimage = preimages[stream_byte][prefix];
-    uint16_t xored = offset ^ preimage;
-    // For these 8 bits there's one crc32tab entry that matches them
-    uint8_t inv = (xored >> 1) & 0xff;
-    uint8_t idx = crcinvtab[inv];
-    // Check that the other 6 bits match
-    // We expect one prefix on average to work.
-    uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
-    if (match == xored) {
-      idxs.push_back(idx);
+        const uint8_t stream_byte,
+        vector<uint8_t> &idxs,
+        const vector<vector<uint16_t>>& preimages) {
+    for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
+        uint16_t preimage = preimages[stream_byte][prefix];
+        uint16_t xored = offset ^ preimage;
+        // For these 8 bits there's one crc32tab entry that matches them
+        uint8_t inv = (xored >> 1) & 0xff;
+        uint8_t idx = crcinvtab[inv];
+        // Check that the other 6 bits match
+        // We expect one prefix on average to work.
+        uint16_t match = (crc32tab[idx] >> 2) & 0x3fff;
+        if (match == xored) {
+            idxs.push_back(idx);
+        }
     }
-  }
 }
 
 // Creates a 24-bit key from four 8-bit MSB's by xoring the first
 // with the other three
 uint32_t toMapKey(uint8_t msbxf0, uint8_t msbyf0, uint8_t msbxf1,
-                  uint8_t msbyf1) {
-  return (msbxf0 ^ msbyf0) | (uint32_t(msbxf0 ^ msbxf1) << 8) |
-         (uint32_t(msbxf0 ^ msbyf1) << 16);
+        uint8_t msbyf1) {
+    return (msbxf0 ^ msbyf0) | (uint32_t(msbxf0 ^ msbxf1) << 8) |
+        (uint32_t(msbxf0 ^ msbyf1) << 16);
 }
 
 void fromMapKey(uint8_t msbxf0, uint32_t mapkey, uint8_t &msbyf0,
-                uint8_t &msbxf1, uint8_t &msbyf1) {
-  msbyf0 = msbxf0 ^ (mapkey & 0xff);
-  msbxf1 = msbxf0 ^ ((mapkey >> 8) & 0xff);
-  msbyf1 = msbxf0 ^ ((mapkey >> 16) & 0xff);
+        uint8_t &msbxf1, uint8_t &msbyf1) {
+    msbyf0 = msbxf0 ^ (mapkey & 0xff);
+    msbxf1 = msbxf0 ^ ((mapkey >> 8) & 0xff);
+    msbyf1 = msbxf0 ^ ((mapkey >> 16) & 0xff);
 }
 
 }; // namespace

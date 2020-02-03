@@ -30,34 +30,6 @@ bool correct_candidate(const mitm::correct_guess &g,
     return result;
 }
 
-void write_word(FILE *f, uint32_t w) {
-    fputc(w & 0xff, f);
-    fputc((w >> 8) & 0xff, f);
-    fputc((w >> 16) & 0xff, f);
-    fputc((w >> 24) & 0xff, f);
-}
-
-void read_word(FILE *f, uint32_t &w) {
-    auto c1 = fgetc(f);
-    auto c2 = fgetc(f);
-    auto c3 = fgetc(f);
-    auto c4 = fgetc(f);
-    w = (c4 << 24) | (c3 << 16) | (c2 << 8) | c1;
-}
-
-void write_3bytes(FILE *f, uint32_t w) {
-    fputc(w & 0xff, f);
-    fputc((w >> 8) & 0xff, f);
-    fputc((w >> 16) & 0xff, f);
-}
-
-void read_3bytes(FILE *f, uint32_t &w) {
-    auto c1 = fgetc(f);
-    auto c2 = fgetc(f);
-    auto c3 = fgetc(f);
-    w = (c3 << 16) | (c2 << 8) | c1;
-}
-
 void write_candidate(FILE *f, stage1_candidate &c) {
     const uint8_t size = c.k20_count;
     fputc(size, f);

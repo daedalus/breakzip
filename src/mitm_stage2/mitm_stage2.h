@@ -13,10 +13,6 @@ using namespace std;
 
 namespace mitm_stage2 {
 
-// TODO(stay): Imeplement stage2.
-
-};  // namespace mitm_stage2
-
 typedef struct stage2a {
     uint8_t chunk6;
     uint8_t chunk7;
@@ -44,7 +40,11 @@ typedef struct stage2_candidate {
     uint32_t m2;
 } stage2_candidate;
 
+void read_stage2_candidate(FILE* f, stage2_candidate& candidate /* out */);
 void write_stage2_candidate(FILE* f, const stage2_candidate& candidate);
+void read_stage2_candidate(stage2_candidate **stage2_candidates /* out */,
+                           size_t &stage2_candidate_count /* out */,
+                           const size_t shard_number);
 void write_stage2_candidates(const stage2_candidate *const stage2_candidates,
                              const size_t stage2_candidate_count,
                              const size_t shard_number);
@@ -61,5 +61,7 @@ void mitm_stage2b(const mitm::archive_info& info,
                   const std::vector<std::vector<uint16_t>>& preimages,
                   const mitm::correct_guess* c = nullptr,
                   const bool sample = false);
+
+} // namespace
 
 #endif
