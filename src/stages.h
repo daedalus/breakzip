@@ -2,620 +2,645 @@
  * Author: Nash E. Foster <leaf@pyrofex.net>
  */
 
-#include <vector>
 #include <array>
 #include <cstdint>
 #include <tuple>
+#include <vector>
 
 #pragma pack(1)
 
 namespace breakzip {
 
-    using namespace std;
+using namespace std;
 
-    /* There are 4 carry bits per stage, 2 for each of 2 files.  There are 4
-     * stages in which we guess carrybits, for a total of 16 carry bits. We
-     * pack those into a single word as the low order 16 bits.
-     * 
-     * Carry bits for stage 1 are the high order 4 bits of the
-     * low order 16 bits.
-     */
-    typedef struct carrybits {
-        uint32_t bits:16;
+/* There are 4 carry bits per stage, 2 for each of 2 files.  There are 4
+ * stages in which we guess carrybits, for a total of 16 carry bits. We
+ * pack those into a single word as the low order 16 bits.
+ *
+ * Carry bits for stage 1 are the high order 4 bits of the
+ * low order 16 bits.
+ */
+typedef struct carrybits {
+    uint32_t bits : 16;
 
-        carrybits() : bits(0) {}
-        carrybits(int x) : bits(x & 0xffff) {}
-        carrybits(unsigned int x) : bits(x & 0xffff) {}
-        carrybits(short unsigned int x) : bits(x & 0xffff) {}
-        carrybits(const struct carrybits& other) : bits(other.bits) {}
+    carrybits() : bits(0) {}
+    carrybits(int x) : bits(x & 0xffff) {}
+    carrybits(unsigned int x) : bits(x & 0xffff) {}
+    carrybits(short unsigned int x) : bits(x & 0xffff) {}
+    carrybits(const struct carrybits& other) : bits(other.bits) {}
 
-        friend bool operator==(const struct carrybits& l,
-                const struct carrybits& r) {
-            return l.bits == r.bits;
+    friend bool operator==(const struct carrybits& l,
+                           const struct carrybits& r) {
+        return l.bits == r.bits;
+    }
+
+    friend bool operator!=(const struct carrybits& l,
+                           const struct carrybits& r) {
+        return !(l == r);
+    }
+
+    friend bool operator<(const struct carrybits& l,
+                          const struct carrybits& r) {
+        return l.bits < r.bits;
+    }
+
+    friend bool operator>(const struct carrybits& l,
+                          const struct carrybits& r) {
+        return r < l;
+    }
+
+    friend bool operator<=(const struct carrybits& l,
+                           const struct carrybits& r) {
+        return !(r > l);
+    }
+
+    friend bool operator>=(const struct carrybits& l,
+                           const struct carrybits& r) {
+        return !(l < r);
+    }
+
+    static const uint16_t NUM_STAGES = 4;
+    static const uint16_t BITS_PER_STAGE = 4;
+
+    static const uint16_t shift_for_stage(int stage) {
+        return (NUM_STAGES - stage) * 4;
+    }
+
+    uint8_t get(uint8_t stage) const {
+        uint8_t r = (bits >> shift_for_stage(stage)) & 0x0f;
+        return r;
+    }
+
+    uint8_t get(uint8_t stage, uint8_t file, uint8_t var) const {
+        // TODO(leaf): If we can constrain file and var to never be
+        // other than 0 or 1, then we can eliminate the conditionals.
+        uint8_t shift_width = shift_for_stage(stage);
+        shift_width += (0 == file) ? 0 : 2;
+        shift_width += (0 == var) ? 0 : 1;
+        uint8_t t = bits >> shift_width;
+        return t & 0x01;
+    }
+
+    uint32_t set(uint8_t stage, uint8_t val) {
+        uint8_t shift_width = shift_for_stage(stage);
+        uint16_t mask = 0x0f << shift_width;
+        bits &= ~mask;
+        bits |= (val & 0x0f) << shift_width;
+        return bits;
+    }
+
+    uint32_t set(uint8_t stage, uint8_t file, uint8_t var, bool val) {
+        uint8_t shift_width = shift_for_stage(stage);
+        shift_width += (0 == file) ? 0 : 2;
+        shift_width += (0 == var) ? 0 : 1;
+        bits |= (val << shift_width);
+        return bits;
+    }
+
+    const std::string& str() const {
+        char buf[16];
+        snprintf(buf, 16, "(0x%04x)", bits);
+        std::string rval(buf);
+        return std::move(rval);
+    }
+} carrybits_t;
+
+class guess_t {
+public:
+    uint16_t chunk1;  // low 16 bits of k20
+    uint8_t chunk2;   // low 8 bits of crc32(k00, 0)
+    uint8_t chunk3;   // high 8 bits of k10 * CRYPTCONST
+    uint8_t chunk4;   // bits 16..23 of k20
+    uint8_t stage;
+
+    uint8_t chunk5;
+    uint8_t chunk6;
+    uint8_t chunk7;
+    uint8_t unused2;
+
+    uint8_t chunk8;
+    uint8_t chunk9;
+
+    uint8_t chunk10;
+    uint8_t chunk11;
+
+    uint32_t k10;
+
+    carrybits_t carry_bits;
+
+    guess_t()
+        : chunk1(0),
+          chunk2(0),
+          chunk3(0),
+          chunk4(0),
+          stage(1),
+          chunk5(0),
+          chunk6(0),
+          chunk7(0),
+          unused2(0xAA),
+          chunk8(0),
+          chunk9(0),
+          chunk10(0),
+          chunk11(0),
+          carry_bits(0){};
+
+    guess_t(int n)
+        : chunk1(0),
+          chunk2(0),
+          chunk3(0),
+          chunk4(0),
+          stage(n),
+          chunk5(0),
+          chunk6(0),
+          chunk7(0),
+          unused2(0xAA),
+          chunk8(0),
+          chunk9(0),
+          chunk10(0),
+          chunk11(0),
+          carry_bits(0){};
+
+    guess_t(int n, const guess_t& other)
+        : chunk1(other.chunk1),
+          chunk2(other.chunk2),
+          chunk3(other.chunk3),
+          chunk4(other.chunk4),
+          stage(n),
+          chunk5(other.chunk5),
+          chunk6(other.chunk6),
+          chunk7(other.chunk7),
+          unused2(0xAA),
+          chunk8(other.chunk8),
+          chunk9(other.chunk9),
+          chunk10(other.chunk10),
+          chunk11(other.chunk11),
+          carry_bits(other.carry_bits){};
+
+    guess_t(int n, carrybits_t bits, uint16_t c1 = 0, uint8_t c2 = 0,
+            uint8_t c3 = 0, uint8_t c4 = 0, uint8_t c5 = 0, uint8_t c6 = 0,
+            uint8_t c7 = 0, uint8_t c8 = 0, uint8_t c9 = 0, uint8_t c10 = 0,
+            uint8_t c11 = 0)
+        : chunk1(c1),
+          chunk2(c2),
+          chunk3(c3),
+          chunk4(c4),
+          stage(n),
+          chunk5(c5),
+          chunk6(c6),
+          chunk7(c7),
+          unused2(0xAA),
+          chunk8(c8),
+          chunk9(c9),
+          chunk10(c10),
+          chunk11(c11),
+          carry_bits(bits){};
+
+    std::string str() const {
+        char cstr[256];
+        snprintf(cstr, 256,
+                 "0x%04x%02x%02x%02x:%02x%02x%02x:%02x%02x:%02x%02x%s", chunk1,
+                 chunk2, chunk3, chunk4, chunk5, chunk6, chunk7, chunk8, chunk9,
+                 chunk10, chunk11, carry_bits.str().c_str());
+        std::string ret(cstr);
+        return std::move(ret);
+    }
+
+    std::string hex() const { return str(); }
+
+    bool operator==(const guess_t& other) const {
+        return (this->carry_bits == other.carry_bits &&
+                this->chunk1 == other.chunk1 && this->chunk2 == other.chunk2 &&
+                this->chunk3 == other.chunk3 && this->chunk4 == other.chunk4 &&
+                this->chunk5 == other.chunk5 && this->chunk6 == other.chunk6 &&
+                this->chunk7 == other.chunk7 && this->chunk8 == other.chunk8 &&
+                this->chunk9 == other.chunk9 &&
+                this->chunk10 == other.chunk10 &&
+                this->chunk11 == other.chunk11);
+    }
+
+    friend bool operator!=(const guess_t& left, const guess_t& right) {
+        return !(left == right);
+    }
+
+    guess_t& operator=(const guess_t& other) {
+        this->chunk1 = other.chunk1;
+        this->chunk2 = other.chunk2;
+        this->chunk3 = other.chunk3;
+        this->chunk4 = other.chunk4;
+        this->chunk5 = other.chunk5;
+        this->chunk6 = other.chunk6;
+        this->chunk7 = other.chunk7;
+        this->chunk8 = other.chunk8;
+        this->chunk9 = other.chunk9;
+        this->chunk10 = other.chunk10;
+        this->chunk11 = other.chunk11;
+        this->carry_bits = other.carry_bits;
+        return *this;
+    }
+
+    // This operator defines the ordering of elements. I.e., which
+    // chunks have what significance. Carry bits are the least
+    // significant.
+    friend bool operator<(const guess_t& left, const guess_t& right) {
+        if (left.chunk11 < right.chunk11) {
+            return true;
+        } else if (left.chunk11 > right.chunk11) {
+            return false;
         }
 
-        friend bool operator!=(const struct carrybits& l,
-                const struct carrybits& r) {
-            return !(l == r);
+        if (left.chunk10 < right.chunk10) {
+            return true;
+        } else if (left.chunk10 > right.chunk10) {
+            return false;
         }
 
-        friend bool operator<(const struct carrybits& l,
-                const struct carrybits& r) {
-            return l.bits < r.bits;
+        if (left.carry_bits.get(4) < right.carry_bits.get(4)) {
+            return true;
+        } else if (left.carry_bits.get(4) > right.carry_bits.get(4)) {
+            return false;
         }
 
-        friend bool operator>(const struct carrybits& l,
-                const struct carrybits& r) {
-            return r < l;
+        if (left.chunk9 < right.chunk9) {
+            return true;
+        } else if (left.chunk9 > right.chunk9) {
+            return false;
         }
 
-        friend bool operator<=(const struct carrybits& l,
-                const struct carrybits& r) {
-            return !(r > l);
+        if (left.chunk8 < right.chunk8) {
+            return true;
+        } else if (left.chunk8 > right.chunk8) {
+            return false;
         }
 
-        friend bool operator>=(const struct carrybits& l,
-                const struct carrybits& r) {
-            return !(l < r);
+        if (left.carry_bits.get(3) < right.carry_bits.get(3)) {
+            return true;
+        } else if (left.carry_bits.get(3) > right.carry_bits.get(3)) {
+            return false;
         }
 
-        static const uint16_t NUM_STAGES = 4;
-        static const uint16_t BITS_PER_STAGE = 4;
-
-        static const uint16_t shift_for_stage(int stage) {
-            return (NUM_STAGES - stage) * 4;
+        if (left.chunk7 < right.chunk7) {
+            return true;
+        } else if (left.chunk7 > right.chunk7) {
+            return false;
         }
 
-        uint8_t get(uint8_t stage) const {
-            uint8_t r = (bits >> shift_for_stage(stage)) & 0x0f;
-            return r;
+        if (left.chunk6 < right.chunk6) {
+            return true;
+        } else if (left.chunk6 > right.chunk6) {
+            return false;
         }
 
-        uint8_t get(uint8_t stage, uint8_t file, uint8_t var) const {
-            // TODO(leaf): If we can constrain file and var to never be
-            // other than 0 or 1, then we can eliminate the conditionals.
-            uint8_t shift_width = shift_for_stage(stage);
-            shift_width += (0 == file) ? 0 : 2;
-            shift_width += (0 == var) ? 0 : 1;
-            uint8_t t = bits >> shift_width;
-            return t & 0x01;
+        if (left.chunk5 < right.chunk5) {
+            return true;
+        } else if (left.chunk5 > right.chunk5) {
+            return false;
         }
 
-        uint32_t set(uint8_t stage, uint8_t val) {
-            uint8_t shift_width = shift_for_stage(stage);
-            uint16_t mask = 0x0f << shift_width;
-            bits &= ~mask;
-            bits |= (val & 0x0f) << shift_width;
-            return bits;
+        if (left.carry_bits.get(2) < right.carry_bits.get(2)) {
+            return true;
+        } else if (left.carry_bits.get(2) > right.carry_bits.get(2)) {
+            return false;
         }
 
-        uint32_t set(uint8_t stage, uint8_t file, uint8_t var, bool val) {
-            uint8_t shift_width = shift_for_stage(stage);
-            shift_width += (0 == file) ? 0 : 2;
-            shift_width += (0 == var) ? 0 : 1;
-            bits |= (val << shift_width);
-            return bits;
+        if (left.chunk4 < right.chunk4) {
+            return true;
+        } else if (left.chunk4 > right.chunk4) {
+            return false;
         }
 
-        const std::string& str() const {
-            char buf[16];
-            snprintf(buf, 16, "(0x%04x)", bits);
-            std::string rval(buf);
-            return std::move(rval);
+        if (left.chunk3 < right.chunk3) {
+            return true;
+        } else if (left.chunk3 > right.chunk3) {
+            return false;
         }
-    } carrybits_t;
 
-    class guess_t {
-        public:
-            uint16_t chunk1; // low 16 bits of k20
-            uint8_t chunk2;  // low 8 bits of crc32(k00, 0)
-            uint8_t chunk3;  // high 8 bits of k10 * CRYPTCONST
-            uint8_t chunk4;  // bits 16..23 of k20
-            uint8_t stage;
+        if (left.chunk2 < right.chunk2) {
+            return true;
+        } else if (left.chunk2 > right.chunk2) {
+            return false;
+        }
 
-            uint8_t chunk5;
-            uint8_t chunk6;
-            uint8_t chunk7;
-            uint8_t unused2;
+        if (left.chunk1 < right.chunk1) {
+            return true;
+        } else if (left.chunk1 > right.chunk1) {
+            return false;
+        }
 
-            uint8_t chunk8;
-            uint8_t chunk9;
+        return left.carry_bits.get(1) < right.carry_bits.get(1);
+    }
 
-            uint8_t chunk10;
-            uint8_t chunk11;
-            
-            uint32_t k10;
+    friend bool operator>(const guess_t& left, const guess_t& right) {
+        return right < left;
+    }
 
-            carrybits_t carry_bits;
+    friend bool operator<=(const guess_t& left, const guess_t& right) {
+        return !(left > right);
+    }
 
-            guess_t() :
-                chunk1(0), chunk2(0), chunk3(0), chunk4(0), stage(1),
-                chunk5(0), chunk6(0), chunk7(0), unused2(0xAA), chunk8(0),
-                chunk9(0), chunk10(0), chunk11(0), carry_bits(0) {};
+    friend bool operator>=(const guess_t& left, const guess_t& right) {
+        return !(left < right);
+    }
 
-            guess_t(int n) :
-                chunk1(0), chunk2(0), chunk3(0), chunk4(0), stage(n),
-                chunk5(0), chunk6(0), chunk7(0), unused2(0xAA), chunk8(0),
-                chunk9(0), chunk10(0), chunk11(0), carry_bits(0) {};
+    guess_t& operator*() { return *this; }
 
-            guess_t(int n, const guess_t& other) :
-                chunk1(other.chunk1), chunk2(other.chunk2),
-                chunk3(other.chunk3), chunk4(other.chunk4), stage(n),
-                chunk5(other.chunk5), chunk6(other.chunk6),
-                chunk7(other.chunk7), unused2(0xAA), chunk8(other.chunk8),
-                chunk9(other.chunk9), chunk10(other.chunk10),
-                chunk11(other.chunk11), carry_bits(other.carry_bits) {};
+    bool compare(const guess_t& other) const { return *this == other; }
 
-            guess_t(int n, carrybits_t bits,
-                    uint16_t c1=0, uint8_t c2=0, uint8_t c3=0, uint8_t c4=0,
-                    uint8_t c5=0, uint8_t c6=0, uint8_t c7=0,
-                    uint8_t c8=0, uint8_t c9=0, uint8_t c10=0, uint8_t c11=0) :
-                chunk1(c1), chunk2(c2), chunk3(c3), chunk4(c4), stage(n),
-                chunk5(c5), chunk6(c6), chunk7(c7), unused2(0xAA), chunk8(c8),
-                chunk9(c9), chunk10(c10), chunk11(c11), carry_bits(bits) {};
+    // Prefix increment.
+    guess_t& operator++() {
+        switch (stage) {
+            case 1: {
+                uint8_t s1bits = carry_bits.get(1);
+                s1bits++;
+                if (0x10 > s1bits) {
+                    carry_bits.set(1, s1bits);
+                    return *this;
+                }
 
+                carry_bits.set(1, 0);
 
-            std::string str() const {
-                char cstr[256];
-                snprintf(cstr, 256,
-                        "0x%04x%02x%02x%02x:%02x%02x%02x:%02x%02x:%02x%02x%s",
-                        chunk1, chunk2, chunk3, chunk4, chunk5, chunk6, chunk7,
-                        chunk8, chunk9, chunk10, chunk11,
-                        carry_bits.str().c_str());
-                std::string ret(cstr);
-                return std::move(ret);
-            }
+                if (UINT16_MAX != chunk1) {
+                    ++(chunk1);
+                    return *this;
+                }
 
-            std::string hex() const { return str(); }
+                chunk1 = 0;
 
-            bool operator==(const guess_t& other) const {
-                return (this->carry_bits == other.carry_bits &&
-                        this->chunk1 == other.chunk1 &&
-                        this->chunk2 == other.chunk2 &&
-                        this->chunk3 == other.chunk3 &&
-                        this->chunk4 == other.chunk4 &&
-                        this->chunk5 == other.chunk5 &&
-                        this->chunk6 == other.chunk6 &&
-                        this->chunk7 == other.chunk7 &&
-                        this->chunk8 == other.chunk8 &&
-                        this->chunk9 == other.chunk9 &&
-                        this->chunk10 == other.chunk10 &&
-                        this->chunk11 == other.chunk11);
-            }
+                if (UINT8_MAX != chunk2) {
+                    ++(chunk2);
+                    return *this;
+                }
 
-            friend bool operator!=(const guess_t& left,
-                    const guess_t& right) {
-                return !(left == right);
-            }
+                chunk2 = 0;
+                if (UINT8_MAX != chunk3) {
+                    ++(chunk3);
+                    return *this;
+                }
 
-            guess_t& operator=(const guess_t& other) {
-                this->chunk1 = other.chunk1;
-                this->chunk2 = other.chunk2;
-                this->chunk3 = other.chunk3;
-                this->chunk4 = other.chunk4;
-                this->chunk5 = other.chunk5;
-                this->chunk6 = other.chunk6;
-                this->chunk7 = other.chunk7;
-                this->chunk8 = other.chunk8;
-                this->chunk9 = other.chunk9;
-                this->chunk10 = other.chunk10;
-                this->chunk11 = other.chunk11;
-                this->carry_bits = other.carry_bits;
+                chunk3 = 0;
+                if (UINT8_MAX != chunk4) {
+                    ++(chunk4);
+                    return *this;
+                }
+
+                chunk4 = 0;
                 return *this;
             }
-
-            // This operator defines the ordering of elements. I.e., which 
-            // chunks have what significance. Carry bits are the least
-            // significant.
-            friend bool operator<(const guess_t& left,
-                    const guess_t& right) {
-                if (left.chunk11 < right.chunk11) {
-                    return true;
-                } else if (left.chunk11 > right.chunk11) {
-                    return false;
+            case 2: {
+                uint8_t s2bits = carry_bits.get(2);
+                s2bits++;
+                if (0x10 > s2bits) {
+                    carry_bits.set(2, s2bits);
+                    return *this;
                 }
 
-                if (left.chunk10 < right.chunk10) {
-                    return true;
-                } else if (left.chunk10 > right.chunk10) {
-                    return false;
+                carry_bits.set(2, 0);
+
+                if (UINT8_MAX != chunk5) {
+                    ++(chunk5);
+                    return *this;
                 }
 
-                if (left.carry_bits.get(4) < right.carry_bits.get(4)) {
-                    return true;
-                } else if (left.carry_bits.get(4) > right.carry_bits.get(4)) {
-                    return false;
+                chunk5 = 0;
+                if (UINT8_MAX != chunk6) {
+                    ++(chunk6);
+                    return *this;
                 }
 
-                if (left.chunk9 < right.chunk9) {
-                    return true;
-                } else if (left.chunk9 > right.chunk9) {
-                    return false;
+                chunk6 = 0;
+                if (UINT8_MAX != chunk7) {
+                    ++(chunk7);
+                    return *this;
                 }
 
-                if (left.chunk8 < right.chunk8) {
-                    return true;
-                } else if (left.chunk8 > right.chunk8) {
-                    return false;
-                }
-
-                if (left.carry_bits.get(3) < right.carry_bits.get(3)) {
-                    return true;
-                } else if (left.carry_bits.get(3) > right.carry_bits.get(3)) {
-                    return false;
-                }
-
-                if (left.chunk7 < right.chunk7) {
-                    return true;
-                } else if (left.chunk7 > right.chunk7) {
-                    return false;
-                }
-
-                if (left.chunk6 < right.chunk6) {
-                    return true;
-                } else if (left.chunk6 > right.chunk6) {
-                    return false;
-                }
-
-                if (left.chunk5 < right.chunk5) {
-                    return true;
-                } else if (left.chunk5 > right.chunk5) {
-                    return false;
-                }
-
-                if (left.carry_bits.get(2) < right.carry_bits.get(2)) {
-                    return true;
-                } else if (left.carry_bits.get(2) > right.carry_bits.get(2)) {
-                    return false;
-                }
-
-                if (left.chunk4 < right.chunk4) {
-                    return true;
-                } else if (left.chunk4 > right.chunk4) {
-                    return false;
-                }
-
-                if (left.chunk3 < right.chunk3) {
-                    return true;
-                } else if (left.chunk3 > right.chunk3) {
-                    return false;
-                }
-
-                if (left.chunk2 < right.chunk2) {
-                    return true;
-                } else if (left.chunk2 > right.chunk2) {
-                    return false;
-                }
-
-                if (left.chunk1 < right.chunk1) {
-                    return true;
-                } else if (left.chunk1 > right.chunk1) {
-                    return false;
-                }
-
-                return left.carry_bits.get(1) < right.carry_bits.get(1);
+                chunk7 = 0;
+                return *this;
             }
-
-            friend bool operator>(const guess_t& left, const guess_t& right) {
-                return right < left;
-            }
-
-            friend bool operator<=(const guess_t& left, const guess_t& right) {
-                return !(left > right);
-            }
-
-            friend bool operator>=(const guess_t& left, const guess_t& right) {
-                return !(left < right);
-            }
-
-            guess_t& operator*() { return *this; }
-
-            bool compare(const guess_t& other) const {
-                return *this == other;
-            }
-
-            // Prefix increment.
-            guess_t& operator++() {
-                switch (stage) {
-                    case 1:
-                        {
-                            uint8_t s1bits = carry_bits.get(1);
-                            s1bits++;
-                            if (0x10 > s1bits) {
-                                carry_bits.set(1, s1bits);
-                                return *this;
-                            }
-
-                            carry_bits.set(1, 0);
-
-                            if (UINT16_MAX != chunk1) {
-                                ++(chunk1);
-                                return *this;
-                            }
-
-                            chunk1 = 0;
-
-                            if (UINT8_MAX != chunk2) {
-                                ++(chunk2);
-                                return *this;
-                            }
-
-                            chunk2 = 0;
-                            if (UINT8_MAX != chunk3) {
-                                ++(chunk3);
-                                return *this;
-                            }
-
-                            chunk3 = 0;
-                            if (UINT8_MAX != chunk4) {
-                                ++(chunk4);
-                                return *this;
-                            }
-
-                            chunk4 = 0;
-                            return *this;
-                        }
-                    case 2:
-                        {
-                            uint8_t s2bits = carry_bits.get(2);
-                            s2bits++;
-                            if (0x10 > s2bits) {
-                                carry_bits.set(2, s2bits);
-                                return *this;
-                            }
-
-                            carry_bits.set(2, 0);
-
-                            if (UINT8_MAX != chunk5) {
-                                ++(chunk5);
-                                return *this;
-                            }
-
-                            chunk5 = 0;
-                            if (UINT8_MAX != chunk6) {
-                                ++(chunk6);
-                                return *this;
-                            }
-
-                            chunk6 = 0;
-                            if (UINT8_MAX != chunk7) {
-                                ++(chunk7);
-                                return *this;
-                            }
-
-                            chunk7 = 0;
-                            return *this;
-                        }
-                    case 3:
-                        {
-                            uint8_t s3bits = carry_bits.get(3);
-                            s3bits++;
-                            if (0x10 > s3bits) {
-                                carry_bits.set(3, s3bits);
-                                return *this;
-                            }
-
-                            carry_bits.set(3, 0);
-
-                            if (UINT8_MAX != chunk8) {
-                                ++(chunk8);
-                                return *this;
-                            }
-
-                            chunk8 = 0;
-                            if (UINT8_MAX != chunk9) {
-                                ++(chunk9);
-                                return *this;
-                            }
-
-                            chunk9 = 0;
-                            return *this;
-                        }
-                    case 4:
-                        {
-                            uint8_t s4bits = carry_bits.get(4);
-                            s4bits++;
-                            if (0x10 > s4bits) {
-                                carry_bits.set(4, s4bits);
-                                return *this;
-                            }
-
-                            carry_bits.set(4, 0);
-
-                            if (UINT8_MAX != chunk10) {
-                                ++(chunk10);
-                                return *this;
-                            }
-
-                            chunk10 = 0;
-                            if (UINT8_MAX != chunk11) {
-                                ++(chunk11);
-                                return *this;
-                            }
-
-                            chunk11 = 0;
-                            return *this;
-                        }
-                    default:
-                        {
-                            fprintf(stderr, "FATAL ERROR: Invalid guess stage %d "
-                                    "during increment.\n", stage);
-                            abort();
-                        }
+            case 3: {
+                uint8_t s3bits = carry_bits.get(3);
+                s3bits++;
+                if (0x10 > s3bits) {
+                    carry_bits.set(3, s3bits);
+                    return *this;
                 }
+
+                carry_bits.set(3, 0);
+
+                if (UINT8_MAX != chunk8) {
+                    ++(chunk8);
+                    return *this;
+                }
+
+                chunk8 = 0;
+                if (UINT8_MAX != chunk9) {
+                    ++(chunk9);
+                    return *this;
+                }
+
+                chunk9 = 0;
+                return *this;
             }
-    };
+            case 4: {
+                uint8_t s4bits = carry_bits.get(4);
+                s4bits++;
+                if (0x10 > s4bits) {
+                    carry_bits.set(4, s4bits);
+                    return *this;
+                }
 
-    /* Structure for containing the global state of the cracking job on this
-     * thread.
-     */
-    typedef struct zip_cryptfile {
-        uint8_t random_bytes[10];
-        uint8_t header_first[10];
-        uint8_t header_second[10];
-    } zip_cryptfile_t;
+                carry_bits.set(4, 0);
 
-    typedef struct zip_crack {
-        pid_t pid;
-        time_t time;
-        unsigned int seed;
-        std::array<uint32_t, 3> keys;
-        // TODO(leaf): Because the specific target archive for which we're
-        // writing this crack has only two files, we hard-coded that number
-        // here. To make this attack generally useful, we would need a vector
-        // here instead.
-        std::array<zip_cryptfile_t, 2> files;
-    } zip_crack_t;
+                if (UINT8_MAX != chunk10) {
+                    ++(chunk10);
+                    return *this;
+                }
 
-    typedef struct crack {
-        uint8_t stage;
-        guess_t start;
-        guess_t end;
-        zip_crack_t zip;
-    } crack_t;
+                chunk10 = 0;
+                if (UINT8_MAX != chunk11) {
+                    ++(chunk11);
+                    return *this;
+                }
 
-    /* Compute the correct guess from a crack_t structure. */
-    guess_t correct_guess(uint8_t stage, const crack_t crypt_test);
+                chunk11 = 0;
+                return *this;
+            }
+            default: {
+                fprintf(stderr,
+                        "FATAL ERROR: Invalid guess stage %d "
+                        "during increment.\n",
+                        stage);
+                abort();
+            }
+        }
+    }
+};
 
-    /* Helper functions for testing stage1. */
-    guess_t stage1_correct_guess_start(guess_t correct_guess);
-    guess_t stage1_correct_guess_end(guess_t correct_guess);
+/* Structure for containing the global state of the cracking job on this
+ * thread.
+ */
+typedef struct zip_cryptfile {
+    uint8_t random_bytes[10];
+    uint8_t header_first[10];
+    uint8_t header_second[10];
+} zip_cryptfile_t;
 
-    /* Helper functions for testing stage2. */
-    guess_t stage2_correct_guess_start(guess_t correct_guess);
-    guess_t stage2_correct_guess_end(guess_t correct_guess);
+typedef struct zip_crack {
+    pid_t pid;
+    time_t time;
+    unsigned int seed;
+    std::array<uint32_t, 3> keys;
+    // TODO(leaf): Because the specific target archive for which we're
+    // writing this crack has only two files, we hard-coded that number
+    // here. To make this attack generally useful, we would need a vector
+    // here instead.
+    std::array<zip_cryptfile_t, 2> files;
+} zip_crack_t;
 
-    /* Helper functions for testing stage3. */
-    guess_t stage3_correct_guess_start(guess_t correct_guess);
-    guess_t stage3_correct_guess_end(guess_t correct_guess);
+typedef struct crack {
+    uint8_t stage;
+    guess_t start;
+    guess_t end;
+    zip_crack_t zip;
+} crack_t;
 
-    /* Helper functions for testing stage4. */
-    guess_t stage4_correct_guess_start(guess_t correct_guess);
-    guess_t stage4_correct_guess_end(guess_t correct_guess);
+/* Compute the correct guess from a crack_t structure. */
+guess_t correct_guess(uint8_t stage, const crack_t crypt_test);
 
-    class stage_range {
-        public:
-            explicit stage_range(int stage, const crack_t& state) :
-                stage_(stage), state_(state) {};
-            guess_t begin() { return guess_t(stage_, state_.start); }
-            guess_t end() { return guess_t(stage_, state_.end); }
+/* Helper functions for testing stage1. */
+guess_t stage1_correct_guess_start(guess_t correct_guess);
+guess_t stage1_correct_guess_end(guess_t correct_guess);
 
-        private:
-            const int stage_;
-            const crack_t& state_;
-    };
+/* Helper functions for testing stage2. */
+guess_t stage2_correct_guess_start(guess_t correct_guess);
+guess_t stage2_correct_guess_end(guess_t correct_guess);
 
-    // Notation:
-    // 
-    // key00, key10, key20 are the keys after having processed the password.
-    // Bytes produced by rand() are x0, x1, x2, ...
-    // Stream bytes during first encryption are s0, s1x, s2x, ...
-    // key0nx, key1nx, key2nx are the keys after having processed the password and
-    // the first n bytes of x.
-    //
-    // y0 = x0 ^ s0, y1 = x1 ^ s1x, y2 = x2 ^ s2x, ...
-    // Stream bytes during second encryption are s0, s1y, s2y, ...
-    // Header bytes in zip file are h0 = y0 ^ s0 = x0, h1 = y1 ^ s1y, h2 = y2 ^ s2y, ...
-    // key0ny, key1ny, key2ny are the keys after having processed the password and the
-    // first n bytes of y.
-    // 
-    // stage 1:
-    // 
-    // We guess [chunk1 = bits 0..15 of key20 (16 bits)] 
-    // We guess [chunk2 = bits 0..7 of crc32(key00, 0) (8 bits)]
-    // We guess [chunk3 = MSB(key10 * 0x08088405), carry for x f0, carry for y f0, carry for x f1, carry for y f1 (12 bits)]
-    // We guess [chunk4 = bits 16..23 of key20 (8 bits)]
-    // (44 bits total)
-    // 
-    // We get 16 bits of filter from h1 in each of the two files.
-    // We expect 2^{44 - 16} = 2^28 chunk1-4 tuples to pass, 2^44 work.
+/* Helper functions for testing stage3. */
+guess_t stage3_correct_guess_start(guess_t correct_guess);
+guess_t stage3_correct_guess_end(guess_t correct_guess);
 
+/* Helper functions for testing stage4. */
+guess_t stage4_correct_guess_start(guess_t correct_guess);
+guess_t stage4_correct_guess_end(guess_t correct_guess);
 
-    /***
-     * stage1: begin with guess start and continue guessing until end. Each guess that
-     * passes is placed into the output vector. Returns 1 if no error occurred. When
-     * errors happen, returns 0 and sets errno.
-     */
+class stage_range {
+public:
+    explicit stage_range(int stage, const crack_t& state)
+        : stage_(stage), state_(state){};
+    guess_t begin() { return guess_t(stage_, state_.start); }
+    guess_t end() { return guess_t(stage_, state_.end); }
 
-    int stage1(const crack_t* state, vector<guess_t>& out,
-            const guess_t& correct_guess=0, uint16_t expected_s0=0);
+private:
+    const int stage_;
+    const crack_t& state_;
+};
 
-    // stage 2:
+// Notation:
+//
+// key00, key10, key20 are the keys after having processed the password.
+// Bytes produced by rand() are x0, x1, x2, ...
+// Stream bytes during first encryption are s0, s1x, s2x, ...
+// key0nx, key1nx, key2nx are the keys after having processed the password and
+// the first n bytes of x.
+//
+// y0 = x0 ^ s0, y1 = x1 ^ s1x, y2 = x2 ^ s2x, ...
+// Stream bytes during second encryption are s0, s1y, s2y, ...
+// Header bytes in zip file are h0 = y0 ^ s0 = x0, h1 = y1 ^ s1y, h2 = y2 ^ s2y,
+// ... key0ny, key1ny, key2ny are the keys after having processed the password
+// and the first n bytes of y.
+//
+// stage 1:
+//
+// We guess [chunk1 = bits 0..15 of key20 (16 bits)]
+// We guess [chunk2 = bits 0..7 of crc32(key00, 0) (8 bits)]
+// We guess [chunk3 = MSB(key10 * 0x08088405), carry for x f0, carry for y f0,
+// carry for x f1, carry for y f1 (12 bits)] We guess [chunk4 = bits 16..23 of
+// key20 (8 bits)] (44 bits total)
+//
+// We get 16 bits of filter from h1 in each of the two files.
+// We expect 2^{44 - 16} = 2^28 chunk1-4 tuples to pass, 2^44 work.
 
-    // We guess [chunk5 = bits 24..32 of key20 (8 bits)]
-    // We guess [chunk6 = bits 8..15 of crc32(key00, 0) (8 bits)]
-    // We guess [chunk7 = MSB(key10 * 0xD4652819), carry for x,
-    // carry for y (12 bits)]
-    // (28 bits total)
+/***
+ * stage1: begin with guess start and continue guessing until end. Each guess
+ * that passes is placed into the output vector. Returns 1 if no error occurred.
+ * When errors happen, returns 0 and sets errno.
+ */
 
-    // Similar process as before, but filtering with h2 in each file.  (I'll
-    // flesh this out later.)  We expect 2^{28 + 28 - 16} = 2^{40} chunk1-7
-    // tuples to pass, 2^{28 + 28} = 2^56 work.
+int stage1(const crack_t* state, vector<guess_t>& out,
+           const guess_t& correct_guess = 0, uint16_t expected_s0 = 0);
 
-    int stage2(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out,
-            const guess_t& correct_guess=0, uint16_t expected_s0=0);
+// stage 2:
 
-    // stage 3:
-    // We guess [chunk8 = bits 16..23 of crc32(key00, 0) (8 bits)]
-    // We guess [chunk9 = MSB(key10 * 0x576eac7d), carry for x, carry for y (12
-    // bits)]
-    // (20 bits total)
+// We guess [chunk5 = bits 24..32 of key20 (8 bits)]
+// We guess [chunk6 = bits 8..15 of crc32(key00, 0) (8 bits)]
+// We guess [chunk7 = MSB(key10 * 0xD4652819), carry for x,
+// carry for y (12 bits)]
+// (28 bits total)
 
-    // Similar process as before, but filtering with h3 in each file.  We
-    // expect 2^{40 + 20 - 16} = 2^{44} chunk1-9 tuples to pass, 2^{60}
-    // work.
+// Similar process as before, but filtering with h2 in each file.  (I'll
+// flesh this out later.)  We expect 2^{28 + 28 - 16} = 2^{40} chunk1-7
+// tuples to pass, 2^{28 + 28} = 2^56 work.
 
-    /*
-     * stage3 depends on guesses from stage2. 
-     */
-    int stage3(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out);
+int stage2(const crack_t* state, const vector<guess_t> in, vector<guess_t>& out,
+           const guess_t& correct_guess = 0, uint16_t expected_s0 = 0);
 
-    // stage 4:
-    // We guess [chunk11 = MSB(key10 * 0x1201d271) (8 bits)]
-    // (8 bits total)
-    // Given chunk3, chunk7, chunk9, chunk11, we do the linear algebra to
-    // get 36 vectors.  Only those vectors whose entries are all in the range
-    // [0, 2^24) are allowed.  We expect (on average) only one vector to work.
-    // From a conforming vector v, we multiply v+(chunk3<<24) by 0xd94fa8cd
-    // (which is CRYPTCONST^{-1} mod 2^32) to get k10.  Given k10, we
-    // check that it gives the 12 carry bits we've guessed.
-    // We expect 2^{44+8-12} = 2^40 candidates for the next stage with
-    // 2^{44+8} = 2^52 work
-    int stage4(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out);
+// stage 3:
+// We guess [chunk8 = bits 16..23 of crc32(key00, 0) (8 bits)]
+// We guess [chunk9 = MSB(key10 * 0x576eac7d), carry for x, carry for y (12
+// bits)]
+// (20 bits total)
 
+// Similar process as before, but filtering with h3 in each file.  We
+// expect 2^{40 + 20 - 16} = 2^{44} chunk1-9 tuples to pass, 2^{60}
+// work.
 
-    // stage 5:
-    // We guess [chunk10 = bits 24..32 of crc32(key00, 0) (8 bits)]
-    // (8 bits total)
+/*
+ * stage3 depends on guesses from stage2.
+ */
+int stage3(const crack_t* state, const vector<guess_t> in,
+           vector<guess_t>& out);
 
-    // Similar process as before, but filtering with h3 in each file.  We
-    // expect 2^{40+8-16} = 2^{32} chunk1-11 tuples to pass, 2^{48} work
+// stage 4:
+// We guess [chunk11 = MSB(key10 * 0x1201d271) (8 bits)]
+// (8 bits total)
+// Given chunk3, chunk7, chunk9, chunk11, we do the linear algebra to
+// get 36 vectors.  Only those vectors whose entries are all in the range
+// [0, 2^24) are allowed.  We expect (on average) only one vector to work.
+// From a conforming vector v, we multiply v+(chunk3<<24) by 0xd94fa8cd
+// (which is CRYPTCONST^{-1} mod 2^32) to get k10.  Given k10, we
+// check that it gives the 12 carry bits we've guessed.
+// We expect 2^{44+8-12} = 2^40 candidates for the next stage with
+// 2^{44+8} = 2^52 work
+int stage4(const crack_t* state, const vector<guess_t> in,
+           vector<guess_t>& out);
 
-    int stage5(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out);
+// stage 5:
+// We guess [chunk10 = bits 24..32 of crc32(key00, 0) (8 bits)]
+// (8 bits total)
 
-    // 
-    // stage 6:
-    // No guesses, just filtration with h4 in each file.  
-    // We expect 2^{32 - 16} = 2^{16} chunk1-11 tuples to pass, 2^32 work
-    int stage6(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out);
+// Similar process as before, but filtering with h3 in each file.  We
+// expect 2^{40+8-16} = 2^{32} chunk1-11 tuples to pass, 2^{48} work
 
-    // 
-    // stage 7:
-    // No guesses, just filtration with h5 in each file.  
-    // We expect 2^{16 - 16} = 1 chunk1-11 tuples to pass, 2^16 work
-    int stage7(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out);
+int stage5(const crack_t* state, const vector<guess_t> in,
+           vector<guess_t>& out);
 
-    // 
-    // stage 8:
-    // No guesses, just filtration with h5 in each file.  
-    // We expect 2^{0 - 16} = 1/65536 chunk1-11 tuples to pass, negligible work
-    int stage8(const crack_t* state, const vector<guess_t> in,
-            vector<guess_t>& out);
+//
+// stage 6:
+// No guesses, just filtration with h4 in each file.
+// We expect 2^{32 - 16} = 2^{16} chunk1-11 tuples to pass, 2^32 work
+int stage6(const crack_t* state, const vector<guess_t> in,
+           vector<guess_t>& out);
 
-}; // namespace
+//
+// stage 7:
+// No guesses, just filtration with h5 in each file.
+// We expect 2^{16 - 16} = 1 chunk1-11 tuples to pass, 2^16 work
+int stage7(const crack_t* state, const vector<guess_t> in,
+           vector<guess_t>& out);
+
+//
+// stage 8:
+// No guesses, just filtration with h5 in each file.
+// We expect 2^{0 - 16} = 1/65536 chunk1-11 tuples to pass, negligible work
+int stage8(const crack_t* state, const vector<guess_t> in,
+           vector<guess_t>& out);
+
+};  // namespace breakzip

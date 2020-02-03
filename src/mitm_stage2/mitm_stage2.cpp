@@ -1,6 +1,6 @@
+#include <gflags/gflags.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <gflags/gflags.h>
 
 #include "mitm_stage2.h"
 
@@ -13,8 +13,8 @@ using namespace std;
 
 namespace mitm_stage2 {
 
-bool correct_candidate(const mitm::correct_guess &g,
-                       const stage2_candidate &c) {
+bool correct_candidate(const mitm::correct_guess& g,
+                       const stage2_candidate& c) {
     bool result = false;
     uint32_t true_k20 = (g.chunk5 << 24) | (g.chunk4 << 16) | g.chunk1;
     for (int i = 0; i < c.k20_count; ++i) {
@@ -104,23 +104,23 @@ void read_stage2_candidate(stage2_candidate **stage2_candidates,
     fclose(target_file);
 }
 
-void write_stage2_candidates(const stage2_candidate *const stage2_candidates,
+void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                              const size_t stage2_candidate_count,
                              const size_t shard_number) {
-
     if (0 == FLAGS_output.length()) {
         fprintf(stderr, "Please provide a -output file basename.\n");
         exit(-1);
     } else {
-        fprintf(stderr, "Using output file basename: %s\n", FLAGS_output.c_str());
+        fprintf(stderr, "Using output file basename: %s\n",
+                FLAGS_output.c_str());
     }
 
     size_t filename_len = FLAGS_output.length() + 32;
-    char* output_filename = (char *)::calloc(filename_len, sizeof(char));
+    char* output_filename = (char*)::calloc(filename_len, sizeof(char));
 
     snprintf(output_filename, filename_len, "%s.%ld", FLAGS_output.c_str(),
              shard_number);
-    
+
     FILE* output_file = fopen(output_filename, "wb");
     if (nullptr == output_file) {
         fprintf(stderr, "Can't open output file: %s\n", output_filename);
@@ -188,7 +188,9 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                     first_half_step(info.file[0].x[1] ^ s1xf0, true, chunk7,
                                     carryy1f0, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
-                    fprintf(stderr, "FATAL: mitm_stage2a: after mxbyf0, upper1 < lower1.\n");
+                    fprintf(stderr,
+                            "FATAL: mitm_stage2a: after mxbyf0, upper1 < "
+                            "lower1.\n");
                     abort();
                 }
                 if (upper2 < lower2) {
@@ -203,7 +205,9 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                     first_half_step(info.file[1].x[1], true, chunk7, carryx1f1,
                                     k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
-                    fprintf(stderr, "FATAL: mitm_stage2a: after msbxf1, upper1 < lower1.\n");
+                    fprintf(stderr,
+                            "FATAL: mitm_stage2a: after msbxf1, upper1 < "
+                            "lower1.\n");
                     abort();
                 }
                 if (upper2 < lower2) {
@@ -218,7 +222,9 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                     first_half_step(info.file[1].x[1] ^ s1xf1, true, chunk7,
                                     carryy1f1, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
-                    fprintf(stderr, "FATAL: mitm_stage2a: after msbyf1, upper1 < lower1.\n");
+                    fprintf(stderr,
+                            "FATAL: mitm_stage2a: after msbyf1, upper1 < "
+                            "lower1.\n");
                     abort();
                 }
                 if (upper2 < lower2) {
@@ -250,8 +256,7 @@ void mitm_stage2b(const mitm::archive_info& info,
                   const size_t array_size,
                   size_t& stage2_candidate_count, /* output */
                   const std::vector<std::vector<uint16_t>>& preimages,
-                  const mitm::correct_guess* c,
-                  const bool sample) {
+                  const mitm::correct_guess* c, const bool sample) {
     // Second half of MITM for stage 2
     fprintf(stderr, "Stage 2b\n");
     if (sample) {
@@ -318,19 +323,28 @@ void mitm_stage2b(const mitm::archive_info& info,
 
                                 for (auto k20 : c1.maybek20) {
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
-                                    uint32_t k22xf0 = crc32(k21xf0, c2.msbk12xf0 >> 24);
-                                    if ((pxf0 & 0x3f) == ((k22xf0 >> 2) & 0x3f)) {
+                                    uint32_t k22xf0 =
+                                        crc32(k21xf0, c2.msbk12xf0 >> 24);
+                                    if ((pxf0 & 0x3f) ==
+                                        ((k22xf0 >> 2) & 0x3f)) {
+
                                         if (g.k20_count >= g.MAX_K20S) {
-                                            fprintf(stderr, "Not enough space "
+                                            fprintf(stderr,
+                                                    "Not enough space "
                                                     "for k20 candidate %d in "
                                                     "stage2_candidate.\n",
                                                     g.k20_count);
                                             abort();
                                         }
+
                                         // Find last byte of k20, then store it
-                                        uint8_t hi_byte = (pxf0 >> 6) ^ ((k22xf0 >> 8) & 0xff);
-                                        g.maybek20[g.k20_count] = k20 | (hi_byte << 24);
+                                        uint8_t hi_byte =
+                                            (pxf0 >> 6) ^
+                                            ((k22xf0 >> 8) & 0xff);
+                                        g.maybek20[g.k20_count] =
+                                            k20 | (hi_byte << 24);
                                         g.k20_count += 1;
+
                                     }
                                 }
 
@@ -352,7 +366,8 @@ void mitm_stage2b(const mitm::archive_info& info,
                                 }
 
                                 if (stage2_candidate_count >= array_size) {
-                                    fprintf(stderr, "Fatal Error: too many stage2 "
+                                    fprintf(stderr,
+                                            "Fatal Error: too many stage2 "
                                             "candidates for output array!\n");
                                     abort();
                                 }

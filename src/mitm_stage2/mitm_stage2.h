@@ -21,8 +21,15 @@ typedef struct stage2a {
 } stage2a;
 
 typedef struct stage2_candidate {
-    stage2_candidate() : k20_count(0), chunk2(0), chunk3(0), chunk6(0),
-                         chunk7(0), cb(0), m1(0), m2(0) {}
+    stage2_candidate()
+        : k20_count(0),
+          chunk2(0),
+          chunk3(0),
+          chunk6(0),
+          chunk7(0),
+          cb(0),
+          m1(0),
+          m2(0) {}
 
     static const size_t MAX_K20S = 16;
 
@@ -40,7 +47,6 @@ typedef struct stage2_candidate {
     uint32_t m2;
 } stage2_candidate;
 
-void read_stage2_candidate(FILE* f, stage2_candidate& candidate /* out */);
 void write_stage2_candidate(FILE* f, const stage2_candidate& candidate);
 void read_stage2_candidate(stage2_candidate **stage2_candidates /* out */,
                            size_t &stage2_candidate_count /* out */,
