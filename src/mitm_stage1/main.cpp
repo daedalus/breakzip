@@ -23,7 +23,6 @@ const char *usage_message = R"usage(
     )usage";
 
 int main(int argc, char *argv[]) {
-
     int my_argc = argc;
 
     SetVersionString(version_string());
@@ -31,9 +30,8 @@ int main(int argc, char *argv[]) {
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
 
     if (FLAGS_runtests) {
-        correct_guess guess[2] = {
-            correct(mitm::test[0]), correct(mitm::test[1])
-        };
+        correct_guess guess[2] = {correct(mitm::test[0]),
+                                  correct(mitm::test[1])};
         vector<vector<stage1a>> table(0x01000000);
         vector<stage1_candidate> candidates(0);
         vector<vector<uint16_t>> preimages(0x100);
@@ -42,11 +40,14 @@ int main(int argc, char *argv[]) {
         build_preimages(preimages);
         printf("Generated %ld preimages.\n", preimages.size());
         mitm_stage1a(test[0], table, &(guess[0]));
-        mitm_stage1b(test[0], table, candidates, preimages, &(guess[0]), &correct_idx);
+        mitm_stage1b(test[0], table, candidates, preimages, &(guess[0]),
+                     &correct_idx);
 
         if (correct_candidate(guess[0], candidates[correct_idx])) {
-            printf("The correct candidate appears in the candidates list at index "
-                   "%ld.\n", correct_idx);
+            printf(
+                "The correct candidate appears in the candidates list at index "
+                "%ld.\n",
+                correct_idx);
         } else {
             printf("Unable to find correct guess in candidates vector!\n");
             abort();
@@ -97,7 +98,8 @@ int main(int argc, char *argv[]) {
 
         if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
             (archive.file[1].x[0] != archive.file[1].h[0])) {
-            fprintf(stderr, "Given seed does not generate the initial bytes!\n");
+            fprintf(stderr,
+                    "Given seed does not generate the initial bytes!\n");
             exit(-1);
         }
 
@@ -109,7 +111,6 @@ int main(int argc, char *argv[]) {
         mitm_stage1a(archive, table);
         mitm_stage1b(archive, table, candidates, preimages);
         write_candidates(candidates);
-
     }
 
     return 0;
