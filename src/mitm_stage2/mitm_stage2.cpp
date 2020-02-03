@@ -257,11 +257,11 @@ void mitm_stage2b(const mitm::archive_info& info,
 
                                 for (auto k20 : c1.maybek20) {
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
-                                    uint32_t k22xf0 = crc32(
-                                        k21xf0,
-                                        c2.msbk12xf0 >>
-                                            24) if ((pxf0 & 0x3f) ==
-                                                    ((k22xf0 >> 2) & 0x3f)) {
+                                    uint32_t k22xf0 =
+                                        crc32(k21xf0, c2.msbk12xf0 >> 24);
+                                    if ((pxf0 & 0x3f) ==
+                                        ((k22xf0 >> 2) & 0x3f)) {
+
                                         if (g.k20_count >= g.MAX_K20S) {
                                             fprintf(stderr,
                                                     "Not enough space "
@@ -270,6 +270,7 @@ void mitm_stage2b(const mitm::archive_info& info,
                                                     g.k20_count);
                                             abort();
                                         }
+
                                         // Find last byte of k20, then store it
                                         uint8_t hi_byte =
                                             (pxf0 >> 6) ^
@@ -277,6 +278,7 @@ void mitm_stage2b(const mitm::archive_info& info,
                                         g.maybek20[g.k20_count] =
                                             k20 | (hi_byte << 24);
                                         g.k20_count += 1;
+
                                     }
                                 }
 
