@@ -10,10 +10,12 @@
 
 DECLARE_string(target);
 DECLARE_bool(runtests);
-DEFINE_string(input_shard, "target.out.0", "The filename of the stage1 shard to run on.");
+DEFINE_string(input_shard, "target.out.0",
+              "The filename of the stage1 shard to run on.");
 DECLARE_string(output);
 DECLARE_int32(srand_seed);
-DEFINE_int32(stop_after, -1, "If set to a positive value, the program "
+DEFINE_int32(stop_after, -1,
+             "If set to a positive value, the program "
              "will stop after processing <stop_after> stage1 candidates.");
 
 using namespace mitm;
@@ -67,18 +69,16 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    fprintf(stdout, "Read %ld candidates from stage1.\n",
-            candidates.size());
+    fprintf(stdout, "Read %ld candidates from stage1.\n", candidates.size());
 
     if (FLAGS_runtests) {
-        correct_guess guess[2] = {
-            correct(mitm::test[0]), correct(mitm::test[1])
-        };
+        correct_guess guess[2] = {correct(mitm::test[0]),
+                                  correct(mitm::test[1])};
 
         size_t idx = 0;
         size_t stage2_candidate_total = 0;
         printf("Starting stage2...\n");
-        for (auto candidate: candidates) {
+        for (auto candidate : candidates) {
             // Clear the output array.
             ::memset(stage2_candidates, 0,
                      S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
@@ -90,16 +90,14 @@ int main(int argc, char* argv[]) {
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
-            mitm_stage2b(test[0], candidate, table,
-                         stage2_candidates, S2CANDIDATE_ARRAYSZ,
-                         stage2_candidate_count,
-                         preimages, guess);
+            mitm_stage2b(test[0], candidate, table, stage2_candidates,
+                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count, preimages,
+                         guess);
 
             stage2_candidate_total += stage2_candidate_count;
-            printf("stage1[%lu] => %lu candidates, %lu total.\n",
-                   idx, stage2_candidate_count, stage2_candidate_total);
-            write_stage2_candidates(stage2_candidates,
-                                    stage2_candidate_count,
+            printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,
+                   stage2_candidate_count, stage2_candidate_total);
+            write_stage2_candidates(stage2_candidates, stage2_candidate_count,
                                     idx);
 
             if (FLAGS_stop_after <= idx) {
@@ -145,12 +143,13 @@ int main(int argc, char* argv[]) {
             exit(-1);
         }
 
-        printf("Starting stage2 for target archive `%s` and input shard `%s`...\n",
-               FLAGS_target.c_str(), FLAGS_input_shard.c_str());
-        for (auto candidate: candidates) {
+        printf(
+            "Starting stage2 for target archive `%s` and input shard `%s`...\n",
+            FLAGS_target.c_str(), FLAGS_input_shard.c_str());
+        for (auto candidate : candidates) {
             // Clear the output array.
             ::memset(stage2_candidates, 0,
-                    S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
+                     S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
             size_t stage2_candidate_count = 0;
 
             if (++idx % 1000) {
@@ -159,17 +158,15 @@ int main(int argc, char* argv[]) {
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(archive, candidate, table);
-            mitm_stage2b(archive, candidate, table,
-                    stage2_candidates, S2CANDIDATE_ARRAYSZ,
-                    stage2_candidate_count,
-                    preimages);
+            mitm_stage2b(archive, candidate, table, stage2_candidates,
+                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count,
+                         preimages);
 
             stage2_candidate_total += stage2_candidate_count;
-            printf("stage1[%lu] => %lu candidates, %lu total.\n",
-                    idx, stage2_candidate_count, stage2_candidate_total);
-            write_stage2_candidates(stage2_candidates,
-                    stage2_candidate_count,
-                    idx);
+            printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,
+                   stage2_candidate_count, stage2_candidate_total);
+            write_stage2_candidates(stage2_candidates, stage2_candidate_count,
+                                    idx);
 
             if (FLAGS_stop_after <= idx) {
                 fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",

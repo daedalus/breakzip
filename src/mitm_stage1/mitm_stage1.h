@@ -2,9 +2,9 @@
 #define MITM_STAGE1_H
 
 #include <stdio.h>
+#include <string.h>
 #include <cstdint>
 #include <vector>
-#include <string.h>
 
 #include "mitm_common.h"
 
@@ -31,8 +31,7 @@ typedef struct stage1_candidate {
     // Could recompute, but it's not much more info.
     uint32_t m1;
 
-    stage1_candidate() : k20_count(0), chunk2(0), chunk3(0), cb1(0),
-                         m1(0) {
+    stage1_candidate() : k20_count(0), chunk2(0), chunk3(0), cb1(0), m1(0) {
         ::memset(maybek20, 0, sizeof(uint32_t) * MAX_K20S);
     };
 } stage1_candidate;
@@ -46,16 +45,18 @@ void write_candidate(FILE *f, stage1_candidate &c);
 void read_candidate(FILE *f, stage1_candidate &c);
 void write_candidates(vector<stage1_candidate> &candidates,
                       size_t correct_index = SIZE_MAX /* output */);
-void read_candidates(FILE *f, vector<stage1_candidate>& out /* output */);
+void read_candidates(FILE *f, vector<stage1_candidate> &out /* output */);
 
-void mitm_stage1a(mitm::archive_info& info, std::vector<std::vector<stage1a>>& table,
-                  mitm::correct_guess* c = nullptr);
+void mitm_stage1a(mitm::archive_info &info,
+                  std::vector<std::vector<stage1a>> &table,
+                  mitm::correct_guess *c = nullptr);
 
-void mitm_stage1b(mitm::archive_info& info, std::vector<std::vector<stage1a>>& table,
-                  std::vector<stage1_candidate>& candidates,
-                  std::vector<vector<uint16_t>>& preimages,
-                  mitm::correct_guess* c = nullptr,
+void mitm_stage1b(mitm::archive_info &info,
+                  std::vector<std::vector<stage1a>> &table,
+                  std::vector<stage1_candidate> &candidates,
+                  std::vector<vector<uint16_t>> &preimages,
+                  mitm::correct_guess *c = nullptr,
                   size_t *correct_candidate_index = nullptr);
 
-}; // namespace
+};  // namespace mitm_stage1
 #endif
