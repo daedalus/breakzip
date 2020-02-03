@@ -13,7 +13,7 @@ using namespace std;
 bool correct_candidate(const mitm::correct_guess &g,
                        const stage2_candidate &c) {
     bool result = false;
-    uint32_t true_k20 = (g.chunk4 << 16) | g.chunk1;
+    uint32_t true_k20 = (g.chunk5 << 24) | (g.chunk4 << 16) | g.chunk1;
     for (int i = 0; i < c.k20_count; ++i) {
         result = result || (c.maybek20[i] == true_k20);
     }
@@ -252,11 +252,8 @@ void mitm_stage2b(const mitm::archive_info& info,
 
                                 for (auto k20 : c1.maybek20) {
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
-                                    if ((pxf0 & 0x3f) ==
-                                        ((crc32(k21xf0, c2.msbk12xf0 >> 24) >>
-                                          2) &
-                                         0x3f)) {
-
+                                    uint32_t k22xf0 = crc32(k21xf0, c2.msbk12xf0 >> 24)
+                                    if ((pxf0 & 0x3f) == ((k22xf0 >> 2) & 0x3f)) {
                                         if (g.k20_count >= g.MAX_K20S) {
                                             fprintf(stderr, "Not enough space "
                                                     "for k20 candidate %d in "
@@ -264,8 +261,9 @@ void mitm_stage2b(const mitm::archive_info& info,
                                                     g.k20_count);
                                             abort();
                                         }
-
-                                        g.maybek20[g.k20_count] = k20;
+                                        // Find last byte of k20, then store it
+                                        uint8_t hi_byte = (pxf0 >> 6) ^ ((k22xf0 >> 8) & 0xff);
+                                        g.maybek20[g.k20_count] = k20 | (hi_byte << 24);
                                         g.k20_count += 1;
                                     }
                                 }
