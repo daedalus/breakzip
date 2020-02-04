@@ -5,10 +5,14 @@
 #include "mitm_stage2.h"
 
 DECLARE_string(output);
+DECLARE_string(target);
+DECLARE_string(input_shard);
 
 using namespace mitm;
 using namespace mitm_stage1;
 using namespace std;
+
+namespace mitm_stage2 {
 
 bool correct_candidate(const mitm::correct_guess& g,
                        const stage2_candidate& c) {
@@ -36,6 +40,69 @@ void write_stage2_candidate(FILE* f, const stage2_candidate& candidate) {
     fputc(candidate.cb, f);
     fputc(candidate.m1, f);
     fputc(candidate.m2, f);
+}
+
+void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
+    uint32_t tmp = 0;
+    read_word(f, tmp);
+    candidate.k20_count = tmp;
+
+    for (uint8_t i = 0 ; i < candidate.k20_count; ++i) {
+        uint32_t word = 0;
+        read_word(f, word);
+        candidate.maybek20[i] = word;
+    }
+
+    candidate.chunk2 = fgetc(f);
+    candidate.chunk3 = fgetc(f);
+    candidate.chunk6 = fgetc(f);
+    candidate.chunk7 = fgetc(f);
+    candidate.cb = fgetc(f);
+    candidate.m1 = fgetc(f);
+    candidate.m2 = fgetc(f);
+}
+
+void read_stage2_candidates(stage2_candidate **stage2_candidates,
+                           uint32_t *stage2_candidate_count) {
+    if (0 == FLAGS_input_shard.length()) {
+        fprintf(stderr, "Please provide a -target file basename.\n");
+        exit(-1);
+    }
+
+    size_t filename_len = FLAGS_input_shard.length() + 32;
+    char *target_filename = (char *)::calloc(filename_len, sizeof(char));
+    snprintf(target_filename, filename_len, "%s",
+             FLAGS_input_shard.c_str());
+
+    fprintf(stderr, "Using input file for stage2 candidates: %s\n",
+            target_filename); 
+
+    FILE *target_file = fopen(target_filename, "rb");
+    if (nullptr == target_file) {
+        fprintf(stderr, "Can't open target input file: %s\n", target_filename);
+        perror("Fatal error");
+        exit(-1);
+    }
+
+    uint32_t count = 0;
+    read_word(target_file, count);
+
+    // Allocate an array of stage2 candidates.
+    stage2_candidate *candidates =
+            (stage2_candidate *)::calloc(count, sizeof(stage2_candidate));
+    if (nullptr == candidates) {
+        fprintf(stderr, "Can't allocate array for %d stage2 candidates.\n",
+                count);
+        perror("Fatal error");
+        exit(-1);
+    }
+
+    *stage2_candidate_count = count;
+    for (int i = 0; i < (int)count; ++i) {
+        read_stage2_candidate(target_file, candidates[i]);
+    }
+
+    fclose(target_file);
 }
 
 void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
@@ -319,3 +386,5 @@ void mitm_stage2b(const mitm::archive_info& info,
     printf("mitm_stage2b: this stage1 candidate produced %lu candidates.\n",
            stage2_candidate_count);
 }
+
+}; // namespace
