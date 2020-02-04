@@ -19,21 +19,26 @@ may vary.
 
 ## Dependencies
 
+The following are the necessary packages from Ubuntu 19 which should be installed
+using `apt`:
+
 * `autotools-dev`
 * `automake`
 * `cmake` >= 13.0
 * `build-essential`
-* `debian-keyring`
 * `doxygen`
-* `g++-6-multilib`
 * `g++-multilib`
-* NVIDIA's CUDA Toolkit v10.2 or later
 * `libgflags-dev`
 * `libgoogle-perftools-dev` (for `tcmalloc`)
-* `libstdc++6-6-dbg:amd64`
 * `pkg-config`
 * `texinfo`
 * `libreadline-dev`
+* `libtool`
+
+Additionally, you should download and install the following packages from third
+parties:
+
+* NVIDIA's CUDA Toolkit v10.2 or later
 
 ## Anti-dependencies
 
