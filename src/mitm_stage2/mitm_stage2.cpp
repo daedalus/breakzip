@@ -6,6 +6,7 @@
 
 DECLARE_string(output);
 DECLARE_string(target);
+DECLARE_string(input_shard);
 
 using namespace mitm;
 using namespace mitm_stage1;
@@ -61,18 +62,18 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
     candidate.m2 = fgetc(f);
 }
 
-void read_stage2_candidate(stage2_candidate **stage2_candidates,
-                           size_t &stage2_candidate_count,
-                           const size_t shard_number) {
-    if (0 == FLAGS_target.length()) {
+void read_stage2_candidates(stage2_candidate **stage2_candidates,
+                           uint32_t *stage2_candidate_count) {
+    if (0 == FLAGS_input_shard.length()) {
         fprintf(stderr, "Please provide a -target file basename.\n");
         exit(-1);
     }
 
-    size_t filename_len = FLAGS_target.length() + 32;
+    size_t filename_len = FLAGS_input_shard.length() + 32;
     char *target_filename = (char *)::calloc(filename_len, sizeof(char));
-    snprintf(target_filename, filename_len, "%s.%ld", FLAGS_output.c_str(),
-             shard_number);
+    snprintf(target_filename, filename_len, "%s",
+             FLAGS_input_shard.c_str());
+
     fprintf(stderr, "Using input file for stage2 candidates: %s\n",
             target_filename); 
 
@@ -96,7 +97,7 @@ void read_stage2_candidate(stage2_candidate **stage2_candidates,
         exit(-1);
     }
 
-    stage2_candidate_count = count;
+    *stage2_candidate_count = count;
     for (int i = 0; i < (int)count; ++i) {
         read_stage2_candidate(target_file, candidates[i]);
     }

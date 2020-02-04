@@ -47,10 +47,11 @@ typedef struct stage2_candidate {
     uint32_t m2;
 } stage2_candidate;
 
+void read_stage2_candidate(FILE* f, stage2_candidate& candidate);
 void write_stage2_candidate(FILE* f, const stage2_candidate& candidate);
-void read_stage2_candidate(stage2_candidate **stage2_candidates /* out */,
-                           size_t &stage2_candidate_count /* out */,
-                           const size_t shard_number);
+
+void read_stage2_candidates(stage2_candidate **stage2_candidates /* out */,
+                            uint32_t *stage2_candidate_count /* out */);
 void write_stage2_candidates(const stage2_candidate *const stage2_candidates,
                              const size_t stage2_candidate_count,
                              const size_t shard_number);
