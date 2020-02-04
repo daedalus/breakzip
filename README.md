@@ -33,6 +33,7 @@ may vary.
 * `libstdc++6-6-dbg:amd64`
 * `pkg-config`
 * `texinfo`
+* `libreadline-dev`
 
 ## Anti-dependencies
 
