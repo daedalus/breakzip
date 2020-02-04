@@ -55,3 +55,4 @@ third-party/check-0.12.0/tests/Makefile
 third-party/check-0.12.0/tests/Makefile.in
 third-party/check-0.12.0/tests/test_vars
 third-party/check-0.12.0/configure
+third-party/check-0.12.0/INSTALL

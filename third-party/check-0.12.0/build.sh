@@ -11,7 +11,9 @@ set -x
 PREFIX="${1:-../no_prefix_given}"
 
 aclocal
+autoheader
 automake -a -f
+autoheader
 ./configure --prefix=${PREFIX}
 make all
 make install
