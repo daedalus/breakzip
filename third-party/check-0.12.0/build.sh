@@ -8,12 +8,9 @@
 set -e
 set -x
 
-PREFIX="${1:-../no_prefix_given}"
+PREFIX="${1:-$(readlink -f ../no_prefix_given)}"
 
-aclocal
-autoheader
-automake -a -f
-autoheader
+autoreconf --install
 ./configure --prefix=${PREFIX}
 make all
 make install
