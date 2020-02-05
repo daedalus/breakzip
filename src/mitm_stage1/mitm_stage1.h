@@ -47,12 +47,11 @@ void mitm_stage1a(mitm::archive_info &info,
                   std::vector<std::vector<stage1a>> &table,
                   mitm::correct_guess *c = nullptr);
 
-void mitm_stage1b(mitm::archive_info &info,
-                  std::vector<std::vector<stage1a>> &table,
-                  std::vector<stage1_candidate> &candidates,
-                  std::vector<vector<uint16_t>> &preimages,
-                  mitm::correct_guess *c = nullptr,
-                  size_t *correct_candidate_index = nullptr);
+void mitm_stage1b(const mitm::archive_info &info,
+                  const std::vector<std::vector<stage1a>> &table,
+                  std::vector<stage1_candidate> &candidates, /* output */
+                  const mitm::correct_guess *c = nullptr,
+                  size_t *correct_candidate_index = nullptr /* output */);
 
 };  // namespace mitm_stage1
 #endif

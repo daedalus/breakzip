@@ -6,13 +6,16 @@ add_subdirectory(mitm_stage2)
 add_subdirectory(gpu_stage3)
 
 configure_file(breakzip_config.h.in breakzip_config.h)
-add_library(breakzipcore breakzip.cpp stages.cpp crc32.cpp mitm_common.cpp)
+add_library(breakzipcore breakzip.cpp stages.cpp crc32.cpp mitm_common.cpp preimages_table.cpp)
 
 add_executable(breakzip main.cpp)
 target_link_libraries(breakzip breakzipcore ${LIBS})
 
 add_executable(recoverseed recoverseed.cpp)
 target_link_libraries(recoverseed breakzipcore ${LIBS})
+
+add_executable(preimages preimages.cpp)
+target_link_libraries(preimages breakzipcore ${LIBS})
 
 install(TARGETS breakzip recoverseed breakzipcore
     RUNTIME DESTINATION bin
