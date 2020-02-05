@@ -49,8 +49,14 @@ int main(int argc, char* argv[]) {
     vector<stage1_candidate> candidates;
 
     // There are about 84,000 stage2_candidates per stage1_candidate.
-    const size_t S2CANDIDATE_ARRAYSZ = 100000;
-    stage2_candidate stage2_candidates[S2CANDIDATE_ARRAYSZ];
+    const size_t S2CANDIDATE_ARRAYSZ = 125000;
+    stage2_candidate* stage2_candidates =
+        (stage2_candidate *)::calloc(S2CANDIDATE_ARRAYSZ, sizeof(stage2_candidate));
+
+    if (nullptr == stage2_candidates) {
+        perror("Allocation failed");
+        exit(-1);
+    }
 
     auto input_file = fopen(FLAGS_input_shard.c_str(), "r");
     if (nullptr == input_file) {

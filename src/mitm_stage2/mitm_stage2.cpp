@@ -368,7 +368,9 @@ void mitm_stage2b(const mitm::archive_info& info,
                                 if (stage2_candidate_count >= array_size) {
                                     fprintf(stderr,
                                             "Fatal Error: too many stage2 "
-                                            "candidates for output array!\n");
+                                            "candidates (%ld) for output array "
+                                            "of size %ld!\n",
+                                            stage2_candidate_count, array_size);
                                     abort();
                                 }
 
