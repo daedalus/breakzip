@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     vector<vector<uint16_t>> preimages(0x100);
     build_preimages(preimages);
 
-    printf("const uint16_t[256][64] = {\n");
+    printf("const uint16_t preimages[256][64] = {\n");
     for (int i = 0; i < preimages.size(); ++i) {
         printf("    {");
         for (int j = 0; j < preimages[i].size(); ++j) {
