@@ -22,14 +22,8 @@ using namespace breakzip;
 using namespace google;
 
 const char* usage_message = R"usage(
-    Usage: mitm_stage2 <FILE> <OUT>
-    Runs the stage2 attack using the stage1 data in FILE, the shard specified
-    by -shard, and writes output to the filename specified by -outfile with the
-    shard number appended.
-
-    If you pass the -runtests argument, then the tests will fail unless the
-    correct guess is contained within the shard you have provided via -target.
-    Stage1 prints the name of the shard containing the correct guess.
+    Usage: preimages
+    Builds the preimages table and outputs a C definition of it.
     )usage";
 
 int main(int argc, char* argv[]) {
