@@ -1,7 +1,10 @@
-#include "mitm_common.h"
-#include "crc32.h"
-
+/**
+ * Copyright (c) 2020, Pyrofex Corporation. All Rights Reserved.
+ * Author: Nash E. Foster <leaf@pyrofex.net>, Michael A. Stay <stay@pyrofex.net>
+ */
 #include <stdlib.h>
+
+#include "breakzip.h"
 
 namespace mitm {
 
@@ -207,8 +210,7 @@ uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
 // Finds idxs such that crc32tab[idx] is the xor of offset and some prefix of
 // stream_byte. We expect one on average.
 void second_half_step(const uint16_t offset, const uint8_t stream_byte,
-                      vector<uint8_t> &idxs,
-                      const vector<vector<uint16_t>> &preimages) {
+                      vector<uint8_t> &idxs) {
     for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
         uint16_t preimage = preimages[stream_byte][prefix];
         uint16_t xored = offset ^ preimage;

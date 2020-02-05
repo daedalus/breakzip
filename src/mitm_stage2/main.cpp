@@ -45,10 +45,6 @@ int main(int argc, char* argv[]) {
 
     const char* input_filename = argv[non_flag];
 
-    // We build the preimages once for all candidates.
-    vector<vector<uint16_t>> preimages(0x100);
-    build_preimages(preimages);
-
     // Read all the stage1 candidates into memory at once.
     vector<stage1_candidate> candidates;
 
@@ -91,7 +87,7 @@ int main(int argc, char* argv[]) {
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
             mitm_stage2b(test[0], candidate, table, stage2_candidates,
-                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count, preimages,
+                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count,
                          guess);
 
             stage2_candidate_total += stage2_candidate_count;
@@ -159,8 +155,7 @@ int main(int argc, char* argv[]) {
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(archive, candidate, table);
             mitm_stage2b(archive, candidate, table, stage2_candidates,
-                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count,
-                         preimages);
+                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count);
 
             stage2_candidate_total += stage2_candidate_count;
             printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,

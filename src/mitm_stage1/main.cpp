@@ -34,13 +34,10 @@ int main(int argc, char *argv[]) {
                                   correct(mitm::test[1])};
         vector<vector<stage1a>> table(0x01000000);
         vector<stage1_candidate> candidates(0);
-        vector<vector<uint16_t>> preimages(0x100);
         size_t correct_idx = 0;
 
-        build_preimages(preimages);
-        printf("Generated %ld preimages.\n", preimages.size());
         mitm_stage1a(test[0], table, &(guess[0]));
-        mitm_stage1b(test[0], table, candidates, preimages, &(guess[0]),
+        mitm_stage1b(test[0], table, candidates, &(guess[0]),
                      &correct_idx);
 
         if (correct_candidate(guess[0], candidates[correct_idx])) {
@@ -105,11 +102,9 @@ int main(int argc, char *argv[]) {
 
         vector<vector<stage1a>> table(0x01000000);
         vector<stage1_candidate> candidates(0);
-        vector<vector<uint16_t>> preimages(0x100);
 
-        build_preimages(preimages);
         mitm_stage1a(archive, table);
-        mitm_stage1b(archive, table, candidates, preimages);
+        mitm_stage1b(archive, table, candidates);
         write_candidates(candidates);
     }
 

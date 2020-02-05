@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "mitm_stage2.h"
+#include "breakzip.h"
 
 DECLARE_string(output);
 DECLARE_string(target);
@@ -256,7 +256,6 @@ void mitm_stage2b(const mitm::archive_info& info,
                   stage2_candidate* candidates, /* output */
                   const size_t array_size,
                   size_t& stage2_candidate_count, /* output */
-                  const std::vector<std::vector<uint16_t>>& preimages,
                   const mitm::correct_guess* c, const bool sample) {
     // Second half of MITM for stage 2
     fprintf(stderr, "Stage 2b\n");
@@ -298,19 +297,19 @@ void mitm_stage2b(const mitm::archive_info& info,
             uint16_t pxf0(preimages[s2xf0][prefix]);
 
             vector<uint8_t> firsts(0);
-            second_half_step(pxf0 ^ cyf0p, s2yf0, firsts, preimages);
+            second_half_step(pxf0 ^ cyf0p, s2yf0, firsts);
             if (!firsts.size()) {
                 continue;
             }
             for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
                 vector<uint8_t> seconds(0);
-                second_half_step(pxf0 ^ cxf1p, s2xf1, seconds, preimages);
+                second_half_step(pxf0 ^ cxf1p, s2xf1, seconds);
                 if (!seconds.size()) {
                     continue;
                 }
                 vector<uint8_t> thirds(0);
                 uint8_t s2yf1 = s2xf1 ^ info.file[1].x[2] ^ info.file[0].h[2];
-                second_half_step(pxf0 ^ cyf1p, s2yf1, thirds, preimages);
+                second_half_step(pxf0 ^ cyf1p, s2yf1, thirds);
                 if (!thirds.size()) {
                     continue;
                 }
