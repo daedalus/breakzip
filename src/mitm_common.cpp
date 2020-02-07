@@ -77,7 +77,7 @@ correct_guess correct(archive_info info) {
     result.chunk5 = k20 >> 24;
 
     for (int f = 0; f < 2; ++f) {
-        for (int s = 0; s < 4; ++s) {
+        for (int s = 0; s < 10; ++s) {
             result.sx[f][s] = info.file[f].x[s] ^ info.file[f].y[s];
         }
     }

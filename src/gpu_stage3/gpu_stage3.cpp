@@ -20,6 +20,9 @@ void gpu_stage3(const mitm::archive_info &info,
         uint8_t s0 = get_s0(k20);
 
         for (uint16_t chunk8 = 0; chunk8 < 0x100; ++chunk8) {
+            if (c && (chunk8 == c->chunk8)) {
+                fprintf(stderr, "On correct chunk8: %02x\n", chunk8);
+            }
             // Compute state at the end of first byte
             // Because of the linearity of CRC, k0 calculations
             // can be moved out of the loop and we can just xor in chunk8
@@ -93,6 +96,9 @@ void gpu_stage3(const mitm::archive_info &info,
             }
 
             for (uint16_t chunk9 = 0; chunk9 < 0x100; ++chunk9) {
+                if (c && (chunk8 == c->chunk8) && (chunk9 == c->chunk9)) {
+                    fprintf(stderr, "On correct chunk9: %02x\n", chunk9);
+                }
                 for (uint8_t cb30 = 0; cb30 < 4; ++cb30) {
                     uint32_t upper = 0x1000000;
                     uint32_t lower = 0x0000000;
@@ -121,6 +127,15 @@ void gpu_stage3(const mitm::archive_info &info,
                         upper = bound < upper ? bound : upper;
                     }
                     if (upper < lower) {
+                        if (c && (chunk8 == c->chunk8) &&
+                            (chunk9 == c->chunk9) &&
+                            (cb30 == ((c->carries >> 4) & 3))) {
+                            fprintf(
+                                stderr,
+                                "Failed to use correct guess! Bounds error. "
+                                "chunk8 = %02x, chunk9 = %02x, cb30 = %x\n",
+                                chunk8, chunk9, cb30);
+                        }
                         continue;
                     }
                     uint8_t m3yf0 =
@@ -129,6 +144,15 @@ void gpu_stage3(const mitm::archive_info &info,
                     uint8_t s3yf0 = get_s0(k23yf0);
                     if ((info.file[0].x[3] ^ s3xf0 ^ s3yf0) !=
                         info.file[0].h[3]) {
+                        if (c && (chunk8 == c->chunk8) &&
+                            (chunk9 == c->chunk9) &&
+                            (cb30 == ((c->carries >> 4) & 3))) {
+                            fprintf(stderr,
+                                    "Failed to use correct guess! Wrong stream "
+                                    "bytes. chunk8 = %02x, chunk9 = %02x, cb30 "
+                                    "= %x\n",
+                                    chunk8, chunk9, cb30);
+                        }
                         continue;
                     }
 
@@ -225,6 +249,15 @@ void gpu_stage3(const mitm::archive_info &info,
                             upper = bound < upper ? bound : upper;
                         }
                         if (upper < lower) {
+                            if (c && (chunk8 == c->chunk8) &&
+                                (chunk9 == c->chunk9) &&
+                                (cb31 == ((c->carries >> 6) & 3))) {
+                                fprintf(stderr,
+                                        "Failed to use correct guess! Bounds "
+                                        "error. chunk8 = %02x, chunk9 = %02x, "
+                                        "cb31 = %x\n",
+                                        chunk8, chunk9, cb31);
+                            }
                             continue;
                         }
                         uint32_t k23xf1 = crc32(k22xf1, m3xf1);
@@ -243,6 +276,15 @@ void gpu_stage3(const mitm::archive_info &info,
                             upper = bound < upper ? bound : upper;
                         }
                         if (upper < lower) {
+                            if (c && (chunk8 == c->chunk8) &&
+                                (chunk9 == c->chunk9) &&
+                                (cb31 == ((c->carries >> 6) & 3))) {
+                                fprintf(stderr,
+                                        "Failed to use correct guess! Wrong "
+                                        "stream bytes. chunk8 = %02x, chunk9 = "
+                                        "%02x, cb31 = %x\n",
+                                        chunk8, chunk9, cb31);
+                            }
                             continue;
                         }
                         uint32_t k23yf1 = crc32(k22yf1, m3yf1);
@@ -314,6 +356,12 @@ void gpu_stage4(const mitm::archive_info &info,
     msbs[2] = chunk9 << 24;
     for (uint16_t chunk11 = 0; chunk11 < 0x100; ++chunk11) {
         msbs[3] = chunk11 << 24;
+        bool is_correct = false;
+        if (c && (chunk8 == c->chunk8) && (chunk9 == c->chunk9) &&
+            (cb30 == ((c->carries >> 4) & 3)) &&
+            (cb31 == ((c->carries >> 6) & 3)) && (chunk11 == c->chunk11)) {
+            is_correct = true;
+        }
 
         // Find values for k10 that give those msbs
         int64_t w[4] = {
@@ -378,6 +426,8 @@ void gpu_stage4(const mitm::archive_info &info,
             }
             if (still_good) {
                 gpu_stages5to10(info, crck00, k10, k20, k, c);
+            } else if (is_correct) {
+                fprintf(stderr, "Failed to use correct k10!\n");
             }
         }
     }
@@ -388,7 +438,18 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
                      std::vector<gpu_stage3::keys> &k,
                      const mitm::correct_guess *c) {
     for (uint16_t chunk10 = 0; chunk10 < 0x100; ++chunk10) {
+        bool is_correct = false;
         uint32_t crc32k00 = crck00 | (chunk10 << 24);
+        if (c &&
+            (crc32k00 == (c->chunk2 | (c->chunk6 << 8) | (c->chunk8 << 16) |
+                          (c->chunk10 << 24))) &&
+            (k20 == (c->chunk1 | (c->chunk4 << 16) | (c->chunk5 << 24))) &&
+            (((k10 * CRYPTCONST) >> 24) == c->chunk3) &&
+            (((k10 * CRYPTCONST_POW2) >> 24) == c->chunk7) &&
+            (((k10 * CRYPTCONST_POW3) >> 24) == c->chunk9) &&
+            (((k10 * CRYPTCONST_POW4) >> 24) == c->chunk11)) {
+            is_correct = true;
+        }
         bool still_good = true;
         uint32_t k0n, bound, k1cn, k2n;
         for (int f = 0; (f < 2) && still_good; ++f) {
@@ -415,10 +476,13 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
                     break;
                 }
             }
-            if (still_good) {
-                keys good = {crc32k00, k10, k20};
-                k.push_back(good);
-            }
+        }
+        if (still_good) {
+            keys good = {crc32k00, k10, k20};
+            k.push_back(good);
+        } else if (is_correct) {
+            fprintf(stderr, "Failed to use correct key! chunk10 = %02x\n",
+                    chunk10);
         }
     }
 }
