@@ -7,12 +7,6 @@
 
 using namespace std;
 
-#define CRYPTCONST 0x08088405
-#define CRYPTCONST_POW2 0xd4652819
-#define CRYPTCONST_POW3 0x576eac7d
-#define CRYPTCONST_POW4 0x1201d271
-#define CRYPTCONST_INV 0xd94fa8cd
-
 namespace mitm {
 
 typedef struct file_info {
@@ -47,7 +41,7 @@ typedef struct correct_guess {
     // file:  1100110011001100
     // xy:    1010101010101010
     uint16_t carries;
-    uint8_t sx[2][4];
+    uint8_t sx[2][10];
 } correct_guess;
 
 void read_word(FILE *f, uint32_t &w);
