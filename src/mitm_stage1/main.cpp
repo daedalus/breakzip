@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
         }
 
         printf("\nWriting candidates to output shards...\n");
-        write_candidates(candidates, correct_idx);
+        write_stage1_candidates(candidates, correct_idx);
 
     } else {
         archive_info archive;
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
 
         mitm_stage1a(archive, table);
         mitm_stage1b(archive, table, candidates);
-        write_candidates(candidates);
+        write_stage1_candidates(candidates);
     }
 
     return 0;

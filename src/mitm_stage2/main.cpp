@@ -64,10 +64,10 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    read_candidates(input_file, candidates);
+    read_stage1_candidates(input_file, candidates);
 
     if (0 == candidates.size()) {
-        fprintf(stderr, "FATAL: Read no candidates from input file.\n");
+        fprintf(stderr, "FATAL: Read no stage1 candidates from input file.\n");
         exit(-1);
     }
 

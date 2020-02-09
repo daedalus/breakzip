@@ -1,9 +1,9 @@
-set(tests check_simple)
+set(tests check_simple check_io)
 set(cuda_tests check_cuda)
 
 foreach(test ${tests})
     add_executable(${test} ${test}.cpp)
-    target_link_libraries(${test} breakzipcore ${LIBS})
+    target_link_libraries(${test} breakzipcore mitm_stage1_core mitm_stage2_core ${LIBS})
     add_test(NAME ${test}_test COMMAND ${test} PROPERTIES TIMEOUT 10)
 endforeach()
 
