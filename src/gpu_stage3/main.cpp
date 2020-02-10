@@ -109,8 +109,9 @@ int main(int argc, char *argv[]) {
         FLAGS_input_shard.c_str());
 
     std::vector<gpu_stage3::keys> k(0);
+    stage2_candidate *candidates = *stage2_candidates;
     for (int i = 0; i < stage2_candidate_count; ++i) {
-        gpu_stage3::gpu_stage3(archive, (*stage2_candidates)[i], k, c);
+        gpu_stage3::gpu_stage3(archive, candidates[i], k, c);
         if (k.size() > 0) {
             fprintf(stderr, "Found keys! crck00: %08x, k10: %08x, k20: %08x\n",
                     k[0].crck00, k[0].k10, k[0].k20);
