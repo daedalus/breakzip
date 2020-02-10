@@ -4,10 +4,10 @@
 #include "breakzip.h"
 #include "breakzip_config.h"
 #include "crc32.h"
+#include "gpu_stage3.h"
 #include "mitm_common.h"
 #include "mitm_stage1/mitm_stage1.h"
 #include "mitm_stage2/mitm_stage2.h"
-#include "gpu_stage3.h"
 
 DECLARE_string(target);
 DECLARE_bool(runtests);
@@ -26,7 +26,7 @@ using namespace std;
 using namespace breakzip;
 using namespace google;
 
-const char* usage_message = R"usage(
+const char *usage_message = R"usage(
     Usage: mitm_stage2 <FILE> <OUT>
     Runs the stage2 attack using the stage1 data in FILE, the shard specified
     by -shard, and writes output to the filename specified by -outfile with the
@@ -37,7 +37,7 @@ const char* usage_message = R"usage(
     Stage1 prints the name of the shard containing the correct guess.
     )usage";
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     int my_argc = argc;
 
     SetVersionString(version_string());
@@ -60,64 +60,61 @@ int main(int argc, char* argv[]) {
     fprintf(stdout, "Read %d candidates from stage2.\n",
             stage2_candidate_count);
 
+    archive_info archive;
+    size_t idx = 0;
+    correct_guess guess[2] = {correct(mitm::test[0]), correct(mitm::test[1])};
+    correct_guess *c;
+
+    read_stage2_candidates(stage2_candidates, &stage2_candidate_count);
+
+    // Generate the x array from the seed.
+    srand(FLAGS_srand_seed);
+    for (int j = 0; j < 2; ++j) {
+        for (int i = 0; i < 10; ++i) {
+            archive.file[j].x[i] = rand() >> 7;
+        }
+    }
+
+    // Acquire the h array from the file.
+    auto zfile = new ZipFile(FLAGS_target);
+    if (0 != zfile->init()) {
+        perror("Couldn't initialize target ZIP file");
+        exit(-1);
+    }
+
+    auto lfhs = zfile->local_file_headers();
+    // NB(leaf): This is a bug if the target file has more than two files
+    // because the MITM types don't support more than two.
+    for (int i = 0; i < lfhs.size(); ++i) {
+        auto crypt_header = lfhs[i]->crypt_header();
+        for (int j = 0; j < 10; ++j) {
+            archive.file[i].h[j] = crypt_header[j];
+        }
+    }
+
     if (FLAGS_runtests) {
-        correct_guess guess[2] = {correct(mitm::test[0]),
-                                  correct(mitm::test[1])};
+        c = &(guess[0]);
+        archive = mitm::test[0];
+    }
 
-        size_t idx = 0;
-        size_t stage3_candidate_total = 0;
-        printf("Starting stage2...\n");
-        for (int i = 0; i < stage2_candidate_count; ++i) {
+    if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
+        (archive.file[1].x[0] != archive.file[1].h[0])) {
+        fprintf(stderr, "Given seed does not generate the initial bytes!");
+        exit(-1);
+    }
 
-            // TOOD(stay): Put the logic to check stage2_candidates[i]
-            // right here.
-        }
+    printf(
+        "Starting stage3 for target archive `%s` and input shard `%s`...\n",
+        FLAGS_runtests ? "Test archive 0" : (const char *)FLAGS_target.c_str(),
+        FLAGS_input_shard.c_str());
 
-    } else {
-        archive_info archive;
-        size_t idx = 0;
-        uint32_t stage2_candidate_count = 0;
-        stage2_candidate **stage2_candidates = nullptr;
-
-        read_stage2_candidates(stage2_candidates, &stage2_candidate_count);
-
-        // Generate the x array from the seed.
-        srand(FLAGS_srand_seed);
-        for (int j = 0; j < 2; ++j) {
-            for (int i = 0; i < 10; ++i) {
-                archive.file[j].x[i] = rand() >> 7;
-            }
-        }
-
-        // Acquire the h array from the file.
-        auto zfile = new ZipFile(FLAGS_target);
-        if (0 != zfile->init()) {
-            perror("Couldn't initialize target ZIP file");
-            exit(-1);
-        }
-
-        auto lfhs = zfile->local_file_headers();
-        // NB(leaf): This is a bug if the target file has more than two files
-        // because the MITM types don't support more than two.
-        for (int i = 0; i < lfhs.size(); ++i) {
-            auto crypt_header = lfhs[i]->crypt_header();
-            for (int j = 0; j < 10; ++j) {
-                archive.file[i].h[j] = crypt_header[j];
-            }
-        }
-
-        if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
-            (archive.file[1].x[0] != archive.file[1].h[0])) {
-            fprintf(stderr, "Given seed does not generate the initial bytes!");
-            exit(-1);
-        }
-
-        printf(
-            "Starting stage2 for target archive `%s` and input shard `%s`...\n",
-            FLAGS_target.c_str(), FLAGS_input_shard.c_str());
-        for (int i = 0; i < stage2_candidate_count; ++i) {
-
-            // TOOD(stay): Put the logic to test a candidate right here.
+    std::vector<gpu_stage3::keys> k(0);
+    stage2_candidate *candidates = *stage2_candidates;
+    for (int i = 0; i < stage2_candidate_count; ++i) {
+        gpu_stage3::gpu_stage3(archive, candidates[i], k, c);
+        if (k.size() > 0) {
+            fprintf(stderr, "Found keys! crck00: %08x, k10: %08x, k20: %08x\n",
+                    k[0].crck00, k[0].k10, k[0].k20);
         }
     }
 
