@@ -29,7 +29,7 @@ bool correct_candidate(const mitm::correct_guess &g,
     return result;
 }
 
-void write_candidate(FILE *f, stage1_candidate &c) {
+void write_stage1_candidate(FILE *f, const stage1_candidate &c) {
     const uint8_t size = c.k20_count;
     fputc(size, f);
     for (uint16_t i = 0; i < size; ++i) {
@@ -41,14 +41,13 @@ void write_candidate(FILE *f, stage1_candidate &c) {
     write_word(f, c.m1);
 }
 
-void read_candidate(FILE *f, stage1_candidate &c) {
+void read_stage1_candidate(FILE *f, stage1_candidate &c) {
     const uint8_t size = (uint8_t)fgetc(f);
-    c.k20_count = 0;
+    c.k20_count = size;
     for (uint8_t i = 0; i < size; ++i) {
         uint32_t maybek20 = 0;
         read_3bytes(f, maybek20);
         c.maybek20[i] = maybek20;
-        ++(c.k20_count);
     }
     c.chunk2 = (uint8_t)fgetc(f);
     c.chunk3 = (uint8_t)fgetc(f);
@@ -56,7 +55,7 @@ void read_candidate(FILE *f, stage1_candidate &c) {
     read_word(f, c.m1);
 }
 
-void read_candidates(FILE *f, vector<stage1_candidate> &out) {
+void read_stage1_candidates(FILE *f, vector<stage1_candidate> &out) {
     uint32_t num_candidates = 0;
     read_word(f, num_candidates);
 
@@ -64,13 +63,13 @@ void read_candidates(FILE *f, vector<stage1_candidate> &out) {
            num_candidates);
     for (int i = 0; i < num_candidates; ++i) {
         stage1_candidate c;
-        read_candidate(f, c);
+        read_stage1_candidate(f, c);
         out.push_back(c);
     }
 }
 
-void write_candidates(vector<stage1_candidate> &candidates,
-                      size_t correct_index) {
+void write_stage1_candidates(const vector<stage1_candidate> &candidates,
+                             size_t correct_index) {
     size_t filename_len = FLAGS_output.length() + 16;
     char *output_filename = (char *)::calloc(filename_len, sizeof(char));
 
@@ -89,6 +88,7 @@ void write_candidates(vector<stage1_candidate> &candidates,
     while (0 < candidates_remaining) {
         snprintf(output_filename, filename_len, "%s.%ld", FLAGS_output.c_str(),
                  shard_index);
+
         FILE *output_file = fopen(output_filename, "wb");
         if (nullptr == output_file) {
             fprintf(stderr, "Can't open output file %s.\n", output_filename);
@@ -107,10 +107,7 @@ void write_candidates(vector<stage1_candidate> &candidates,
 
         shard_end += size;
 
-        write_word(output_file, size);
-        for (uint32_t i = 0; i < size; ++i) {
-            write_candidate(output_file, candidates[i]);
-        }
+        write_stage1_candidate_file(output_file, candidates, shard_start, size);
 
         candidates_remaining -= size;
         fclose(output_file);
@@ -122,6 +119,24 @@ void write_candidates(vector<stage1_candidate> &candidates,
 
         shard_index += 1;
         shard_start += size;
+    }
+}
+
+void write_stage1_candidate_file(
+        FILE* f,
+        const vector<stage1_candidate> &candidates,
+        const size_t start_idx,
+        const size_t num) {
+
+    fprintf(stderr,
+            "write_stage1_candidate_file: writing %ld candidates "
+            "out of %ld to file starting at index %ld.\n",
+            num, candidates.size(), start_idx);
+
+    write_word(f, num);
+    auto end_idx = start_idx + num;
+    for (size_t i = start_idx ; i < end_idx; ++i) {
+        write_stage1_candidate(f, candidates[i]);
     }
 }
 
