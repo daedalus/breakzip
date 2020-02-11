@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -9,6 +10,10 @@
 #include "mitm_stage1/mitm_stage1.h"
 #include "mitm_stage2/mitm_stage2.h"
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
+
 DECLARE_string(target);
 DECLARE_bool(runtests);
 DEFINE_string(input_shard, "target.out.0",
@@ -18,6 +23,8 @@ DECLARE_int32(srand_seed);
 DEFINE_int32(stop_after, -1,
              "If set to a positive value, the program "
              "will stop after processing <stop_after> stage1 candidates.");
+DEFINE_int32(cuda_device, -1,
+             "Which CUDA device to use, -1 to use them all.");
 
 using namespace mitm;
 using namespace mitm_stage1;
@@ -64,7 +71,7 @@ int main(int argc, char *argv[]) {
     archive_info archive;
     size_t idx = 0;
     correct_guess guess[2] = {correct(mitm::test[0]), correct(mitm::test[1])};
-    correct_guess *c;
+    correct_guess *c = nullptr;
 
     read_stage2_candidates(stage2_candidates, &stage2_candidate_count);
 
@@ -104,6 +111,47 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
+    int cuda_device_count = 0;
+    cudaGetDeviceCount(&cuda_device_count);
+
+    if (0 == cuda_device_count) {
+        fprintf(stderr, "Host has no CUDA capable devices. Use cpu_stage3, instead?\n");
+        exit(-1);
+    }
+
+    vector<int> target_devices;
+    int cuda_device = 0;
+    for (cuda_device = 0; cuda_device < cuda_device_count; ++cuda_device) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, cuda_device);
+        fprintf(stderr, "CUDA Device %d: %s\n", cuda_device, prop.name);
+        fprintf(stderr, "    Compute capabilities: %d.%d\n",
+                prop.major, prop.minor);
+        fprintf(stderr, "    Processor count: %d\n", prop.multiProcessorCount);
+        fprintf(stderr, "    Memory: const=0x%lx global=0x%lx shared_per_block=0x%lx\n",
+                prop.totalConstMem, prop.totalGlobalMem, prop.sharedMemPerBlock);
+        fprintf(stderr, "\n");
+        
+        
+        // TODO(leaf): Check capabilities for what we need?
+        if (-1 == FLAGS_cuda_device) {
+            target_devices.push_back(cuda_device);
+            fprintf(stderr, "Targeting CUDA device %d\n", cuda_device);
+        } else if (FLAGS_cuda_device == cuda_device) {
+            target_devices.push_back(cuda_device);
+            fprintf(stderr, "Targeting CUDA device %d\n", cuda_device);
+        } else {
+            fprintf(stderr, "Ignoring CUDA device %d\n", cuda_device);
+        }
+    }
+
+    fprintf(stderr, "CUDA stage3 targeting these devices: ");
+    for_each(target_devices.begin(), target_devices.end(),
+             [](const auto &e) { fprintf(stderr, "%d ", e); });
+    fprintf(stderr, "\n");
+
+    exit(0);
+
     printf(
         "Starting stage3 for target archive `%s` and input shard `%s`...\n",
         FLAGS_runtests ? "Test archive 0" : (const char *)FLAGS_target.c_str(),
@@ -117,7 +165,5 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Found keys! crck00: %08x, k10: %08x, k20: %08x\n",
                     k[0].crck00, k[0].k10, k[0].k20);
         }
-    }
-
-    return 0;
+    } return 0;
 }

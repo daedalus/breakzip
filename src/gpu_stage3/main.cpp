@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     archive_info archive;
     size_t idx = 0;
     correct_guess guess[2] = {correct(mitm::test[0]), correct(mitm::test[1])};
-    correct_guess *c;
+    correct_guess *c = nullptr;
 
     read_stage2_candidates(stage2_candidates, &stage2_candidate_count);
 
