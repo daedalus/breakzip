@@ -1,8 +1,17 @@
+/**
+ * Copyright (c) 2020, Pyrofex Corporation. All Rights Reserved.
+ * Author: Mike Stay <stay@pyrofex.net
+ */
+
+#ifndef __STAGE3_DEFINITIONS__
+#define __STAGE3_DEFINITIONS__
+
 #include <gflags/gflags.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "breakzip.h"
+#include "stage3.h"
 
 DECLARE_string(output);
 
@@ -10,7 +19,7 @@ using namespace mitm;
 using namespace mitm_stage1;
 using namespace std;
 
-namespace gpu_stage3 {
+namespace stage3 {
 
 void gpu_stage3(const mitm::archive_info &info,
                 const mitm_stage2::stage2_candidate &c2, std::vector<keys> &k,
@@ -435,7 +444,7 @@ void gpu_stage4(const mitm::archive_info &info,
 
 void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
                      const uint32_t k10, const uint32_t k20,
-                     std::vector<gpu_stage3::keys> &k,
+                     std::vector<keys> &k,
                      const mitm::correct_guess *c) {
     for (uint16_t chunk10 = 0; chunk10 < 0x100; ++chunk10) {
         bool is_correct = false;
@@ -488,3 +497,5 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
 }
 
 }  // namespace gpu_stage3
+
+#endif
