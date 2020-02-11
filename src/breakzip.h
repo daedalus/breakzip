@@ -27,7 +27,6 @@
 #include "mitm_common.h"
 #include "mitm_stage1/mitm_stage1.h"
 #include "mitm_stage2/mitm_stage2.h"
-#include "gpu_stage3/gpu_stage3.h"
 
 
 // Avoid structure padding
