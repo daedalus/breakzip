@@ -97,11 +97,11 @@ typedef struct carrybits {
         return bits;
     }
 
-    const std::string& str() const {
+    const std::string str() const {
         char buf[16];
         snprintf(buf, 16, "(0x%04x)", bits);
         std::string rval(buf);
-        return std::move(rval);
+        return rval;
     }
 } carrybits_t;
 

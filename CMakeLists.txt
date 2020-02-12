@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.5.2 FATAL_ERROR)
-project (breakzip CXX CUDA)
+project (breakzip CUDA CXX)
 set (breakzip_VERSION_MAJOR 1)
 set (breakzip_VERSION_MINOR 0)
 set (breakzip_VERSION_PATCH 0)

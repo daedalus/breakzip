@@ -49,12 +49,17 @@ int main(int argc, char *argv[]) {
     vector<vector<uint16_t>> preimages(0x100);
     build_preimages(preimages);
 
-    stage2_candidate **stage2_candidates = nullptr;
+    stage2_candidate *stage2_candidates = nullptr;
     uint32_t stage2_candidate_count = 0;
-    read_stage2_candidates(stage2_candidates, &stage2_candidate_count);
+    read_stage2_candidates(&stage2_candidates, &stage2_candidate_count);
 
     if (0 == stage2_candidate_count) {
         fprintf(stderr, "FATAL: Read no candidates from input file.\n");
+        exit(-1);
+    }
+
+    if (nullptr == stage2_candidates) {
+        fprintf(stderr, "FATAL: Stage2 candidates array was null.\n");
         exit(-1);
     }
 
@@ -64,9 +69,7 @@ int main(int argc, char *argv[]) {
     archive_info archive;
     size_t idx = 0;
     correct_guess guess[2] = {correct(mitm::test[0]), correct(mitm::test[1])};
-    correct_guess *c;
-
-    read_stage2_candidates(stage2_candidates, &stage2_candidate_count);
+    correct_guess *c = nullptr;
 
     // Generate the x array from the seed.
     srand(FLAGS_srand_seed);
@@ -109,13 +112,12 @@ int main(int argc, char *argv[]) {
         FLAGS_runtests ? "Test archive 0" : (const char *)FLAGS_target.c_str(),
         FLAGS_input_shard.c_str());
 
-    std::vector<keys> k(0);
-    stage2_candidate *candidates = *stage2_candidates;
+    keys result;
     for (int i = 0; i < stage2_candidate_count; ++i) {
-        gpu_stage3(archive, candidates[i], k, c);
-        if (k.size() > 0) {
+        gpu_stage3(archive, stage2_candidates[i], &result, c);
+        if (result.crck00 != 0 || result.k10 != 0 || result.k20 != 0) {
             fprintf(stderr, "Found keys! crck00: %08x, k10: %08x, k20: %08x\n",
-                    k[0].crck00, k[0].k10, k[0].k20);
+                    result.crck00, result.k10, result.k20);
         }
     }
 

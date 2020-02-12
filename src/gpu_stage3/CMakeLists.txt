@@ -7,7 +7,7 @@ add_executable(cpu_stage3 main.cpp)
 target_link_libraries(cpu_stage3 mitm_stage1_core mitm_stage2_core
                       cpu_stage3_core breakzipcore ${LIBS})
 
-add_executable(cuda_stage3 cuda_main.cpp)
+add_executable(cuda_stage3 cuda_main.cu)
 target_link_libraries(cuda_stage3 mitm_stage1_core mitm_stage2_core
                       cuda_stage3_core breakzipcore ${LIBS})
 
