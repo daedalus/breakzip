@@ -5,6 +5,12 @@
 #include <cstdint>
 #include <vector>
 
+#ifndef __CUDACC__
+#define CUDA_DECL
+#else
+#define CUDA_DECL __host__ __device__
+#endif
+
 using namespace std;
 
 namespace mitm {
@@ -52,7 +58,7 @@ void read_3bytes(FILE *f, uint32_t &w);
 void build_preimages(vector<vector<uint16_t>>& preimages);
 
 correct_guess correct(archive_info info);
-uint8_t get_s0(uint16_t k20);
+CUDA_DECL uint8_t get_s0(uint16_t k20);
 uint8_t first_half_step(uint8_t x, bool crc_flag, uint8_t k1msb, uint8_t carry,
                         uint32_t &k0, uint32_t &extra, uint32_t &upper,
                         uint32_t &lower);

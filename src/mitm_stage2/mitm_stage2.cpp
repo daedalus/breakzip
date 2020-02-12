@@ -97,6 +97,7 @@ void read_stage2_candidates(stage2_candidate **stage2_candidates,
         exit(-1);
     }
 
+    *stage2_candidates = candidates;
     *stage2_candidate_count = count;
     for (int i = 0; i < (int)count; ++i) {
         read_stage2_candidate(target_file, candidates[i]);

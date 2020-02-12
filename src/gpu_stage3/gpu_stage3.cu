@@ -4,6 +4,8 @@
 
 #include "breakzip.h"
 
+#define CUDA_DEVICE_CODE
+
 #include "stage3_definitions.h"
 
 namespace gpu_stage3 {
