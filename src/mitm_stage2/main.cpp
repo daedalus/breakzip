@@ -50,8 +50,8 @@ int main(int argc, char* argv[]) {
 
     // There are about 84,000 stage2_candidates per stage1_candidate.
     const size_t S2CANDIDATE_ARRAYSZ = 125000;
-    stage2_candidate* stage2_candidates =
-        (stage2_candidate *)::calloc(S2CANDIDATE_ARRAYSZ, sizeof(stage2_candidate));
+    stage2_candidate* stage2_candidates = (stage2_candidate*)::calloc(
+        S2CANDIDATE_ARRAYSZ, sizeof(stage2_candidate));
 
     if (nullptr == stage2_candidates) {
         perror("Allocation failed");
@@ -93,8 +93,7 @@ int main(int argc, char* argv[]) {
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
             mitm_stage2b(test[0], candidate, table, stage2_candidates,
-                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count,
-                         guess);
+                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count, guess);
 
             stage2_candidate_total += stage2_candidate_count;
             printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,

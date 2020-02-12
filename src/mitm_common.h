@@ -49,7 +49,7 @@ void write_word(FILE *f, uint32_t w);
 void write_3bytes(FILE *f, uint32_t w);
 void read_3bytes(FILE *f, uint32_t &w);
 
-void build_preimages(vector<vector<uint16_t>>& preimages);
+void build_preimages(vector<vector<uint16_t>> &preimages);
 
 correct_guess correct(archive_info info);
 uint8_t get_s0(uint16_t k20);
