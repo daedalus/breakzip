@@ -14,6 +14,19 @@ using namespace std;
 
 namespace mitm_stage2 {
 
+CUDA_HOSTDEVICE void set_gpu_candidate(gpu_stage2_candidate &self,
+                                       const stage2_candidate& other,
+                                       const int idx) {
+    self.maybek20 = other.maybek20[idx];
+    self.chunk2 = other.chunk2;
+    self.chunk3 = other.chunk3;
+    self.chunk6 = other.chunk6;
+    self.chunk7 = other.chunk7;
+    self.cb = other.cb;
+    self.m1 = other.m1;
+    self.m2 = other.m2;
+}
+
 bool correct_candidate(const mitm::correct_guess& g,
                        const stage2_candidate& c) {
     bool result = false;
@@ -60,6 +73,36 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
     candidate.cb = fgetc(f);
     candidate.m1 = fgetc(f);
     candidate.m2 = fgetc(f);
+}
+
+void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
+                                    uint32_t* count) {
+
+    stage2_candidate* tmparray = nullptr;
+    uint32_t my_count = 0;
+
+    read_stage2_candidates(&tmparray, &my_count);
+    if (my_count == 0 || nullptr == tmparray) {
+        fprintf(stderr, "Fail.\n");
+        exit(-1);
+    }
+
+    gpu_stage2_candidate* array = (gpu_stage2_candidate *)::calloc(my_count, sizeof(gpu_stage2_candidate));
+    if (nullptr == array) {
+        fprintf(stderr, "Failed to allocate array for gpu candidates\n");
+        exit(-1);
+    }
+
+    int total = 0;
+    for (int i = 0; i < my_count; ++i) {
+        for (int j = 0; j < tmparray[i].k20_count; ++j, ++total) {
+            set_gpu_candidate(array[total], tmparray[i], j);
+        }
+    }
+
+    *count = total;
+    *candidates = array;
+    return;
 }
 
 void read_stage2_candidates(stage2_candidate** stage2_candidates,

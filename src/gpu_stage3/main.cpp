@@ -1,12 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "breakzip.h"
-#include "breakzip_config.h"
-#include "crc32.h"
-#include "mitm_common.h"
-#include "mitm_stage1/mitm_stage1.h"
-#include "mitm_stage2/mitm_stage2.h"
 #include "stage3.h"
 
 DECLARE_string(target);
