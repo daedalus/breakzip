@@ -77,9 +77,9 @@ typedef struct gpu_stage2_candidate {
     uint32_t m2;
 } gpu_stage2_candidate;
 
-CUDA_HOSTDEVICE void set_gpu_candidate(mitm_stage2::gpu_stage2_candidate &self,
-                                       const mitm_stage2::stage2_candidate& other,
-                                       const int idx);
+CUDA_HOSTDEVICE void set_gpu_candidate(
+    mitm_stage2::gpu_stage2_candidate& self,
+    const mitm_stage2::stage2_candidate& other, const int idx);
 
 void read_stage2_candidate(FILE* f, stage2_candidate& candidate);
 void write_stage2_candidate(FILE* f, const stage2_candidate& candidate);
@@ -87,13 +87,13 @@ void write_stage2_candidate(FILE* f, const stage2_candidate& candidate);
 void read_stage2_candidates(stage2_candidate** stage2_candidates /* out */,
                             uint32_t* stage2_candidate_count /* out */);
 
-void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates /* out */, 
+void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates /* out */,
                                     uint32_t* count /* out */);
 
 void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                              const size_t stage2_candidate_count,
                              const size_t shard_number,
-                             const mitm::correct_guess *correct = nullptr);
+                             const mitm::correct_guess* correct = nullptr);
 
 void mitm_stage2a(mitm::archive_info& info, mitm_stage1::stage1_candidate& c1,
                   std::vector<std::vector<stage2a>>& table,
