@@ -7,6 +7,7 @@
 #include "mitm_stage1.h"
 
 DECLARE_bool(runtests);
+DECLARE_bool(only_emit_correct);
 DECLARE_string(target);
 DECLARE_int32(srand_seed);
 
@@ -28,6 +29,10 @@ int main(int argc, char *argv[]) {
     SetVersionString(version_string());
     SetUsageMessage(usage_message);
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
+
+    if (FLAGS_only_emit_correct) {
+        FLAGS_runtests = true;
+    }
 
     if (FLAGS_runtests) {
         correct_guess guess[2] = {correct(mitm::test[0]),

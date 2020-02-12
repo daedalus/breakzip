@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -ex 
 apt-get update
 apt install git
 
