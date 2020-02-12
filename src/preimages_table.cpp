@@ -2313,4 +2313,4 @@ uint16_t preimages[PREIMAGES_HEIGHT][PREIMAGES_WIDTH] = {
     },
 };
 
-} // namespace
+}  // namespace mitm

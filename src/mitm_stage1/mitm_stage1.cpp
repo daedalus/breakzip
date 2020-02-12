@@ -122,12 +122,9 @@ void write_stage1_candidates(const vector<stage1_candidate> &candidates,
     }
 }
 
-void write_stage1_candidate_file(
-        FILE* f,
-        const vector<stage1_candidate> &candidates,
-        const size_t start_idx,
-        const size_t num) {
-
+void write_stage1_candidate_file(FILE *f,
+                                 const vector<stage1_candidate> &candidates,
+                                 const size_t start_idx, const size_t num) {
     fprintf(stderr,
             "write_stage1_candidate_file: writing %ld candidates "
             "out of %ld to file starting at index %ld.\n",
@@ -135,7 +132,7 @@ void write_stage1_candidate_file(
 
     write_word(f, num);
     auto end_idx = start_idx + num;
-    for (size_t i = start_idx ; i < end_idx; ++i) {
+    for (size_t i = start_idx; i < end_idx; ++i) {
         write_stage1_candidate(f, candidates[i]);
     }
 }
@@ -255,9 +252,9 @@ void mitm_stage1a(archive_info &info, vector<vector<stage1a>> &table,
 // info: the info about the archive to attack
 // table: the output of mitm_stage1a
 // candidates: an empty vector
-void mitm_stage1b(const archive_info &info, const vector<vector<stage1a>> &table,
-                  vector<stage1_candidate> &candidates,
-                  const correct_guess *c,
+void mitm_stage1b(const archive_info &info,
+                  const vector<vector<stage1a>> &table,
+                  vector<stage1_candidate> &candidates, const correct_guess *c,
                   size_t *correct_candidate_index) {
     // Second half of MITM for stage 1
     bool found_correct = false;

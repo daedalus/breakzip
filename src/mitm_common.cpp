@@ -170,7 +170,6 @@ void read_3bytes(FILE *f, uint32_t &w) {
     w = (c3 << 16) | (c2 << 8) | c1;
 }
 
-
 uint8_t get_s0(uint16_t k20) {
     uint16_t temp = k20 | 3;
     return (temp * (temp ^ 1)) >> 8;

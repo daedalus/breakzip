@@ -47,7 +47,7 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
     read_word(f, tmp);
     candidate.k20_count = tmp;
 
-    for (uint8_t i = 0 ; i < candidate.k20_count; ++i) {
+    for (uint8_t i = 0; i < candidate.k20_count; ++i) {
         uint32_t word = 0;
         read_word(f, word);
         candidate.maybek20[i] = word;
@@ -62,22 +62,21 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
     candidate.m2 = fgetc(f);
 }
 
-void read_stage2_candidates(stage2_candidate **stage2_candidates,
-                           uint32_t *stage2_candidate_count) {
+void read_stage2_candidates(stage2_candidate** stage2_candidates,
+                            uint32_t* stage2_candidate_count) {
     if (0 == FLAGS_input_shard.length()) {
         fprintf(stderr, "Please provide a -target file basename.\n");
         exit(-1);
     }
 
     size_t filename_len = FLAGS_input_shard.length() + 32;
-    char *target_filename = (char *)::calloc(filename_len, sizeof(char));
-    snprintf(target_filename, filename_len, "%s",
-             FLAGS_input_shard.c_str());
+    char* target_filename = (char*)::calloc(filename_len, sizeof(char));
+    snprintf(target_filename, filename_len, "%s", FLAGS_input_shard.c_str());
 
     fprintf(stderr, "Using input file for stage2 candidates: %s\n",
-            target_filename); 
+            target_filename);
 
-    FILE *target_file = fopen(target_filename, "rb");
+    FILE* target_file = fopen(target_filename, "rb");
     if (nullptr == target_file) {
         fprintf(stderr, "Can't open target input file: %s\n", target_filename);
         perror("Fatal error");
@@ -88,8 +87,8 @@ void read_stage2_candidates(stage2_candidate **stage2_candidates,
     read_word(target_file, count);
 
     // Allocate an array of stage2 candidates.
-    stage2_candidate *candidates =
-            (stage2_candidate *)::calloc(count, sizeof(stage2_candidate));
+    stage2_candidate* candidates =
+        (stage2_candidate*)::calloc(count, sizeof(stage2_candidate));
     if (nullptr == candidates) {
         fprintf(stderr, "Can't allocate array for %d stage2 candidates.\n",
                 count);
@@ -328,7 +327,6 @@ void mitm_stage2b(const mitm::archive_info& info,
                                         crc32(k21xf0, c2.msbk12xf0 >> 24);
                                     if ((pxf0 & 0x3f) ==
                                         ((k22xf0 >> 2) & 0x3f)) {
-
                                         if (g.k20_count >= g.MAX_K20S) {
                                             fprintf(stderr,
                                                     "Not enough space "
@@ -345,7 +343,6 @@ void mitm_stage2b(const mitm::archive_info& info,
                                         g.maybek20[g.k20_count] =
                                             k20 | (hi_byte << 24);
                                         g.k20_count += 1;
-
                                     }
                                 }
 
@@ -389,4 +386,4 @@ void mitm_stage2b(const mitm::archive_info& info,
            stage2_candidate_count);
 }
 
-}; // namespace
+};  // namespace mitm_stage2
