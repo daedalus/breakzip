@@ -35,20 +35,21 @@ typedef struct stage1_candidate {
         ::memset(maybek20, 0, sizeof(uint32_t) * MAX_K20S);
     };
 
-    stage1_candidate(const stage1_candidate& other) :
-            k20_count(other.k20_count), chunk2(other.chunk2),
-            chunk3(other.chunk3), cb1(other.cb1), m1(other.m1) {
+    stage1_candidate(const stage1_candidate &other)
+        : k20_count(other.k20_count),
+          chunk2(other.chunk2),
+          chunk3(other.chunk3),
+          cb1(other.cb1),
+          m1(other.m1) {
         ::memset(maybek20, 0, sizeof(uint32_t) * MAX_K20S);
         for (int i = 0; i < k20_count; ++i) {
             maybek20[i] = other.maybek20[i];
         }
     };
 
-    bool operator==(const stage1_candidate& other) {
-        if (k20_count == other.k20_count &&
-            chunk2 == other.chunk2 && chunk3 == other.chunk3 &&
-            cb1 == other.cb1 && m1 == other.m1) {
-
+    bool operator==(const stage1_candidate &other) {
+        if (k20_count == other.k20_count && chunk2 == other.chunk2 &&
+            chunk3 == other.chunk3 && cb1 == other.cb1 && m1 == other.m1) {
             for (int i = 0; i < k20_count; ++i) {
                 if (maybek20[i] != other.maybek20[i]) {
                     return false;
@@ -69,12 +70,12 @@ void read_stage1_candidate(FILE *f, stage1_candidate &c /* output */);
 void write_stage1_candidates(const vector<stage1_candidate> &candidates,
                              size_t correct_index = SIZE_MAX /* output */);
 
-void write_stage1_candidate_file(FILE* f,
+void write_stage1_candidate_file(FILE *f,
                                  const vector<stage1_candidate> &candidates,
-                                 const size_t start_idx,
-                                 const size_t num);
+                                 const size_t start_idx, const size_t num);
 
-void read_stage1_candidates(FILE *f, vector<stage1_candidate> &out /* output */);
+void read_stage1_candidates(FILE *f,
+                            vector<stage1_candidate> &out /* output */);
 
 void mitm_stage1a(mitm::archive_info &info,
                   std::vector<std::vector<stage1a>> &table,

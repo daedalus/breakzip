@@ -9,4 +9,3 @@
 #include "breakzip.h"
 
 #include "stage3_definitions.h"
-
