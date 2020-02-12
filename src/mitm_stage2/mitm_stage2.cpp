@@ -234,7 +234,11 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
     for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
         for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
             for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
-                if (nullptr != c && chunk6 == c->chunk6 &&
+                if (nullptr != c && 
+                    c1.chunk2 == c->chunk2 &&
+                    c1.chunk3 == c->chunk3 &&
+                    c1.cb1 == (c->carries >> 12) &&
+                    chunk6 == c->chunk6 &&
                     chunk7 == c->chunk7 && cb2 == ((c->carries >> 8) & 0xf)) {
                     fprintf(stderr, "Stage 2a, should be on correct guess.\n");
                 }
@@ -316,7 +320,11 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 s2a.chunk7 = chunk7;
                 s2a.cb2 = cb2;
                 s2a.msbk12xf0 = msbxf0;
-                if (nullptr != c && s2a.chunk6 == c->chunk6 &&
+                if (nullptr != c && 
+                    c1.chunk2 == c->chunk2 &&
+                    c1.chunk3 == c->chunk3 &&
+                    c1.cb1 == (c->carries >> 12) &&
+                    s2a.chunk6 == c->chunk6 &&
                     s2a.chunk7 == c->chunk7 &&
                     s2a.cb2 == ((c->carries >> 8) & 0xf)) {
                     fprintf(stderr,

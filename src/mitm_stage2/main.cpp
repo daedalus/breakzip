@@ -84,16 +84,15 @@ int main(int argc, char* argv[]) {
 
         size_t idx = 0;
         size_t stage2_candidate_total = 0;
-        printf("Starting stage2...\n");
+        printf("Starting stage2... %ld candidates\n", candidates.size());
         for (auto candidate : candidates) {
+            if (idx++ < 9234) { continue; }
             // Clear the output array.
             ::memset(stage2_candidates, 0,
                      S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
             size_t stage2_candidate_count = 0;
 
-            if (++idx % 1000) {
-                printf("On stage1 candidate %ld...\n", idx);
-            }
+            printf("On stage1 candidate %ld...\n", idx);
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
