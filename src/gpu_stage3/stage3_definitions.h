@@ -30,7 +30,7 @@ uint8_t gpu_get_s0(uint16_t k20) {
 }
 
 #ifdef __CUDACC__
-__device__
+__device__ __constant__
 #endif
 const uint32_t gpu_crc32tab[256] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -86,7 +86,7 @@ uint32_t gpu_crc32(uint32_t x, uint8_t y) {
 
 // crcinvtab[(crc32tab[i] >> 3) & 0xff] == i
 #ifdef __CUDACC__
-__device__
+__device__ __constant__
 #endif
 const uint8_t gpu_crcinvtab[256] = {
     0x00, 0x39, 0x72, 0x4b, 0x7a, 0x43, 0x08, 0x31, 0x6a, 0x53, 0x18, 0x21,

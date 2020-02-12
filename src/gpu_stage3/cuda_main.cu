@@ -78,20 +78,15 @@ void print_device_properties(cudaDeviceProp devProp) {
 
 __global__ void gpu_stage3_kernel(const stage2_candidate *candidates,
                                   keys *results,
-                                  const archive_info& archive,
+                                  const archive_info* archive,
                                   const uint32_t stage2_candidate_count,
                                   const mitm::correct_guess& c) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int i = blockIdx.x + blockDim.x * threadIdx.x;
     if (i < stage2_candidate_count) {
         keys result = {0, 0, 0};
-        stage3::gpu_stage3(archive, candidates[i], &result, &c);
-        /*
-        if (k.size() > 0) {
-            results[i].crck00 = k[0].crck00;
-            results[i].k10 = k[0].k10;
-            results[i].k20 = k[0].k20;
-            */
-        if (i == 1024) {
+        stage3::gpu_stage3(*archive, candidates[i], &result, &c);
+
+        if (result.crck00 != 0 || result.k10 != 0 || result.k20 != 0) {
             results[i].crck00 = 1;
             results[i].k10 = 0;
             results[i].k20 = 0;
@@ -225,6 +220,18 @@ int main(int argc, char *argv[]) {
             exit(-1);
         }
 
+        archive_info *dev_archive = nullptr;
+        err = cudaMalloc(&dev_archive, sizeof(archive_info));
+        if (cudaSuccess != err) {
+            fprintf(stderr, "Failed to allocate memory for archive on device %d\n", device);
+            exit(-1);
+        }
+        err = cudaMemcpy(dev_archive, &archive, sizeof(archive_info), cudaMemcpyHostToDevice);
+        if (cudaSuccess != err) {
+            fprintf(stderr, "Failed to memcpy archive to CUDA device %d\n", device);
+            exit(-1);
+        }
+
         // Allocate device memory
         stage2_candidate *dev_cands = nullptr;
         keys *dev_results = nullptr;
@@ -242,6 +249,7 @@ int main(int argc, char *argv[]) {
             exit(-1);
         }
 
+        fprintf(stderr, "Allocating results array of size %ld on device %d\n", results_array_size, device);
         err = cudaMalloc(&dev_results, results_array_size);
         if (cudaSuccess != err) {
             fprintf(stderr, "Failed to allocate memory on CUDA device %d: %s\n",
@@ -251,6 +259,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Copy candidates to device
+        fprintf(stderr, "Copying candidate data to device %d\n", device);
         err = cudaMemcpy(dev_cands, stage2_candidates, candidate_array_size, cudaMemcpyHostToDevice);
         if (cudaSuccess != err) {
             fprintf(stderr, "Failed to memcpy data to CUDA device %d: %s\n",
@@ -259,36 +268,61 @@ int main(int argc, char *argv[]) {
         }
 
         // Call kernel
-        gpu_stage3_kernel<<<1024, 128>>>(dev_cands, dev_results, archive, stage2_candidate_count, *c);
+        fprintf(stderr, "Calling kernel:\n  Host results @ %p\n  Dev  results @ %p\n  Results size: %ld\n",
+                host_results, dev_results, results_array_size);
+        fprintf(stderr, "  Dec candidates @ %p\n  Stage2 candidates: %u\n", dev_cands, stage2_candidate_count);
 
-        // Copy results to host.
-        err = cudaMemcpy(host_results, dev_results, results_array_size, cudaMemcpyDeviceToHost);
+        int block_size = 0;
+        int min_grid_size = 0;
+        int grid_size = 0;
+
+        cudaOccupancyMaxPotentialBlockSize(&min_grid_size, &block_size, (void*)gpu_stage3_kernel, 0, stage2_candidate_count);
+
+        fprintf(stderr, "Est.   BlockSize: block_sz=%d min_grid_sz=%d grid_size=%d\n", block_size, min_grid_size, grid_size);
+        //round up
+        grid_size = (stage2_candidate_count + block_size - 1) / block_size;
+        fprintf(stderr, "Actual BlockSize: block_sz=%d min_grid_sz=%d grid_size=%d\n", block_size, min_grid_size, grid_size);
+
+
+        gpu_stage3_kernel<<<grid_size, block_size>>>(dev_cands, dev_results, dev_archive, stage2_candidate_count, *c);
+        err = cudaGetLastError();
         if (cudaSuccess != err) {
-            fprintf(stderr, "Failed to copy results to host: %s\n",
-                    cudaGetErrorString(err));
+            fprintf(stderr, "CUDA Kernel failed: %s\n", cudaGetErrorString(err));
             cudaFree(dev_cands);
             cudaFree(dev_results);
             free(host_results);
             exit(-1);
         }
 
+        // Copy results to host.
+        err = cudaMemcpy(host_results, dev_results, results_array_size, cudaMemcpyDeviceToHost);
+        if (cudaSuccess != err) {
+            fprintf(stderr, "Failed to copy results to host: %s\n",
+                    cudaGetErrorString(err));
+            fprintf(stderr, "  Host results @ %p\n", host_results);
+            fprintf(stderr, "  Dev  results @ %p\n", dev_results);
+            fprintf(stderr, "  Results size: %ld\n", results_array_size);
+            cudaFree(dev_cands);
+            cudaFree(dev_results);
+            free(host_results);
+            exit(-1);
+        }
+
+        bool success = false;
         for (int i = 0; i < stage2_candidate_count; ++i) {
-            if (i == 1024) {
-                if (host_results[i].crck00 != 0x01) {
-                    fprintf(stderr, "Expected 0x01 at index %d in host results, got: %d\n",
-                            i, host_results[i].crck00);
-                    exit(-1);
-                } 
-            } else {
-                if (host_results[i].crck00 != 0x00) {
-                    fprintf(stderr, "Expected 0x00 at index %d in host results, got: %d\n",
-                            i, host_results[i].crck00);
-                    exit(-1);
-                }
+            if (host_results[i].crck00 != 0 || host_results[i].k10 != 0 || host_results[i].k20 != 0) {
+                fprintf(stdout, "FINAL: Success! Keys: crck00=%u k10=%u k20=%u\n", 
+                        host_results[i].crck00,
+                        host_results[i].k10,
+                        host_results[i].k20);
+                success = true;
+                break;
             }
         }
 
-        fprintf(stderr, "Results verified.\n");
+        if (!success) {
+            fprintf(stderr, "FINAL: Results check complete, no keys found.\n");
+        }
 
         // Free memory on device.
         err = cudaFree(dev_cands);
@@ -299,6 +333,13 @@ int main(int argc, char *argv[]) {
         }
 
         err = cudaFree(dev_results);
+        if (cudaSuccess != err) {
+            fprintf(stderr, "Failed to free device memory on %d: %s\n",
+                    device, cudaGetErrorString(err));
+            exit(-1);
+        }
+
+        err = cudaFree(dev_archive);
         if (cudaSuccess != err) {
             fprintf(stderr, "Failed to free device memory on %d: %s\n",
                     device, cudaGetErrorString(err));
