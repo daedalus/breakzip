@@ -16,7 +16,7 @@ using namespace std;
 
 namespace mitm_stage2 {
 
-CUDA_HOSTDEVICE void set_gpu_candidate(gpu_stage2_candidate &self,
+CUDA_HOSTDEVICE void set_gpu_candidate(gpu_stage2_candidate& self,
                                        const stage2_candidate& other,
                                        const int idx) {
     self.maybek20 = other.maybek20[idx];
@@ -79,7 +79,6 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
 
 void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
                                     uint32_t* count) {
-
     stage2_candidate* tmparray = nullptr;
     uint32_t my_count = 0;
 
@@ -89,7 +88,8 @@ void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
         exit(-1);
     }
 
-    gpu_stage2_candidate* array = (gpu_stage2_candidate *)::calloc(my_count, sizeof(gpu_stage2_candidate));
+    gpu_stage2_candidate* array =
+        (gpu_stage2_candidate*)::calloc(my_count, sizeof(gpu_stage2_candidate));
     if (nullptr == array) {
         fprintf(stderr, "Failed to allocate array for gpu candidates\n");
         exit(-1);
@@ -153,9 +153,11 @@ void read_stage2_candidates(stage2_candidate** stage2_candidates,
 void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                              const size_t stage2_candidate_count,
                              const size_t shard_number,
-                             const mitm::correct_guess *correct) {
+                             const mitm::correct_guess* correct) {
     if ((FLAGS_only_emit_correct || FLAGS_runtests) && nullptr == correct) {
-        fprintf(stderr, "No correct guess but -runtests enabled. Goodbye cruel world!\n");
+        fprintf(
+            stderr,
+            "No correct guess but -runtests enabled. Goodbye cruel world!\n");
         exit(-1);
     }
 

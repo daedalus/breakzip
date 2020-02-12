@@ -25,9 +25,9 @@ typedef struct keys {
     uint32_t crck00, k10, k20;
 } keys;
 
-CUDA_HOSTDEVICE 
+CUDA_HOSTDEVICE
 void gpu_set_gpu_candidate(mitm_stage2::gpu_stage2_candidate &self,
-                           const mitm_stage2::stage2_candidate& other,
+                           const mitm_stage2::stage2_candidate &other,
                            const int idx);
 
 CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
@@ -36,9 +36,8 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
                                 const mitm::correct_guess *c = nullptr);
 
 CUDA_HOSTDEVICE void gpu_stage3_internal(
-        const mitm::archive_info &info,
-        const mitm_stage2::gpu_stage2_candidate &c2,
-        keys *result, const mitm::correct_guess *c);
+    const mitm::archive_info &info, const mitm_stage2::gpu_stage2_candidate &c2,
+    keys *result, const mitm::correct_guess *c);
 
 CUDA_HOSTDEVICE void gpu_stage4(const mitm::archive_info &info,
                                 const mitm_stage2::gpu_stage2_candidate &c2,
