@@ -29,6 +29,7 @@ endif ()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -pg")
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast")
+set(CMAKE_CUDA_FLAGS_DEBUG "-G")
 
 # Disable certain warnings.
 # TODO(leaf): Fix up all instances of these printf warnings.
