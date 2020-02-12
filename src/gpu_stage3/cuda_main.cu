@@ -276,13 +276,13 @@ int main(int argc, char *argv[]) {
             if (i == 1024) {
                 if (host_results[i].crck00 != 0x01) {
                     fprintf(stderr, "Expected 0x01 at index %d in host results, got: %d\n",
-                            i, host_results[i]);
+                            i, host_results[i].crck00);
                     exit(-1);
                 } 
             } else {
                 if (host_results[i].crck00 != 0x00) {
                     fprintf(stderr, "Expected 0x00 at index %d in host results, got: %d\n",
-                            i, host_results[i]);
+                            i, host_results[i].crck00);
                     exit(-1);
                 }
             }

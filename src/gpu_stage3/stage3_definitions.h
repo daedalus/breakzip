@@ -24,6 +24,14 @@ namespace stage3 {
 #ifdef __CUDACC__
 __device__
 #endif
+uint8_t gpu_get_s0(uint16_t k20) {
+        uint16_t temp = k20 | 3;
+            return (temp * (temp ^ 1)) >> 8;
+}
+
+#ifdef __CUDACC__
+__device__
+#endif
 const uint32_t gpu_crc32tab[256] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -110,7 +118,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
                              const mitm::correct_guess *c) {
     for (uint8_t i = 0; i < c2.k20_count; ++i) {
         uint32_t k20 = c2.maybek20[i];
-        uint8_t s0 = get_s0(k20);
+        uint8_t s0 = gpu_get_s0(k20);
 
         for (uint16_t chunk8 = 0; chunk8 < 0x100; ++chunk8) {
 
@@ -139,7 +147,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
             }
 #endif
             uint32_t k21xf0 = gpu_crc32(k20, m1xf0);
-            uint8_t s1xf0 = get_s0(k21xf0);
+            uint8_t s1xf0 = gpu_get_s0(k21xf0);
 
             uint32_t k01yf0 = crck00 ^ gpu_crc32tab[info.file[0].x[0] ^ s0];
             uint8_t extra1yf0 = (k01yf0 & 0xff) * CRYPTCONST;
@@ -156,7 +164,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
 #endif
 
             uint32_t k21yf0 = gpu_crc32(k20, m1yf0);
-            uint8_t s1yf0 = get_s0(k21yf0);
+            uint8_t s1yf0 = gpu_get_s0(k21yf0);
 
 #ifndef __CUDACC__
             if ((info.file[0].x[1] ^ s1xf0 ^ s1yf0) != info.file[0].h[1]) {
@@ -184,7 +192,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
 #endif
 
             uint32_t k22xf0 = gpu_crc32(k21xf0, m2xf0);
-            uint8_t s2xf0 = get_s0(k22xf0);
+            uint8_t s2xf0 = gpu_get_s0(k22xf0);
 
             uint32_t k02yf0 = gpu_crc32(k01yf0, info.file[0].x[1] ^ s1xf0);
             uint8_t extra2yf0 = (extra1yf0 + (k02yf0 & 0xff)) * CRYPTCONST + 1;
@@ -201,7 +209,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
 #endif
 
             uint32_t k22yf0 = gpu_crc32(k21yf0, m2yf0);
-            uint8_t s2yf0 = get_s0(k22yf0);
+            uint8_t s2yf0 = gpu_get_s0(k22yf0);
 
 #ifndef __CUDACC__
             if ((info.file[0].x[2] ^ s2xf0 ^ s2yf0) != info.file[0].h[2]) {
@@ -237,7 +245,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
                     }
                     uint8_t m3xf0 = chunk9 + (extra3xf0 >> 24) + (cb30 & 1);
                     uint32_t k23xf0 = gpu_crc32(k22xf0, m3xf0);
-                    uint8_t s3xf0 = get_s0(k23xf0);
+                    uint8_t s3xf0 = gpu_get_s0(k23xf0);
 
                     uint32_t k03yf0 = gpu_crc32(k02yf0, info.file[0].x[2] ^ s2xf0);
                     uint8_t extra3yf0 =
@@ -267,7 +275,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
                     uint8_t m3yf0 =
                         chunk9 + (extra3yf0 >> 24) + ((cb30 >> 1) & 1);
                     uint32_t k23yf0 = gpu_crc32(k22yf0, m3yf0);
-                    uint8_t s3yf0 = get_s0(k23yf0);
+                    uint8_t s3yf0 = gpu_get_s0(k23yf0);
                     if ((info.file[0].x[3] ^ s3xf0 ^ s3yf0) !=
                         info.file[0].h[3]) {
 
@@ -304,7 +312,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
 #endif
 
                         uint32_t k21xf1 = gpu_crc32(k20, m1xf1);
-                        uint8_t s1xf1 = get_s0(k21xf1);
+                        uint8_t s1xf1 = gpu_get_s0(k21xf1);
 
                         uint32_t k01yf1 =
                             crck00 ^ gpu_crc32tab[info.file[1].x[0] ^ s0];
@@ -323,7 +331,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
 #endif
 
                         uint32_t k21yf1 = gpu_crc32(k20, m1yf1);
-                        uint8_t s1yf1 = get_s0(k21yf1);
+                        uint8_t s1yf1 = gpu_get_s0(k21yf1);
 
 #ifndef __CUDACC__
                         if ((info.file[1].x[1] ^ s1xf1 ^ s1yf1) !=
@@ -356,7 +364,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
 #endif
 
                         uint32_t k22xf1 = gpu_crc32(k21xf1, m2xf1);
-                        uint8_t s2xf1 = get_s0(k22xf1);
+                        uint8_t s2xf1 = gpu_get_s0(k22xf1);
 
                         uint32_t k02yf1 =
                             gpu_crc32(k01yf1, info.file[1].x[1] ^ s1xf1);
@@ -376,7 +384,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
 #endif
 
                         uint32_t k22yf1 = gpu_crc32(k21yf1, m2yf1);
-                        uint8_t s2yf1 = get_s0(k22yf1);
+                        uint8_t s2yf1 = gpu_get_s0(k22yf1);
 
 #ifndef __CUDACC__
                         if ((info.file[1].x[2] ^ s2xf1 ^ s2yf1) !=
@@ -419,7 +427,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
                             continue;
                         }
                         uint32_t k23xf1 = gpu_crc32(k22xf1, m3xf1);
-                        uint8_t s3xf1 = get_s0(k23xf1);
+                        uint8_t s3xf1 = gpu_get_s0(k23xf1);
 
                         uint32_t k03yf1 =
                             gpu_crc32(k02yf1, info.file[1].x[2] ^ s2xf1);
@@ -451,7 +459,7 @@ CUDA_HOSTDEVICE void gpu_stage3(const mitm::archive_info &info,
                         }
 
                         uint32_t k23yf1 = gpu_crc32(k22yf1, m3yf1);
-                        uint8_t s3yf1 = get_s0(k23yf1);
+                        uint8_t s3yf1 = gpu_get_s0(k23yf1);
                         if ((info.file[1].x[3] ^ s3xf1 ^ s3yf1) ==
                             info.file[1].h[3]) {
                             gpu_stage4(info, c2, chunk8, chunk9, cb30, cb31,
@@ -642,7 +650,7 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
                     bound = (bound + lsbk0n) * CRYPTCONST + 1;
                     k1cn = k1cn * CRYPTCONST;
                     k2n = gpu_crc32(k2n, (k1cn + bound) >> 24);
-                    sn[idx][xy] = get_s0(k2n);
+                    sn[idx][xy] = gpu_get_s0(k2n);
                     k0n = gpu_crc32(k0n, bytes[idx + 1]);
                 }
             }

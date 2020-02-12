@@ -18,6 +18,8 @@ using namespace std;
 
 namespace stage3 {
 
+uint8_t get_s0(uint16_t k20);
+
 typedef struct keys {
     uint32_t crck00, k10, k20;
 } keys;

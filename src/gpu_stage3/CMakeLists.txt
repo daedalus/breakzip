@@ -2,12 +2,16 @@
 
 add_library(cpu_stage3_core cpu_stage3.cpp)
 add_library(cuda_stage3_core gpu_stage3.cu)
+set_property(TARGET cuda_stage3_core
+             PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
 add_executable(cpu_stage3 main.cpp)
 target_link_libraries(cpu_stage3 mitm_stage1_core mitm_stage2_core
                       cpu_stage3_core breakzipcore ${LIBS})
 
 add_executable(cuda_stage3 cuda_main.cu)
+set_property(TARGET cuda_stage3
+             PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 target_link_libraries(cuda_stage3 mitm_stage1_core mitm_stage2_core
                       cuda_stage3_core breakzipcore ${LIBS})
 
