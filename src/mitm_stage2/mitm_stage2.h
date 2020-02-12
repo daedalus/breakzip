@@ -54,7 +54,8 @@ void read_stage2_candidates(stage2_candidate** stage2_candidates /* out */,
                             uint32_t* stage2_candidate_count /* out */);
 void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                              const size_t stage2_candidate_count,
-                             const size_t shard_number);
+                             const size_t shard_number,
+                             const mitm::correct_guess *correct = nullptr);
 
 void mitm_stage2a(mitm::archive_info& info, mitm_stage1::stage1_candidate& c1,
                   std::vector<std::vector<stage2a>>& table,

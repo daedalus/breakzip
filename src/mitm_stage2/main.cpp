@@ -10,6 +10,7 @@
 
 DECLARE_string(target);
 DECLARE_bool(runtests);
+DECLARE_bool(only_emit_correct);
 DEFINE_string(input_shard, "target.out.0",
               "The filename of the stage1 shard to run on.");
 DECLARE_string(output);
@@ -42,6 +43,10 @@ int main(int argc, char* argv[]) {
     SetVersionString(version_string());
     SetUsageMessage(usage_message);
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
+
+    if (FLAGS_only_emit_correct) {
+        FLAGS_runtests = true;
+    }
 
     const char* input_filename = argv[non_flag];
 

@@ -4,6 +4,8 @@
 
 #include "breakzip.h"
 
+DECLARE_bool(runtests);
+DECLARE_bool(only_emit_correct);
 DECLARE_string(output);
 DECLARE_string(target);
 DECLARE_string(input_shard);
@@ -107,7 +109,13 @@ void read_stage2_candidates(stage2_candidate** stage2_candidates,
 
 void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                              const size_t stage2_candidate_count,
-                             const size_t shard_number) {
+                             const size_t shard_number,
+                             const mitm::correct_guess *correct) {
+    if ((FLAGS_only_emit_correct || FLAGS_runtests) && nullptr == correct) {
+        fprintf(stderr, "No correct guess but -runtests enabled. Goodbye cruel world!\n");
+        exit(-1);
+    }
+
     if (0 == FLAGS_output.length()) {
         fprintf(stderr, "Please provide a -output file basename.\n");
         exit(-1);
@@ -131,7 +139,16 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
 
     write_word(output_file, (uint32_t)stage2_candidate_count);
     for (int i = 0; i < (int)stage2_candidate_count; ++i) {
-        write_stage2_candidate(output_file, stage2_candidates[i]);
+        if (FLAGS_only_emit_correct) {
+            if (correct_candidate(*correct, stage2_candidates[i])) {
+                write_stage2_candidate(output_file, stage2_candidates[i]);
+                break;
+            } else {
+                continue;
+            }
+        } else {
+            write_stage2_candidate(output_file, stage2_candidates[i]);
+        }
     }
 
     fclose(output_file);
