@@ -401,9 +401,6 @@ void mitm_stage2b(const mitm::archive_info& info,
                                 stage2_candidate g;
 
                                 for (auto k20 : c1.maybek20) {
-                                    if (0 == k20) {
-                                        continue;
-                                    }
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
                                     uint32_t k22xf0 =
                                         crc32(k21xf0, c2.msbk12xf0 >> 24);
