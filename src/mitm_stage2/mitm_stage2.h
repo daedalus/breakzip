@@ -35,6 +35,29 @@ typedef struct stage2_candidate {
           m1(0),
           m2(0) {}
 
+    struct stage2_candidate& operator=(const struct stage2_candidate& other) {
+        this->k20_count = other.k20_count;
+        this->chunk2 = other.chunk2;
+        this->chunk3 = other.chunk3;
+        this->chunk6 = other.chunk6;
+        this->chunk7 = other.chunk7;
+        this->cb = other.cb;
+        this->m1 = other.m1;
+        this->m2 = other.m2;
+        return *this;
+    }
+
+    void print() {
+        printf("stage2 candidate:\n  k20_count: %u\n  k20s:\n", this->k20_count);
+        for (int i = 0; i < this->k20_count; ++i) {
+            printf(" %u", this->maybek20[i]);
+        }
+        printf("\n");
+        printf("  chunks: 2: %u 3: %u 6: %u 7: %u cb: %u m1: %u m2: %u", 
+               this->chunk2, this->chunk3, this->chunk6, this->chunk7,
+               this->cb, this->m1, this->m2);
+    }
+
     static const size_t MAX_K20S = 16;
 
     // Expect four candidates for chunks 1, 4
