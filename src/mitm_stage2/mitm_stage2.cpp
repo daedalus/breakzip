@@ -88,6 +88,17 @@ void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
         exit(-1);
     }
 
+    fprintf(stderr, "Read %d stage2 candidates.\n", my_count);
+
+    int total = 0;
+    uint32_t gpu_count = 0;
+    for (int i = 0; i < my_count; ++i) {
+        fprintf(stderr, "Candidate %d has %d k20's\n", i, tmparray[i].k20_count);
+        gpu_count += tmparray[i].k20_count;
+    }
+
+    fprintf(stderr, "Expanding %d stage2 candidates into %d gpu candidates...\n", my_count, gpu_count);
+
     gpu_stage2_candidate* array =
         (gpu_stage2_candidate*)::calloc(my_count, sizeof(gpu_stage2_candidate));
     if (nullptr == array) {
@@ -95,7 +106,7 @@ void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
         exit(-1);
     }
 
-    int total = 0;
+    total = 0;
     for (int i = 0; i < my_count; ++i) {
         for (int j = 0; j < tmparray[i].k20_count; ++j, ++total) {
             set_gpu_candidate(array[total], tmparray[i], j);
@@ -184,6 +195,12 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
 
     write_word(output_file, (uint32_t)stage2_candidate_count);
     for (int i = 0; i < (int)stage2_candidate_count; ++i) {
+        // Sanity check
+        if (0 == stage2_candidates[i].k20_count) {
+            fprintf(stderr, "Invalid data: candidate %d has no maybek20's!\n", i);
+            exit(-1);
+        }
+
         if (FLAGS_only_emit_correct) {
             if (correct_candidate(*correct, stage2_candidates[i])) {
                 write_stage2_candidate(output_file, stage2_candidates[i]);
@@ -384,6 +401,9 @@ void mitm_stage2b(const mitm::archive_info& info,
                                 stage2_candidate g;
 
                                 for (auto k20 : c1.maybek20) {
+                                    if (0 == k20) {
+                                        continue;
+                                    }
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
                                     uint32_t k22xf0 =
                                         crc32(k21xf0, c2.msbk12xf0 >> 24);
@@ -406,6 +426,10 @@ void mitm_stage2b(const mitm::archive_info& info,
                                             k20 | (hi_byte << 24);
                                         g.k20_count += 1;
                                     }
+                                }
+
+                                if (0 == g.k20_count) {
+                                    continue;
                                 }
 
                                 g.chunk2 = c1.chunk2;
@@ -432,6 +456,11 @@ void mitm_stage2b(const mitm::archive_info& info,
                                             "of size %ld!\n",
                                             stage2_candidate_count, array_size);
                                     abort();
+                                }
+
+                                if (g.k20_count == 0) {
+                                    fprintf(stderr, "Assertion failed: k20_count = 0\n");
+                                    exit(-1);
                                 }
 
                                 candidates[stage2_candidate_count] = g;
