@@ -61,14 +61,17 @@ void read_stage1_candidates(FILE *f, vector<stage1_candidate> &out) {
     uint32_t num_candidates = 0;
     read_word(f, num_candidates);
 
-    printf("read_candidates: file should contain %d candidates\n",
+    printf("read_stage1_candidates: file should contain %d candidates\n",
            num_candidates);
-    for (int i = 0; i < num_candidates; ++i) {
-        fprintf(stderr, "%d ", i);
+
+    int i = 0;
+    for (; i < num_candidates; ++i) {
         stage1_candidate c;
         read_stage1_candidate(f, c);
         out.push_back(c);
     }
+
+    printf("read_stage1_candidates: Actually read %d candidates.\n", i);
 }
 
 void write_stage1_candidates(const vector<stage1_candidate> &candidates,
