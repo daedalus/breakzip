@@ -4,6 +4,12 @@
 
 #include "breakzip.h"
 
+#ifdef DEBUG
+#define PRINT_ON_CORRECT(...) { if (flag) fprintf(stderr, __VA_ARGS__); }
+#else
+#define PRINT_ON_CORRECT(...)
+#endif
+
 DECLARE_bool(runtests);
 DECLARE_bool(only_emit_correct);
 DECLARE_string(output);
@@ -234,7 +240,12 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
     for (uint16_t chunk6 = 0; chunk6 < 0x100; ++chunk6) {
         for (uint16_t chunk7 = 0; chunk7 < 0x100; ++chunk7) {
             for (uint8_t cb2 = 0; cb2 < 0x10; ++cb2) {
-                if (nullptr != c && chunk6 == c->chunk6 &&
+                auto flag = false;
+                if (nullptr != c && 
+                    c1.chunk2 == c->chunk2 &&
+                    c1.chunk3 == c->chunk3 &&
+                    c1.cb1 == (c->carries >> 12) &&
+                    chunk6 == c->chunk6 &&
                     chunk7 == c->chunk7 && cb2 == ((c->carries >> 8) & 0xf)) {
                     fprintf(stderr, "Stage 2a, should be on correct guess.\n");
                 }
@@ -316,7 +327,11 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 s2a.chunk7 = chunk7;
                 s2a.cb2 = cb2;
                 s2a.msbk12xf0 = msbxf0;
-                if (nullptr != c && s2a.chunk6 == c->chunk6 &&
+                if (nullptr != c && 
+                    c1.chunk2 == c->chunk2 &&
+                    c1.chunk3 == c->chunk3 &&
+                    c1.cb1 == (c->carries >> 12) &&
+                    s2a.chunk6 == c->chunk6 &&
                     s2a.chunk7 == c->chunk7 &&
                     s2a.cb2 == ((c->carries >> 8) & 0xf)) {
                     fprintf(stderr,
@@ -335,12 +350,9 @@ void mitm_stage2b(const mitm::archive_info& info,
                   stage2_candidate* candidates, /* output */
                   const size_t array_size,
                   size_t& stage2_candidate_count, /* output */
-                  const mitm::correct_guess* c, const bool sample) {
+                  const mitm::correct_guess* c) {
     // Second half of MITM for stage 2
     fprintf(stderr, "Stage 2b\n");
-    if (sample) {
-        fprintf(stderr, "Correct stage1 candidate\n");
-    }
 
     /*
     If we xor two k22 values together, the result is independent of k20:
@@ -364,6 +376,8 @@ void mitm_stage2b(const mitm::archive_info& info,
     uint32_t cyf0 = crc32tab[mk1 & 0xff];
     uint32_t cxf1 = crc32tab[(mk1 >> 8) & 0xff];
     uint32_t cyf1 = crc32tab[(mk1 >> 16) & 0xff];
+    fprintf(stderr, "m1: %08x\n", c1.m1);
+    fprintf(stderr, "Stage 1 constants: cyf0 = %08x, cxf1 = %08x, cyf1 = %08x\n", cyf0, cxf1, cyf1);
     uint32_t cyf0p = (cyf0 >> 10) & 0x3fff;
     uint32_t cxf1p = (cxf1 >> 10) & 0x3fff;
     uint32_t cyf1p = (cyf1 >> 10) & 0x3fff;
@@ -372,38 +386,55 @@ void mitm_stage2b(const mitm::archive_info& info,
     uint32_t cyf1l = cyf1 & 0xff;
     for (uint16_t s2xf0 = 0; s2xf0 < 0x100; ++s2xf0) {
         uint8_t s2yf0 = s2xf0 ^ info.file[0].x[2] ^ info.file[0].h[2];
+        bool flag = false;
+        if (nullptr != c && s2xf0 == c->sx[0][2]) {
+            fprintf(stderr, "Stage 2b on correct s2xf0=%02x\n", s2xf0);
+            flag = true;
+        }
         for (uint8_t prefix = 0; prefix < 0x40; ++prefix) {
             uint16_t pxf0(preimages[s2xf0][prefix]);
 
             vector<uint8_t> firsts(0);
             second_half_step(pxf0 ^ cyf0p, s2yf0, firsts);
             if (!firsts.size()) {
+                PRINT_ON_CORRECT("Failed to find firsts on pxf0<<2 %04x\n\n", pxf0<<2);
                 continue;
             }
             for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
+                flag = false;
+                if (nullptr != c && s2xf0 == c->sx[0][2] && s2xf1 == c->sx[1][2]) {
+                    fprintf(stderr, "Stage 2b on correct candidate: s2xf0=%02x, s2xf1=%02x\n", s2xf0, s2xf1);
+                    flag = true;
+                }
                 vector<uint8_t> seconds(0);
                 second_half_step(pxf0 ^ cxf1p, s2xf1, seconds);
                 if (!seconds.size()) {
+                    PRINT_ON_CORRECT("Failed to find seconds on pxf0<<2 %04x, s2xf1 %02x\n\n", pxf0<<2, s2xf1);
                     continue;
                 }
                 vector<uint8_t> thirds(0);
-                uint8_t s2yf1 = s2xf1 ^ info.file[1].x[2] ^ info.file[0].h[2];
+                uint8_t s2yf1 = s2xf1 ^ info.file[1].x[2] ^ info.file[1].h[2];
                 second_half_step(pxf0 ^ cyf1p, s2yf1, thirds);
                 if (!thirds.size()) {
+                    PRINT_ON_CORRECT("Failed to find thirds on pxf0<<2 %04x, s2xf1 %02x\n\n", pxf0<<2, s2xf1);
                     continue;
                 }
+                PRINT_ON_CORRECT("pxf0<<2: %04x, f:%ld, s:%ld, t:%ld\n", pxf0<<2, firsts.size(), seconds.size(), thirds.size());
                 for (auto f : firsts) {
                     for (auto s : seconds) {
                         for (auto t : thirds) {
                             uint32_t mapkey((f ^ cyf0l) | ((s ^ cxf1l) << 8) |
                                             ((t ^ cyf1l) << 16));
+                            PRINT_ON_CORRECT("Mapkey %08x has %ld entries\n", mapkey, table[mapkey].size());
                             for (auto c2 : table[mapkey]) {
                                 stage2_candidate g;
-
-                                for (auto k20 : c1.maybek20) {
+                                PRINT_ON_CORRECT("c1 has %d maybek20s, c1.m1 = %08x\n", c1.k20_count, c1.m1);
+                                for (int i = 0; i < c1.k20_count; ++i) {
+                                    uint32_t k20 = c1.maybek20[i];
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
                                     uint32_t k22xf0 =
-                                        crc32(k21xf0, c2.msbk12xf0 >> 24);
+                                        crc32(k21xf0, c2.msbk12xf0);
+                                    PRINT_ON_CORRECT("k20 = %08x, k21xf0 = %08x, c2.msbk12xf0 = %02x, k22xf0 = %08x\n", k20, k21xf0, c2.msbk12xf0, k22xf0);
                                     if ((pxf0 & 0x3f) ==
                                         ((k22xf0 >> 2) & 0x3f)) {
                                         if (g.k20_count >= g.MAX_K20S) {
@@ -421,11 +452,15 @@ void mitm_stage2b(const mitm::archive_info& info,
                                             ((k22xf0 >> 8) & 0xff);
                                         g.maybek20[g.k20_count] =
                                             k20 | (hi_byte << 24);
+                                        PRINT_ON_CORRECT("Pushed back maybek20 %08x\n", g.maybek20[g.k20_count]);
                                         g.k20_count += 1;
+                                    } else {
+                                        PRINT_ON_CORRECT("Skipped maybek20 %08x\n", k20);
                                     }
                                 }
 
                                 if (0 == g.k20_count) {
+                                    PRINT_ON_CORRECT("No valid k20s for correct candidate\n");
                                     continue;
                                 }
 
@@ -436,12 +471,19 @@ void mitm_stage2b(const mitm::archive_info& info,
                                 g.cb = (c1.cb1 << 4) | c2.cb2;
                                 g.m1 = c1.m1;
                                 g.m2 = mapkey ^ (c2.msbk12xf0 * 0x01010101);
+                                fprintf(stderr, "Pushed back chunk6 = %02x, chunk7 = %02x, cb = %02x, m1 = %08x, m2 = %08x, s2xf0 = %02x, s2xf1 = %02x\n",
+                                        g.chunk6, g.chunk7, g.cb, g.m1, g.m2, s2xf0, s2xf1);
+                                for (int i = 0; i < g.k20_count; ++i) {
+                                    fprintf(stderr, "%08x, ", g.maybek20[i]);
+                                }
+                                fprintf(stderr, "\n");
 
                                 if (nullptr != c && g.chunk2 == c->chunk2 &&
                                     g.chunk3 == c->chunk3 &&
                                     g.cb == (c->carries >> 8) &&
                                     g.chunk6 == c->chunk6 &&
-                                    g.chunk7 == c->chunk7) {
+                                    g.chunk7 == c->chunk7 &&
+                                    s2xf0 == c->sx[0][2] && s2xf1 == c->sx[1][2]) {
                                     fprintf(stderr,
                                             "Pushed back correct candidate!\n");
                                 }

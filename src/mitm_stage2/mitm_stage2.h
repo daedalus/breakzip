@@ -127,8 +127,7 @@ void mitm_stage2b(const mitm::archive_info& info,
                   stage2_candidate* candidates, /* output */
                   const size_t array_size,
                   size_t& stage2_candidate_count, /* output */
-                  const mitm::correct_guess* c = nullptr,
-                  const bool sample = false);
+                  const mitm::correct_guess* c = nullptr);
 
 }  // namespace mitm_stage2
 

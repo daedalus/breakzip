@@ -79,21 +79,20 @@ int main(int argc, char* argv[]) {
     fprintf(stdout, "Read %ld candidates from stage1.\n", candidates.size());
 
     if (FLAGS_runtests) {
-        correct_guess guess[2] = {correct(mitm::test[0]),
-                                  correct(mitm::test[1])};
+        correct_guess guess[1] = {correct(mitm::test[0])};//,
+                                  //correct(mitm::test[1])};
 
         size_t idx = 0;
         size_t stage2_candidate_total = 0;
-        printf("Starting stage2...\n");
+        printf("Starting stage2... %ld candidates\n", candidates.size());
         for (auto candidate : candidates) {
+            ++idx;
             // Clear the output array.
             ::memset(stage2_candidates, 0,
                      S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
             size_t stage2_candidate_count = 0;
 
-            if (++idx % 1000) {
-                printf("On stage1 candidate %ld...\n", idx);
-            }
+            printf("On stage1 candidate %ld...\n", idx);
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
@@ -104,7 +103,7 @@ int main(int argc, char* argv[]) {
             printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,
                    stage2_candidate_count, stage2_candidate_total);
             write_stage2_candidates(stage2_candidates, stage2_candidate_count,
-                                    idx);
+                                    idx, guess);
 
             if (FLAGS_stop_after <= idx) {
                 fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",

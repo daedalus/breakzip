@@ -49,12 +49,17 @@ void read_stage1_candidate(FILE *f, stage1_candidate &c) {
     for (uint8_t i = 0; i < size; ++i) {
         uint32_t maybek20 = 0;
         read_3bytes(f, maybek20);
+        fprintf(stderr, "maybek20: %06x ", maybek20);
         c.maybek20[i] = maybek20;
     }
     c.chunk2 = (uint8_t)fgetc(f);
+    fprintf(stderr, "chunk2: %02x ", c.chunk2);
     c.chunk3 = (uint8_t)fgetc(f);
+    fprintf(stderr, "chunk3: %02x ", c.chunk3);
     c.cb1 = (uint8_t)fgetc(f);
+    fprintf(stderr, "cb1: %x ", c.cb1);
     read_word(f, c.m1);
+    fprintf(stderr, "m1: %02x\n", c.m1);
 }
 
 void read_stage1_candidates(FILE *f, vector<stage1_candidate> &out) {
@@ -64,6 +69,7 @@ void read_stage1_candidates(FILE *f, vector<stage1_candidate> &out) {
     printf("read_candidates: file should contain %d candidates\n",
            num_candidates);
     for (int i = 0; i < num_candidates; ++i) {
+        fprintf(stderr, "%d ", i);
         stage1_candidate c;
         read_stage1_candidate(f, c);
         out.push_back(c);
