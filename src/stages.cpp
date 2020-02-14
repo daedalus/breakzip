@@ -12,7 +12,8 @@
 #include "breakzip.h"
 
 #ifdef DEBUG
-#define DPRINT(x, ...) { fprintf(stderr, x, __VA_ARGS__); }
+#define DPRINT(x, ...) \
+    { fprintf(stderr, x, __VA_ARGS__); }
 #else
 #define DPRINT(x, ...)
 #endif
