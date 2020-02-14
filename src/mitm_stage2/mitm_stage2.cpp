@@ -42,9 +42,19 @@ bool correct_candidate(const mitm::correct_guess& g,
                        const stage2_candidate& c) {
     bool result = false;
     uint32_t true_k20 = (g.chunk5 << 24) | (g.chunk4 << 16) | g.chunk1;
+#ifdef DEBUG
+    fprintf(stderr, "\n2:%02x, 3:%02x, 6:%02x, 7:%02x, cb:%x\n", c.chunk2,
+            c.chunk3, c.chunk6, c.chunk7, c.cb);
+#endif
     for (int i = 0; i < c.k20_count; ++i) {
         result = result || (c.maybek20[i] == true_k20);
+#ifdef DEBUG
+        fprintf(stderr, "%08x, ", c.maybek20[i]);
+#endif
     }
+#ifdef DEBUG
+    fprintf(stderr, "\n");
+#endif
     result = result && (c.chunk2 == g.chunk2 && c.chunk3 == g.chunk3 &&
                         c.chunk6 == g.chunk6 && c.chunk7 == g.chunk7 &&
                         c.cb == (g.carries >> 8));
@@ -206,6 +216,18 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
     }
 
     write_word(output_file, (uint32_t)stage2_candidate_count);
+#ifdef DEBUG
+    if (nullptr != correct) {
+        fprintf(
+            stderr,
+            "Correct: k20:%08x, 2:%02x, 3:%02x, 6:%02x, 7:%02x, 8:%02x, "
+            "9:%02x, 10:%02x, 11:%02x, cb:%04x\n",
+            correct->chunk1 | (correct->chunk4 << 16) | (correct->chunk5 << 24),
+            correct->chunk2, correct->chunk3, correct->chunk6, correct->chunk7,
+            correct->chunk8, correct->chunk9, correct->chunk10,
+            correct->chunk11, correct->carries);
+    }
+#endif
     for (int i = 0; i < (int)stage2_candidate_count; ++i) {
         // Sanity check
         if (0 == stage2_candidates[i].k20_count) {
@@ -268,15 +290,16 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 // Compute msbk12s
                 uint32_t k0crc = c1.chunk2 | (chunk6 << 8);
                 uint32_t extra = 0;
+                first_half_step(info.file[0].x[0], false, c1.chunk3, carryx0f0,
+                                k0crc, extra, upper1, lower1);
                 uint32_t msbxf0 =
                     first_half_step(info.file[0].x[1], true, chunk7, carryx1f0,
                                     k0crc, extra, upper2, lower2);
                 k0crc = c1.chunk2 | (chunk6 << 8);
                 extra = 0;
+                first_half_step(info.file[0].x[0] ^ s0, false, c1.chunk3,
+                                carryy0f0, k0crc, extra, upper1, lower1);
                 uint32_t msbyf0 =
-                    first_half_step(info.file[0].x[0] ^ s0, false, c1.chunk3,
-                                    carryy0f0, k0crc, extra, upper1, lower1);
-                msbyf0 =
                     first_half_step(info.file[0].x[1] ^ s1xf0, true, chunk7,
                                     carryy1f0, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
@@ -290,10 +313,9 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 }
                 k0crc = c1.chunk2 | (chunk6 << 8);
                 extra = 0;
+                first_half_step(info.file[1].x[0], false, c1.chunk3, carryx0f1,
+                                k0crc, extra, upper1, lower1);
                 uint32_t msbxf1 =
-                    first_half_step(info.file[1].x[0], false, c1.chunk3,
-                                    carryx0f1, k0crc, extra, upper1, lower1);
-                msbxf1 =
                     first_half_step(info.file[1].x[1], true, chunk7, carryx1f1,
                                     k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
@@ -307,10 +329,9 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 }
                 k0crc = c1.chunk2 | (chunk6 << 8);
                 extra = 0;
+                first_half_step(info.file[1].x[0] ^ s0, false, c1.chunk3,
+                                carryy0f1, k0crc, extra, upper1, lower1);
                 uint32_t msbyf1 =
-                    first_half_step(info.file[1].x[0] ^ s0, false, c1.chunk3,
-                                    carryy0f1, k0crc, extra, upper1, lower1);
-                msbyf1 =
                     first_half_step(info.file[1].x[1] ^ s1xf1, true, chunk7,
                                     carryy1f1, k0crc, extra, upper2, lower2);
                 if (upper1 < lower1) {
@@ -398,12 +419,14 @@ void mitm_stage2b(const mitm::archive_info& info,
                 continue;
             }
             for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
+                flag = false;
                 if (nullptr != c && s2xf0 == c->sx[0][2] &&
                     s2xf1 == c->sx[1][2]) {
                     PRINT_ON_CORRECT(
                         "Stage 2b on correct candidate: s2xf0=%02x, "
                         "s2xf1=%02x\n",
                         s2xf0, s2xf1);
+                    flag = true;
                 }
                 vector<uint8_t> seconds(0);
                 second_half_step(pxf0 ^ cxf1p, s2xf1, seconds);
