@@ -36,6 +36,9 @@ typedef struct stage2_candidate {
           m2(0) {}
 
     struct stage2_candidate& operator=(const struct stage2_candidate& other) {
+        for (int i = 0; i < other.k20_count; ++i) {
+            this->maybek20[i] = other.maybek20[i];
+        }
         this->k20_count = other.k20_count;
         this->chunk2 = other.chunk2;
         this->chunk3 = other.chunk3;

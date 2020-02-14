@@ -99,7 +99,6 @@ int main(int argc, char* argv[]) {
             mitm_stage2a(test[0], candidate, table, guess);
             mitm_stage2b(test[0], candidate, table, stage2_candidates,
                          S2CANDIDATE_ARRAYSZ, stage2_candidate_count, guess);
-
             stage2_candidate_total += stage2_candidate_count;
             printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,
                    stage2_candidate_count, stage2_candidate_total);
