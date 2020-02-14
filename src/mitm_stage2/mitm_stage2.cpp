@@ -471,12 +471,14 @@ void mitm_stage2b(const mitm::archive_info& info,
                                 g.cb = (c1.cb1 << 4) | c2.cb2;
                                 g.m1 = c1.m1;
                                 g.m2 = mapkey ^ (c2.msbk12xf0 * 0x01010101);
+                                /*
                                 fprintf(stderr, "Pushed back chunk6 = %02x, chunk7 = %02x, cb = %02x, m1 = %08x, m2 = %08x, s2xf0 = %02x, s2xf1 = %02x\n",
                                         g.chunk6, g.chunk7, g.cb, g.m1, g.m2, s2xf0, s2xf1);
                                 for (int i = 0; i < g.k20_count; ++i) {
                                     fprintf(stderr, "%08x, ", g.maybek20[i]);
                                 }
                                 fprintf(stderr, "\n");
+                                */
 
                                 if (nullptr != c && g.chunk2 == c->chunk2 &&
                                     g.chunk3 == c->chunk3 &&
