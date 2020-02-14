@@ -97,7 +97,8 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
 }
 
 void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
-                                    uint32_t* count) {
+                                    uint32_t* count,
+                                    /*out*/ size_t &array_size) {
     stage2_candidate* tmparray = nullptr;
     uint32_t my_count = 0;
 
@@ -112,8 +113,6 @@ void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
     int total = 0;
     uint32_t gpu_count = 0;
     for (int i = 0; i < my_count; ++i) {
-        fprintf(stderr, "Candidate %d has %d k20's\n", i,
-                tmparray[i].k20_count);
         gpu_count += tmparray[i].k20_count;
     }
 
@@ -121,12 +120,17 @@ void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
             "Expanding %d stage2 candidates into %d gpu candidates...\n",
             my_count, gpu_count);
 
+    array_size = gpu_count * sizeof(gpu_stage2_candidate);
     gpu_stage2_candidate* array =
-        (gpu_stage2_candidate*)::calloc(my_count, sizeof(gpu_stage2_candidate));
+        (gpu_stage2_candidate*)::malloc(array_size);
     if (nullptr == array) {
         fprintf(stderr, "Failed to allocate array for gpu candidates\n");
         exit(-1);
     }
+
+    fprintf(stderr, "Allocated array of gpu candidates: size is %lu, at address %p\n",
+            gpu_count * sizeof(gpu_stage2_candidate), array);
+    ::memset(array, 0, array_size);
 
     total = 0;
     for (int i = 0; i < my_count; ++i) {
@@ -214,6 +218,9 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
         perror("Fatal error");
         exit(-1);
     }
+
+    printf("Writing stage2 shard %lu with %lu candidates: %s\n",
+           shard_number, stage2_candidate_count, output_filename);
 
     write_word(output_file, (uint32_t)stage2_candidate_count);
 #ifdef DEBUG
@@ -370,26 +377,23 @@ void mitm_stage2b(const mitm::archive_info& info,
                   const size_t array_size,
                   size_t& stage2_candidate_count, /* output */
                   const mitm::correct_guess* c) {
-    // Second half of MITM for stage 2
-    fprintf(stderr, "Stage 2b\n");
-
-    /*
-    If we xor two k22 values together, the result is independent of k20:
-    = k22x ^ k22y
-    = crc32(k21x, msbk12x) ^ crc32(k21y, msbk12y)
-    = crc32(crc32(k20, msbk11x), msbk12x) ^ crc32(crc32(k20, msbk11x), msbk12y)
-    = crc32(crc32(k20, msbk11x) ^ crc32(k20, msbk11y), msbk12x ^ msbk12y)
-    = crc32(crc32(0, msbk11x ^ msbk11y), msbk12x ^ msbk12y)
-
-    Continuing to expand, the result is the crc of a constant that depends on
-    the stage1 candidate with a value from stage 2.
-    = crc32(crc32tab[msbk11x ^ msbk11y], msbk12x ^ msbk12y)
-
-    Expanding some more and letting cy = crc32tab[msbk11x ^ msbk11y],
-    this is a constant (cy >> 8) depending only on the stage 1 candidate
-    xor a crc32tab entry.
-    = (cy >> 8) ^ crc32tab[(cy & 0xff) ^ msbk12x ^ msbk12y]
-    */
+    /**
+     * If we xor two k22 values together, the result is independent of k20:
+     * = k22x ^ k22y
+     * = crc32(k21x, msbk12x) ^ crc32(k21y, msbk12y)
+     * = crc32(crc32(k20, msbk11x), msbk12x) ^ crc32(crc32(k20, msbk11x), msbk12y)
+     * = crc32(crc32(k20, msbk11x) ^ crc32(k20, msbk11y), msbk12x ^ msbk12y)
+     * = crc32(crc32(0, msbk11x ^ msbk11y), msbk12x ^ msbk12y)
+     *
+     * Continuing to expand, the result is the crc of a constant that depends on
+     * the stage1 candidate with a value from stage 2.
+     * = crc32(crc32tab[msbk11x ^ msbk11y], msbk12x ^ msbk12y)
+     *
+     * Expanding some more and letting cy = crc32tab[msbk11x ^ msbk11y],
+     * this is a constant (cy >> 8) depending only on the stage 1 candidate
+     * xor a crc32tab entry.
+     * = (cy >> 8) ^ crc32tab[(cy & 0xff) ^ msbk12x ^ msbk12y]
+     */
     uint32_t mk1 = c1.m1 ^ ((c1.m1 >> 24) * 0x01010101);
     // Compute the constants from stage1.
     uint32_t cyf0 = crc32tab[mk1 & 0xff];

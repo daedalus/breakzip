@@ -18,6 +18,10 @@ DECLARE_int32(srand_seed);
 DEFINE_int32(stop_after, -1,
              "If set to a positive value, the program "
              "will stop after processing <stop_after> stage1 candidates.");
+DEFINE_int32(stage2_candidates_per_stage1_candidate, 10000,
+             "An estimate of the maximum number of stage2 candidates per stage1 "
+             "candidate.");
+DEFINE_int32(stage2_shard_size, 1000000, "Size of a stage2 shard.");
 
 using namespace mitm;
 using namespace mitm_stage1;
@@ -37,6 +41,91 @@ const char* usage_message = R"usage(
     Stage1 prints the name of the shard containing the correct guess.
     )usage";
 
+
+class stage2_candidate_array {
+public:
+    stage2_candidate_array() : ptr_(nullptr), size_(0), count_(0) {
+        if (0 < FLAGS_stage2_shard_size) {
+            ptr_ = (stage2_candidate *)::calloc(FLAGS_stage2_shard_size, sizeof(stage2_candidate));
+            if (nullptr == ptr_) {
+                std::bad_alloc ex;
+                throw ex;
+            }
+            size_ = FLAGS_stage2_shard_size;
+        } else {
+            std::bad_alloc ex;
+            throw ex;
+        }
+    }
+
+    stage2_candidate_array(size_t x) : ptr_(nullptr), size_(0), count_(0) {
+        ptr_ = (stage2_candidate *)::calloc(x, sizeof(stage2_candidate));
+        if (nullptr == ptr_) {
+            std::bad_alloc ex;
+            throw ex;
+        }
+        size_ = x;
+    }
+
+    size_t size() { return size_; }
+    size_t count() { return count_; }
+    void incr(size_t x) { count_ += x; }
+    stage2_candidate *ptr() { return ptr_; }
+
+    bool merge(const stage2_candidate_array &other) {
+        // TODO: try a realloc?
+        if (count_ + other.count_ > size_) {
+            fprintf(stderr, "merge: can't merge: size_=%lu, current count=%lu, merge count=%lu\n",
+                    size_, count_, other.count_);
+            return false;
+        }
+       
+        ::memcpy(ptr_ + count_, other.ptr_, sizeof(stage2_candidate) * other.count_);
+        count_ += other.count_;
+        return true;
+    }
+
+    void clear() {
+        ::memset((void *)ptr_, 0, sizeof(stage2_candidate) * size_);
+        count_ = 0;
+    }
+
+private:
+    stage2_candidate *ptr_;
+    size_t size_, count_;
+};
+
+
+void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
+                      const stage2_candidate_array &stage2_tmp_array,
+                      /* out */ size_t &idx,
+                      const size_t &stage2b_count,
+                      const correct_guess *guess = nullptr) {
+    if (false == stage2_candidates.merge(stage2_tmp_array)) {
+        // Output the current shard, however many elements it has.
+        fprintf(stderr, "Emitting shard %lu with %lu elements.\n", idx, stage2_candidates.count());
+        if (nullptr != guess) {
+            write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(),
+                                    idx, guess);
+        } else {
+            write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(), idx);
+        }
+
+        stage2_candidates.clear();
+        if (false == stage2_candidates.merge(stage2_tmp_array)) {
+            fprintf(stderr, "FATAL: Failed to merge arrays after clear.\n");
+            exit(-1);
+        }
+
+        // Increment the shard number.
+        idx += 1;
+    }
+
+    printf("shard[%lu] => %lu more candidates, %lu total.\n", idx,
+           stage2b_count, stage2_candidates.count());
+    fflush(stdout);
+}
+
 int main(int argc, char* argv[]) {
     int my_argc = argc;
 
@@ -53,15 +142,8 @@ int main(int argc, char* argv[]) {
     // Read all the stage1 candidates into memory at once.
     vector<stage1_candidate> candidates;
 
-    // There are about 84,000 stage2_candidates per stage1_candidate.
-    const size_t S2CANDIDATE_ARRAYSZ = 125000;
-    stage2_candidate* stage2_candidates = (stage2_candidate*)::calloc(
-        S2CANDIDATE_ARRAYSZ, sizeof(stage2_candidate));
-
-    if (nullptr == stage2_candidates) {
-        perror("Allocation failed");
-        exit(-1);
-    }
+    stage2_candidate_array stage2_candidates;
+    stage2_candidate_array stage2_tmp_array(FLAGS_stage2_candidates_per_stage1_candidate);
 
     auto input_file = fopen(FLAGS_input_shard.c_str(), "r");
     if (nullptr == input_file) {
@@ -76,7 +158,9 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    fprintf(stdout, "Read %ld candidates from stage1.\n", candidates.size());
+    printf("Read %ld candidates from stage1.\n", candidates.size());
+    printf("Starting stage2...\n  * Stage2 shards will be no larger than %d candidates.\n",
+           FLAGS_stage2_shard_size);
 
     if (FLAGS_runtests) {
         correct_guess guess[1] = {
@@ -85,32 +169,30 @@ int main(int argc, char* argv[]) {
 
         size_t idx = 0;
         size_t stage2_candidate_total = 0;
-        printf("Starting stage2... %ld candidates\n", candidates.size());
-        for (auto candidate : candidates) {
-            ++idx;
-            // Clear the output array.
-            ::memset(stage2_candidates, 0,
-                     S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
-            size_t stage2_candidate_count = 0;
+        size_t current_stage1_cand = 0;
 
-            printf("On stage1 candidate %ld...\n", idx);
+        for (auto candidate : candidates) {
+            stage2_tmp_array.clear();
+            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand, candidates.size());
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
-            mitm_stage2b(test[0], candidate, table, stage2_candidates,
-                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count, guess);
+            
+            size_t stage2b_count = 0;
+            mitm_stage2b(test[0], candidate, table, stage2_tmp_array.ptr(),
+                         stage2_tmp_array.size(), stage2b_count, guess);
+            stage2_tmp_array.incr(stage2b_count);
+            stage2_candidate_total += stage2b_count;
 
-            stage2_candidate_total += stage2_candidate_count;
-            printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,
-                   stage2_candidate_count, stage2_candidate_total);
-            write_stage2_candidates(stage2_candidates, stage2_candidate_count,
-                                    idx, guess);
+            merge_candidates(stage2_candidates, stage2_tmp_array, idx, stage2b_count);
 
-            if (FLAGS_stop_after <= idx) {
+            if (FLAGS_stop_after <= stage2_candidate_total) {
                 fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
                         (int)idx);
                 break;
             }
+
+            ++current_stage1_cand;
         }
 
     } else {
@@ -149,10 +231,10 @@ int main(int argc, char* argv[]) {
             exit(-1);
         }
 
-        printf(
-            "Starting stage2 for target archive `%s` and input shard `%s`...\n",
-            FLAGS_target.c_str(), FLAGS_input_shard.c_str());
+        size_t current_stage1_cand = 0;
         for (auto candidate : candidates) {
+            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand, candidates.size());
+            stage2_tmp_array.clear();
 #ifdef DEBUG
             fprintf(stderr, "Stage 1 candidate:\nmaybek20s: ");
             for (int i = 0; i < candidate.k20_count; ++i) {
@@ -163,40 +245,24 @@ int main(int argc, char* argv[]) {
                     candidate.m1);
 #endif
 
-            // Clear the output array.
-            ::memset(stage2_candidates, 0,
-                     S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
-            size_t stage2_candidate_count = 0;
-
-            if (++idx % 1000) {
-                printf("On stage1 candidate %ld...\n", idx);
-            }
-
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(archive, candidate, table);
-            mitm_stage2b(archive, candidate, table, stage2_candidates,
-                         S2CANDIDATE_ARRAYSZ, stage2_candidate_count);
 
-            stage2_candidate_total += stage2_candidate_count;
-            printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,
-                   stage2_candidate_count, stage2_candidate_total);
-            for (int i = 0; i < stage2_candidate_count; ++i) {
-                // sanity check
-                if (0 == stage2_candidates[i].k20_count) {
-                    fprintf(stderr,
-                            "Assert failed: candidate %d has %d maybek20's\n",
-                            i, stage2_candidates[i].k20_count);
-                    abort();
-                }
-            }
-            write_stage2_candidates(stage2_candidates, stage2_candidate_count,
-                                    idx);
+            size_t stage2b_count = 0;
+            mitm_stage2b(archive, candidate, table, stage2_tmp_array.ptr(),
+                         stage2_tmp_array.size(), stage2b_count);
+            stage2_tmp_array.incr(stage2b_count);
+            stage2_candidate_total += stage2b_count;
+
+            merge_candidates(stage2_candidates, stage2_tmp_array, idx, stage2b_count);
 
             if (FLAGS_stop_after <= idx) {
                 fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
                         (int)idx);
                 break;
             }
+
+            ++current_stage1_cand;
         }
     }
 
