@@ -79,8 +79,9 @@ int main(int argc, char* argv[]) {
     fprintf(stdout, "Read %ld candidates from stage1.\n", candidates.size());
 
     if (FLAGS_runtests) {
-        correct_guess guess[1] = {correct(mitm::test[0])};//,
-                                  //correct(mitm::test[1])};
+        correct_guess guess[1] = {
+            correct(mitm::test[0])};  //,
+                                      // correct(mitm::test[1])};
 
         size_t idx = 0;
         size_t stage2_candidate_total = 0;
@@ -152,6 +153,16 @@ int main(int argc, char* argv[]) {
             "Starting stage2 for target archive `%s` and input shard `%s`...\n",
             FLAGS_target.c_str(), FLAGS_input_shard.c_str());
         for (auto candidate : candidates) {
+#ifdef DEBUG
+            fprintf(stderr, "Stage 1 candidate:\nmaybek20s: ");
+            for (int i = 0; i < candidate.k20_count; ++i) {
+                fprintf(stderr, "%08x, ", candidate.maybek20[i]);
+            }
+            fprintf(stderr, "\nch2: %02x, ch3: %02x, cb1: %x, m1: %08x\n",
+                    candidate.chunk2, candidate.chunk3, candidate.cb1,
+                    candidate.m1);
+#endif
+
             // Clear the output array.
             ::memset(stage2_candidates, 0,
                      S2CANDIDATE_ARRAYSZ * sizeof(stage2_candidate));
@@ -172,7 +183,8 @@ int main(int argc, char* argv[]) {
             for (int i = 0; i < stage2_candidate_count; ++i) {
                 // sanity check
                 if (0 == stage2_candidates[i].k20_count) {
-                    fprintf(stderr, "Assert failed: candidate %d has %d maybek20's\n",
+                    fprintf(stderr,
+                            "Assert failed: candidate %d has %d maybek20's\n",
                             i, stage2_candidates[i].k20_count);
                     abort();
                 }

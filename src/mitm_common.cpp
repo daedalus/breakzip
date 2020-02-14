@@ -76,8 +76,12 @@ correct_guess correct(archive_info info) {
     result.chunk4 = (k20 >> 16) & 0xff;
     result.chunk5 = k20 >> 24;
 
-    fprintf(stderr, "Result\nchunks: 1=%04x 2=%02x 3=%02x 4=%02x 5=%02x 6=%02x 7=%02x 8=%02x 9=%02x 10= %02x 11=%02x\n",
-        result.chunk1, result.chunk2, result.chunk3, result.chunk4, result.chunk5, result.chunk6, result.chunk7, result.chunk8, result.chunk9, result.chunk10, result.chunk11);
+    fprintf(stderr,
+            "Result\nchunks: 1=%04x 2=%02x 3=%02x 4=%02x 5=%02x 6=%02x 7=%02x "
+            "8=%02x 9=%02x 10= %02x 11=%02x\n",
+            result.chunk1, result.chunk2, result.chunk3, result.chunk4,
+            result.chunk5, result.chunk6, result.chunk7, result.chunk8,
+            result.chunk9, result.chunk10, result.chunk11);
     for (int f = 0; f < 2; ++f) {
         for (int s = 0; s < 10; ++s) {
             result.sx[f][s] = info.file[f].x[s] ^ info.file[f].y[s];

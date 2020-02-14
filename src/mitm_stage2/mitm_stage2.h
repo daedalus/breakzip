@@ -48,14 +48,15 @@ typedef struct stage2_candidate {
     }
 
     void print() {
-        printf("stage2 candidate:\n  k20_count: %u\n  k20s:\n", this->k20_count);
+        printf("stage2 candidate:\n  k20_count: %u\n  k20s:\n",
+               this->k20_count);
         for (int i = 0; i < this->k20_count; ++i) {
             printf(" %u", this->maybek20[i]);
         }
         printf("\n");
-        printf("  chunks: 2: %u 3: %u 6: %u 7: %u cb: %u m1: %u m2: %u", 
-               this->chunk2, this->chunk3, this->chunk6, this->chunk7,
-               this->cb, this->m1, this->m2);
+        printf("  chunks: 2: %u 3: %u 6: %u 7: %u cb: %u m1: %u m2: %u",
+               this->chunk2, this->chunk3, this->chunk6, this->chunk7, this->cb,
+               this->m1, this->m2);
     }
 
     static const size_t MAX_K20S = 16;
