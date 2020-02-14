@@ -116,14 +116,14 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
             fprintf(stderr, "FATAL: Failed to merge arrays after clear.\n");
             exit(-1);
         }
+
+        // Increment the shard number.
+        idx += 1;
     }
 
     printf("shard[%lu] => %lu more candidates, %lu total.\n", idx,
            stage2b_count, stage2_candidates.count());
     fflush(stdout);
-
-    // Increment the shard number.
-    idx += 1;
 }
 
 int main(int argc, char* argv[]) {
