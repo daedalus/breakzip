@@ -4,6 +4,8 @@
 
 #include "breakzip.h"
 
+DECLARE_bool(runtests);
+DECLARE_bool(only_emit_correct);
 DECLARE_string(output);
 DECLARE_string(target);
 DECLARE_string(input_shard);
@@ -13,6 +15,19 @@ using namespace mitm_stage1;
 using namespace std;
 
 namespace mitm_stage2 {
+
+CUDA_HOSTDEVICE void set_gpu_candidate(gpu_stage2_candidate& self,
+                                       const stage2_candidate& other,
+                                       const int idx) {
+    self.maybek20 = other.maybek20[idx];
+    self.chunk2 = other.chunk2;
+    self.chunk3 = other.chunk3;
+    self.chunk6 = other.chunk6;
+    self.chunk7 = other.chunk7;
+    self.cb = other.cb;
+    self.m1 = other.m1;
+    self.m2 = other.m2;
+}
 
 bool correct_candidate(const mitm::correct_guess& g,
                        const stage2_candidate& c) {
@@ -62,6 +77,47 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
     candidate.m2 = fgetc(f);
 }
 
+void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
+                                    uint32_t* count) {
+    stage2_candidate* tmparray = nullptr;
+    uint32_t my_count = 0;
+
+    read_stage2_candidates(&tmparray, &my_count);
+    if (my_count == 0 || nullptr == tmparray) {
+        fprintf(stderr, "Fail.\n");
+        exit(-1);
+    }
+
+    fprintf(stderr, "Read %d stage2 candidates.\n", my_count);
+
+    int total = 0;
+    uint32_t gpu_count = 0;
+    for (int i = 0; i < my_count; ++i) {
+        fprintf(stderr, "Candidate %d has %d k20's\n", i, tmparray[i].k20_count);
+        gpu_count += tmparray[i].k20_count;
+    }
+
+    fprintf(stderr, "Expanding %d stage2 candidates into %d gpu candidates...\n", my_count, gpu_count);
+
+    gpu_stage2_candidate* array =
+        (gpu_stage2_candidate*)::calloc(my_count, sizeof(gpu_stage2_candidate));
+    if (nullptr == array) {
+        fprintf(stderr, "Failed to allocate array for gpu candidates\n");
+        exit(-1);
+    }
+
+    total = 0;
+    for (int i = 0; i < my_count; ++i) {
+        for (int j = 0; j < tmparray[i].k20_count; ++j, ++total) {
+            set_gpu_candidate(array[total], tmparray[i], j);
+        }
+    }
+
+    *count = total;
+    *candidates = array;
+    return;
+}
+
 void read_stage2_candidates(stage2_candidate** stage2_candidates,
                             uint32_t* stage2_candidate_count) {
     if (0 == FLAGS_input_shard.length()) {
@@ -107,7 +163,15 @@ void read_stage2_candidates(stage2_candidate** stage2_candidates,
 
 void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                              const size_t stage2_candidate_count,
-                             const size_t shard_number) {
+                             const size_t shard_number,
+                             const mitm::correct_guess* correct) {
+    if ((FLAGS_only_emit_correct || FLAGS_runtests) && nullptr == correct) {
+        fprintf(
+            stderr,
+            "No correct guess but -runtests enabled. Goodbye cruel world!\n");
+        exit(-1);
+    }
+
     if (0 == FLAGS_output.length()) {
         fprintf(stderr, "Please provide a -output file basename.\n");
         exit(-1);
@@ -131,7 +195,22 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
 
     write_word(output_file, (uint32_t)stage2_candidate_count);
     for (int i = 0; i < (int)stage2_candidate_count; ++i) {
-        write_stage2_candidate(output_file, stage2_candidates[i]);
+        // Sanity check
+        if (0 == stage2_candidates[i].k20_count) {
+            fprintf(stderr, "Invalid data: candidate %d has no maybek20's!\n", i);
+            exit(-1);
+        }
+
+        if (FLAGS_only_emit_correct) {
+            if (correct_candidate(*correct, stage2_candidates[i])) {
+                write_stage2_candidate(output_file, stage2_candidates[i]);
+                break;
+            } else {
+                continue;
+            }
+        } else {
+            write_stage2_candidate(output_file, stage2_candidates[i]);
+        }
     }
 
     fclose(output_file);
@@ -346,6 +425,10 @@ void mitm_stage2b(const mitm::archive_info& info,
                                     }
                                 }
 
+                                if (0 == g.k20_count) {
+                                    continue;
+                                }
+
                                 g.chunk2 = c1.chunk2;
                                 g.chunk3 = c1.chunk3;
                                 g.chunk6 = c2.chunk6;
@@ -370,6 +453,11 @@ void mitm_stage2b(const mitm::archive_info& info,
                                             "of size %ld!\n",
                                             stage2_candidate_count, array_size);
                                     abort();
+                                }
+
+                                if (g.k20_count == 0) {
+                                    fprintf(stderr, "Assertion failed: k20_count = 0\n");
+                                    exit(-1);
                                 }
 
                                 candidates[stage2_candidate_count] = g;

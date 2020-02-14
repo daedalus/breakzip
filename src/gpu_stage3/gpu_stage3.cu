@@ -2,10 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "breakzip.h"
-
-#define CUDA_DEVICE_CODE
-
+#include "stage3.h"
 #include "stage3_definitions.h"
 
 namespace gpu_stage3 {

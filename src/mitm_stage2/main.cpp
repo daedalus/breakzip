@@ -10,6 +10,7 @@
 
 DECLARE_string(target);
 DECLARE_bool(runtests);
+DECLARE_bool(only_emit_correct);
 DEFINE_string(input_shard, "target.out.0",
               "The filename of the stage1 shard to run on.");
 DECLARE_string(output);
@@ -42,6 +43,10 @@ int main(int argc, char* argv[]) {
     SetVersionString(version_string());
     SetUsageMessage(usage_message);
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
+
+    if (FLAGS_only_emit_correct) {
+        FLAGS_runtests = true;
+    }
 
     const char* input_filename = argv[non_flag];
 
@@ -165,6 +170,14 @@ int main(int argc, char* argv[]) {
             stage2_candidate_total += stage2_candidate_count;
             printf("stage1[%lu] => %lu candidates, %lu total.\n", idx,
                    stage2_candidate_count, stage2_candidate_total);
+            for (int i = 0; i < stage2_candidate_count; ++i) {
+                // sanity check
+                if (0 == stage2_candidates[i].k20_count) {
+                    fprintf(stderr, "Assert failed: candidate %d has %d maybek20's\n",
+                            i, stage2_candidates[i].k20_count);
+                    abort();
+                }
+            }
             write_stage2_candidates(stage2_candidates, stage2_candidate_count,
                                     idx);
 

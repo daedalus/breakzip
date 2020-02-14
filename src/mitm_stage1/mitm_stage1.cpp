@@ -11,7 +11,8 @@ DEFINE_string(target, "target.zip", "Name of the target ZIP file.");
 DEFINE_int32(srand_seed, 0x57700d32,
              "The srand seed that the file was created with.");
 DEFINE_bool(runtests, false, "Run the test cases instead of attack.");
-DEFINE_bool(only_emit_correct, false, "Only emit the correct answer, if we have one.");
+DEFINE_bool(only_emit_correct, false,
+            "Only emit the correct answer, if we have one.");
 
 using namespace std;
 using namespace mitm;
@@ -88,7 +89,8 @@ void write_stage1_candidates(const vector<stage1_candidate> &candidates,
     unsigned long int shard_index = 0;
 
     if (FLAGS_only_emit_correct) {
-        snprintf(output_filename, filename_len, "%s.%d", FLAGS_output.c_str(), 0);
+        snprintf(output_filename, filename_len, "%s.%d", FLAGS_output.c_str(),
+                 0);
 
         FILE *output_file = fopen(output_filename, "wb");
         if (nullptr == output_file) {

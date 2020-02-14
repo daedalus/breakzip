@@ -2,13 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "breakzip.h"
-#include "breakzip_config.h"
-#include "crc32.h"
 #include "stage3.h"
-#include "mitm_common.h"
-#include "mitm_stage1/mitm_stage1.h"
-#include "mitm_stage2/mitm_stage2.h"
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -76,7 +70,7 @@ void print_device_properties(cudaDeviceProp devProp) {
     return;
 }
 
-__global__ void gpu_stage3_kernel(const stage2_candidate *candidates,
+__global__ void gpu_stage3_kernel(const gpu_stage2_candidate *candidates,
                                   keys *results,
                                   const archive_info* archive,
                                   const uint32_t stage2_candidate_count,
@@ -84,7 +78,7 @@ __global__ void gpu_stage3_kernel(const stage2_candidate *candidates,
     int i = blockIdx.x + blockDim.x * threadIdx.x;
     if (i < stage2_candidate_count) {
         keys result = {0, 0, 0};
-        stage3::gpu_stage3(*archive, candidates[i], &result, &c);
+        stage3::gpu_stage3_internal(*archive, candidates[i], &result, &c);
 
         if (result.crck00 != 0 || result.k10 != 0 || result.k20 != 0) {
             results[i].crck00 = 1;
@@ -109,9 +103,9 @@ int main(int argc, char *argv[]) {
     vector<vector<uint16_t>> preimages(0x100);
     build_preimages(preimages);
 
-    stage2_candidate *stage2_candidates = nullptr;
+    gpu_stage2_candidate *stage2_candidates = nullptr;
     uint32_t stage2_candidate_count = 0;
-    read_stage2_candidates(&stage2_candidates, &stage2_candidate_count);
+    read_stage2_candidates_for_gpu(&stage2_candidates, &stage2_candidate_count);
 
     if (0 == stage2_candidate_count) {
         fprintf(stderr, "FATAL: Read no candidates from input file.\n");
@@ -233,7 +227,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Allocate device memory
-        stage2_candidate *dev_cands = nullptr;
+        gpu_stage2_candidate *dev_cands = nullptr;
         keys *dev_results = nullptr;
         fprintf(stderr, "Allocating candidate array of size %ld on device %d\n",
                 candidate_array_size, device);
