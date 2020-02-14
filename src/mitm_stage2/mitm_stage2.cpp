@@ -263,11 +263,7 @@ void mitm_stage2a(archive_info& info, stage1_candidate& c1,
                 // Compute msbk12s
                 uint32_t k0crc = c1.chunk2 | (chunk6 << 8);
                 uint32_t extra = 0;
-                // TODO: revert double assignment. Added for debugging.
                 uint32_t msbxf0 =
-                    first_half_step(info.file[0].x[0], false, c1.chunk3,
-                                    carryx0f0, k0crc, extra, upper1, lower1);
-                msbxf0 =
                     first_half_step(info.file[0].x[1], true, chunk7, carryx1f0,
                                     k0crc, extra, upper2, lower2);
                 k0crc = c1.chunk2 | (chunk6 << 8);

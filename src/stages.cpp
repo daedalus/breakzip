@@ -11,19 +11,11 @@
 
 #include "breakzip.h"
 
-//#define CGPRINT(x, ...) if ((correct_guess != 0) && (guess_bits == correct_guess)) { \
-//    fprintf(stderr, x, __VA_ARGS__); \
-//}
-//#define CGABORT(x, ...) if ((correct_guess != 0) && (guess_bits == correct_guess)) { \
-//    fprintf(stderr, x, __VA_ARGS__); \
-//    abort(); \
-//}
-
-#define DEBUG false
-#define DPRINT(x, ...)                   \
-    if (DEBUG) {                         \
-        fprintf(stderr, x, __VA_ARGS__); \
-    }
+#ifdef DEBUG
+#define DPRINT(x, ...) { fprintf(stderr, x, __VA_ARGS__); }
+#else
+#define DPRINT(x, ...)
+#endif
 
 #define LSB32(x) ((uint8_t)(0x000000ff & x))
 #define MSB32(x) ((uint8_t)((0xff000000 & x) >> 24))
