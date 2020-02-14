@@ -169,10 +169,11 @@ int main(int argc, char* argv[]) {
 
         size_t idx = 0;
         size_t stage2_candidate_total = 0;
+        size_t current_stage1_cand = 0;
 
         for (auto candidate : candidates) {
             stage2_tmp_array.clear();
-            printf("On stage1 candidate %ld...\n", idx);
+            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand, candidates.size());
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
@@ -190,6 +191,8 @@ int main(int argc, char* argv[]) {
                         (int)idx);
                 break;
             }
+
+            ++current_stage1_cand;
         }
 
     } else {
@@ -228,7 +231,9 @@ int main(int argc, char* argv[]) {
             exit(-1);
         }
 
+        size_t current_stage1_cand = 0;
         for (auto candidate : candidates) {
+            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand, candidates.size());
             stage2_tmp_array.clear();
 #ifdef DEBUG
             fprintf(stderr, "Stage 1 candidate:\nmaybek20s: ");
@@ -256,6 +261,8 @@ int main(int argc, char* argv[]) {
                         (int)idx);
                 break;
             }
+
+            ++current_stage1_cand;
         }
     }
 
