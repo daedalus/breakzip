@@ -4,6 +4,12 @@
 
 #include "breakzip.h"
 
+#ifdef DEBUG
+#define PRINT_ON_CORRECT(...) { if (flag) fprintf(stderr, __VA_ARGS__); }
+#else
+#define PRINT_ON_CORRECT(...)
+#endif
+
 DECLARE_bool(runtests);
 DECLARE_bool(only_emit_correct);
 DECLARE_string(output);
@@ -391,9 +397,7 @@ void mitm_stage2b(const mitm::archive_info& info,
             vector<uint8_t> firsts(0);
             second_half_step(pxf0 ^ cyf0p, s2yf0, firsts);
             if (!firsts.size()) {
-                if (flag) {
-                    fprintf(stderr, "Failed to find firsts on pxf0<<2 %04x\n\n", pxf0<<2);
-                }
+                PRINT_ON_CORRECT("Failed to find firsts on pxf0<<2 %04x\n\n", pxf0<<2);
                 continue;
             }
             for (uint16_t s2xf1 = 0; s2xf1 < 0x100; ++s2xf1) {
@@ -405,44 +409,32 @@ void mitm_stage2b(const mitm::archive_info& info,
                 vector<uint8_t> seconds(0);
                 second_half_step(pxf0 ^ cxf1p, s2xf1, seconds);
                 if (!seconds.size()) {
-                    if (flag) {
-                        fprintf(stderr, "Failed to find seconds on pxf0<<2 %04x, s2xf1 %02x\n\n", pxf0<<2, s2xf1);
-                    }
+                    PRINT_ON_CORRECT("Failed to find seconds on pxf0<<2 %04x, s2xf1 %02x\n\n", pxf0<<2, s2xf1);
                     continue;
                 }
                 vector<uint8_t> thirds(0);
                 uint8_t s2yf1 = s2xf1 ^ info.file[1].x[2] ^ info.file[1].h[2];
                 second_half_step(pxf0 ^ cyf1p, s2yf1, thirds);
                 if (!thirds.size()) {
-                    if (flag) {
-                        fprintf(stderr, "Failed to find thirds on pxf0<<2 %04x, s2xf1 %02x\n\n", pxf0<<2, s2xf1);
-                    }
+                    PRINT_ON_CORRECT("Failed to find thirds on pxf0<<2 %04x, s2xf1 %02x\n\n", pxf0<<2, s2xf1);
                     continue;
                 }
-                if (flag) {
-                    fprintf(stderr, "pxf0<<2: %04x, f:%ld, s:%ld, t:%ld\n", pxf0<<2, firsts.size(), seconds.size(), thirds.size());
-                }
+                PRINT_ON_CORRECT("pxf0<<2: %04x, f:%ld, s:%ld, t:%ld\n", pxf0<<2, firsts.size(), seconds.size(), thirds.size());
                 for (auto f : firsts) {
                     for (auto s : seconds) {
                         for (auto t : thirds) {
                             uint32_t mapkey((f ^ cyf0l) | ((s ^ cxf1l) << 8) |
                                             ((t ^ cyf1l) << 16));
-                            if (flag) {
-                                fprintf(stderr, "Mapkey %08x has %ld entries\n", mapkey, table[mapkey].size());
-                            }
+                            PRINT_ON_CORRECT("Mapkey %08x has %ld entries\n", mapkey, table[mapkey].size());
                             for (auto c2 : table[mapkey]) {
                                 stage2_candidate g;
-                                if (flag) {
-                                    fprintf(stderr, "c1 has %d maybek20s, c1.m1 = %08x\n", c1.k20_count, c1.m1);
-                                }
+                                PRINT_ON_CORRECT("c1 has %d maybek20s, c1.m1 = %08x\n", c1.k20_count, c1.m1);
                                 for (int i = 0; i < c1.k20_count; ++i) {
                                     uint32_t k20 = c1.maybek20[i];
                                     uint32_t k21xf0 = crc32(k20, c1.m1 >> 24);
                                     uint32_t k22xf0 =
                                         crc32(k21xf0, c2.msbk12xf0);
-                                    if (flag) {
-                                        fprintf(stderr, "k20 = %08x, k21xf0 = %08x, c2.msbk12xf0 = %02x, k22xf0 = %08x\n", k20, k21xf0, c2.msbk12xf0, k22xf0);
-                                    }
+                                    PRINT_ON_CORRECT("k20 = %08x, k21xf0 = %08x, c2.msbk12xf0 = %02x, k22xf0 = %08x\n", k20, k21xf0, c2.msbk12xf0, k22xf0);
                                     if ((pxf0 & 0x3f) ==
                                         ((k22xf0 >> 2) & 0x3f)) {
                                         if (g.k20_count >= g.MAX_K20S) {
@@ -460,21 +452,15 @@ void mitm_stage2b(const mitm::archive_info& info,
                                             ((k22xf0 >> 8) & 0xff);
                                         g.maybek20[g.k20_count] =
                                             k20 | (hi_byte << 24);
-                                        if (flag) {
-                                            fprintf(stderr, "Pushed back maybek20 %08x\n", g.maybek20[g.k20_count]);
-                                        }
+                                        PRINT_ON_CORRECT("Pushed back maybek20 %08x\n", g.maybek20[g.k20_count]);
                                         g.k20_count += 1;
                                     } else {
-                                        if (flag) {
-                                            fprintf(stderr, "Skipped maybek20 %08x\n", k20);
-                                        }                                        
+                                        PRINT_ON_CORRECT("Skipped maybek20 %08x\n", k20);
                                     }
                                 }
 
                                 if (0 == g.k20_count) {
-                                    if (flag) {
-                                        fprintf(stderr, "No valid k20s for correct candidate\n");
-                                    }
+                                    PRINT_ON_CORRECT("No valid k20s for correct candidate\n");
                                     continue;
                                 }
 
