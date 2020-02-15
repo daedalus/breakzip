@@ -6,7 +6,7 @@
 DEFINE_string(output, "stage.out",
               "Output file basename. Shard files will be named"
               "BASENAME.X for shard number X.");
-DEFINE_int32(shard_size, 100000, "Size of an output shard.");
+DEFINE_int32(shard_size, 1000000, "Size of an output shard.");
 DEFINE_string(target, "target.zip", "Name of the target ZIP file.");
 DEFINE_int32(srand_seed, 0x57700d32,
              "The srand seed that the file was created with.");
@@ -61,14 +61,17 @@ void read_stage1_candidates(FILE *f, vector<stage1_candidate> &out) {
     uint32_t num_candidates = 0;
     read_word(f, num_candidates);
 
-    printf("read_candidates: file should contain %d candidates\n",
+    printf("read_stage1_candidates: file should contain %d candidates\n",
            num_candidates);
-    for (int i = 0; i < num_candidates; ++i) {
-        fprintf(stderr, "%d ", i);
+
+    int i = 0;
+    for (; i < num_candidates; ++i) {
         stage1_candidate c;
         read_stage1_candidate(f, c);
         out.push_back(c);
     }
+
+    printf("read_stage1_candidates: Actually read %d candidates.\n", i);
 }
 
 void write_stage1_candidates(const vector<stage1_candidate> &candidates,

@@ -115,7 +115,8 @@ void read_stage2_candidates(stage2_candidate** stage2_candidates /* out */,
                             uint32_t* stage2_candidate_count /* out */);
 
 void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates /* out */,
-                                    uint32_t* count /* out */);
+                                    uint32_t* count /* out */,
+                                    size_t &array_size /* out */);
 
 void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                              const size_t stage2_candidate_count,

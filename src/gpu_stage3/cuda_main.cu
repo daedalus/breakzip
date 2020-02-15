@@ -105,7 +105,9 @@ int main(int argc, char *argv[]) {
 
     gpu_stage2_candidate *stage2_candidates = nullptr;
     uint32_t stage2_candidate_count = 0;
-    read_stage2_candidates_for_gpu(&stage2_candidates, &stage2_candidate_count);
+    size_t candidate_array_size = 0;
+    read_stage2_candidates_for_gpu(&stage2_candidates, &stage2_candidate_count, candidate_array_size);
+    size_t results_array_size = sizeof(keys) * stage2_candidate_count;
 
     if (0 == stage2_candidate_count) {
         fprintf(stderr, "FATAL: Read no candidates from input file.\n");
@@ -194,9 +196,6 @@ int main(int argc, char *argv[]) {
     for_each(target_devices.begin(), target_devices.end(),
              [](const auto &e) { fprintf(stderr, "%d ", e); });
     fprintf(stderr, "\n");
-
-    size_t candidate_array_size = sizeof(stage2_candidate) * stage2_candidate_count;
-    size_t results_array_size = sizeof(keys) * stage2_candidate_count;
 
     for (auto device: target_devices) {
         fprintf(stderr, "Initialization device %d...\n", device);
