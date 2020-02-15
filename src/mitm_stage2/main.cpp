@@ -187,7 +187,6 @@ int main(int argc, char* argv[]) {
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
-            
             size_t stage2b_count = 0;
             mitm_stage2b(test[0], candidate, table, stage2_tmp_array.ptr(),
                          stage2_tmp_array.size(), stage2b_count, guess);

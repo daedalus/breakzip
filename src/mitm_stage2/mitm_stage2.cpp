@@ -72,8 +72,8 @@ void write_stage2_candidate(FILE* f, const stage2_candidate& candidate) {
     fputc(candidate.chunk6, f);
     fputc(candidate.chunk7, f);
     fputc(candidate.cb, f);
-    fputc(candidate.m1, f);
-    fputc(candidate.m2, f);
+    write_word(f, candidate.m1);
+    write_word(f, candidate.m2);
 }
 
 void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
@@ -92,8 +92,8 @@ void read_stage2_candidate(FILE* f, stage2_candidate& candidate) {
     candidate.chunk6 = fgetc(f);
     candidate.chunk7 = fgetc(f);
     candidate.cb = fgetc(f);
-    candidate.m1 = fgetc(f);
-    candidate.m2 = fgetc(f);
+    read_word(f, candidate.m1);
+    read_word(f, candidate.m2);
 }
 
 void read_stage2_candidates_for_gpu(gpu_stage2_candidate** candidates,
@@ -219,8 +219,14 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
         exit(-1);
     }
 
-    printf("Writing stage2 shard %lu with %lu candidates: %s\n",
-           shard_number, stage2_candidate_count, output_filename);
+    if (nullptr == correct) {
+        printf("Writing stage2 shard %lu with %lu candidates: %s\n",
+               shard_number, stage2_candidate_count, output_filename);
+
+        write_word(output_file, (uint32_t)stage2_candidate_count);
+    } else {
+        write_word(output_file, 1);
+    }
 
     if (!FLAGS_only_emit_correct) {
         write_word(output_file, (uint32_t)stage2_candidate_count);
