@@ -193,7 +193,8 @@ int main(int argc, char* argv[]) {
             stage2_tmp_array.incr(stage2b_count);
             stage2_candidate_total += stage2b_count;
 
-            merge_candidates(stage2_candidates, stage2_tmp_array, idx, stage2b_count);
+            merge_candidates(stage2_candidates, stage2_tmp_array, idx,
+                             stage2b_count, guess);
 
             if (FLAGS_stop_after <= stage2_candidate_total) {
                 fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
