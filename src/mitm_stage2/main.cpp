@@ -301,7 +301,7 @@ int main(int argc, char* argv[]) {
 
             merge_candidates(stage2_candidates, stage2_tmp_array, idx,
                              stage2b_count, nullptr,
-                             (current_stage1_cand - 1 == candidates.size()));
+                             (candidates.size() - 1 == current_stage1_cand));
 
             if (FLAGS_stop_after <= current_stage1_cand) {
                 fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
