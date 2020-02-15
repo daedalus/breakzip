@@ -27,13 +27,13 @@ END_TEST
 
 START_TEST(test_write_word) {
     auto tmp = tmpfile();
-    for (uint32_t word = 0; word < 0x100000; ++word) {
+    for (uint32_t word = 0; word < 0x10000; ++word) {
         write_word(tmp, word);
     }
 
     fseek(tmp, 0, SEEK_SET);
 
-    for (uint32_t word = 0; word < 0x100000; ++word) {
+    for (uint32_t word = 0; word < 0x10000; ++word) {
         uint32_t tmpword = 0;
         read_word(tmp, tmpword);
         ck_assert_msg(tmpword == word,
