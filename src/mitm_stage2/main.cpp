@@ -101,6 +101,7 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
                       /* out */ size_t &idx,
                       const size_t &stage2b_count,
                       const correct_guess *guess = nullptr) {
+
     if (false == stage2_candidates.merge(stage2_tmp_array)) {
         // Output the current shard, however many elements it has.
         fprintf(stderr, "Emitting shard %lu with %lu elements.\n", idx, stage2_candidates.count());
@@ -111,6 +112,8 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
             write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(), idx);
         }
 
+        // TODO(leaf): If the shard size is smaller than the number of entries
+        // in stage2_candidates, make sure they all get written.
         stage2_candidates.clear();
         if (false == stage2_candidates.merge(stage2_tmp_array)) {
             fprintf(stderr, "FATAL: Failed to merge arrays after clear.\n");
@@ -118,6 +121,13 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
         }
 
         // Increment the shard number.
+        idx += 1;
+    } else if (FLAGS_only_emit_correct) {
+        // Write every shard and then clear, because we only care about the one
+        // with the correct guess.
+        write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(),
+                                idx, guess);
+        stage2_candidates.clear();
         idx += 1;
     }
 
