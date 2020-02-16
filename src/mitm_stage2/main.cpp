@@ -143,6 +143,9 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
                                     stage2_candidates.count(), idx);
         }
 
+        // Only increment the shard number when we write one.
+        idx += 1;
+
         // TODO(leaf): If the shard size is smaller than the number of entries
         // in stage2_candidates, make sure they all get written.
         stage2_candidates.clear();
@@ -158,17 +161,13 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
         // with the correct guess.
         write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(),
                                 idx, guess);
+
         stage2_candidates.clear();
-        idx += 1;
-        
     }
 
-    printf("shard[%lu] => %lu more candidates, %lu total.\n", idx,
+    printf("shard[%lu] => %lu more candidates, %lu pending.\n", idx,
            stage2b_count, stage2_candidates.count());
     fflush(stdout);
-
-    // Increment the shard number.
-    idx += 1;
 }
 
 int main(int argc, char* argv[]) {
@@ -304,8 +303,8 @@ int main(int argc, char* argv[]) {
                              (candidates.size() - 1 == current_stage1_cand));
 
             if (FLAGS_stop_after <= current_stage1_cand) {
-                fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
-                        (int)idx);
+                fprintf(stderr, "Stopping on shard %lu after %lutotal candidates.\n",
+                        idx, stage2_candidate_total);
                 break;
             }
 
