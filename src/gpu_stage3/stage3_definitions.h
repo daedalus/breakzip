@@ -177,7 +177,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
             exit(-1);
         }
 #endif
-
         uint32_t k21yf0 = gpu_crc32(k20, m1yf0);
         uint8_t s1yf0 = gpu_get_s0(k21yf0);
 
@@ -203,7 +202,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
             exit(-1);
         }
 #endif
-
         uint32_t k22xf0 = gpu_crc32(k21xf0, m2xf0);
         uint8_t s2xf0 = gpu_get_s0(k22xf0);
 
@@ -218,7 +216,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
             exit(-1);
         }
 #endif
-
         uint32_t k22yf0 = gpu_crc32(k21yf0, m2yf0);
         uint8_t s2yf0 = gpu_get_s0(k22yf0);
 
@@ -360,7 +357,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                         exit(-1);
                     }
 #endif
-
                     uint32_t k22xf1 = gpu_crc32(k21xf1, m2xf1);
                     uint8_t s2xf1 = gpu_get_s0(k22xf1);
 
@@ -379,9 +375,9 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                         exit(-1);
                     }
 #endif
-
                     uint32_t k22yf1 = gpu_crc32(k21yf1, m2yf1);
                     uint8_t s2yf1 = gpu_get_s0(k22yf1);
+
 #ifndef __CUDACC__
                     if ((info.file[1].x[2] ^ s2xf1 ^ s2yf1) !=
                         info.file[1].h[2]) {
@@ -417,7 +413,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                     chunk8, chunk9, cb31);
                         }
 #endif
-
                         continue;
                     }
                     uint32_t k23xf1 = gpu_crc32(k22xf1, m3xf1);
@@ -447,7 +442,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                     chunk8, chunk9, cb31);
                         }
 #endif
-
                         continue;
                     }
                     uint32_t k23yf1 = gpu_crc32(k22yf1, m3yf1);

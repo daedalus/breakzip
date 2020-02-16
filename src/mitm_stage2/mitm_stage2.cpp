@@ -224,10 +224,13 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                shard_number, stage2_candidate_count, output_filename);
 
         write_word(output_file, (uint32_t)stage2_candidate_count);
+<<<<<<< HEAD
     }
+=======
+    } 
+>>>>>>> master
 
-#ifdef DEBUG
-    if (nullptr != correct) {
+#ifdef DEBUG if (nullptr != correct) {
         fprintf(
             stderr,
             "Correct: k20:%08x, 2:%02x, 3:%02x, 6:%02x, 7:%02x, 8:%02x, "
