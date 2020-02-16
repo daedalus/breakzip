@@ -18,9 +18,10 @@ DECLARE_int32(srand_seed);
 DEFINE_int32(stop_after, -1,
              "If set to a positive value, the program "
              "will stop after processing <stop_after> stage1 candidates.");
-DEFINE_int32(stage2_candidates_per_stage1_candidate, 10000,
-             "An estimate of the maximum number of stage2 candidates per stage1 "
-             "candidate.");
+DEFINE_int32(
+    stage2_candidates_per_stage1_candidate, 10000,
+    "An estimate of the maximum number of stage2 candidates per stage1 "
+    "candidate.");
 DEFINE_int32(stage2_shard_size, 1000000, "Size of a stage2 shard.");
 
 using namespace mitm;
@@ -30,7 +31,7 @@ using namespace std;
 using namespace breakzip;
 using namespace google;
 
-const char* usage_message = R"usage(
+const char *usage_message = R"usage(
     Usage: mitm_stage2 <FILE> <OUT>
     Runs the stage2 attack using the stage1 data in FILE, the shard specified
     by -shard, and writes output to the filename specified by -outfile with the
@@ -41,12 +42,12 @@ const char* usage_message = R"usage(
     Stage1 prints the name of the shard containing the correct guess.
     )usage";
 
-
 class stage2_candidate_array {
 public:
     stage2_candidate_array() : ptr_(nullptr), size_(0), count_(0) {
         if (0 < FLAGS_stage2_shard_size) {
-            ptr_ = (stage2_candidate *)::calloc(FLAGS_stage2_shard_size, sizeof(stage2_candidate));
+            ptr_ = (stage2_candidate *)::calloc(FLAGS_stage2_shard_size,
+                                                sizeof(stage2_candidate));
             if (nullptr == ptr_) {
                 std::bad_alloc ex;
                 throw ex;
@@ -75,12 +76,15 @@ public:
     bool merge(const stage2_candidate_array &other) {
         // TODO: try a realloc?
         if (count_ + other.count_ > size_) {
-            fprintf(stderr, "merge: can't merge: size_=%lu, current count=%lu, merge count=%lu\n",
+            fprintf(stderr,
+                    "merge: can't merge: size_=%lu, current count=%lu, merge "
+                    "count=%lu\n",
                     size_, count_, other.count_);
             return false;
         }
-       
-        ::memcpy(ptr_ + count_, other.ptr_, sizeof(stage2_candidate) * other.count_);
+
+        ::memcpy(ptr_ + count_, other.ptr_,
+                 sizeof(stage2_candidate) * other.count_);
         count_ += other.count_;
         return true;
     }
@@ -95,27 +99,23 @@ private:
     size_t size_, count_;
 };
 
-
 void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
                       const stage2_candidate_array &stage2_tmp_array,
-                      /* out */ size_t &idx,
-                      const size_t &stage2b_count,
+                      /* out */ size_t &idx, const size_t &stage2b_count,
                       const correct_guess *guess = nullptr,
                       bool force_write = false) {
-
     // Usually force_write is associated with being on the last part of a shard,
     // where you want to write out whatever is left in the arrays, regardless
     // of shard rollover.
     if (force_write) {
         if (false == stage2_candidates.merge(stage2_tmp_array)) {
-            fprintf(stderr, "Emitting shard %lu with %lu elements.\n",
-                    idx, stage2_candidates.count());
+            fprintf(stderr, "Emitting shard %lu with %lu elements.\n", idx,
+                    stage2_candidates.count());
 
             // If the current array is too full, write it out, clear, and merge
             // again before we write the final chunk of data.
             write_stage2_candidates(stage2_candidates.ptr(),
-                                    stage2_candidates.count(),
-                                    idx);
+                                    stage2_candidates.count(), idx);
 
             stage2_candidates.clear();
             if (false == stage2_candidates.merge(stage2_tmp_array)) {
@@ -126,18 +126,16 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
 
         // Write whatever's left in the candidate array.
         write_stage2_candidates(stage2_candidates.ptr(),
-                                stage2_candidates.count(),
-                                idx);
+                                stage2_candidates.count(), idx);
 
     } else if (false == stage2_candidates.merge(stage2_tmp_array)) {
         // This is usually the case for shards that aren't the last shard.
         // Output the current shard, however many elements it has.
-        fprintf(stderr, "Emitting shard %lu with %lu elements.\n",
-                idx, stage2_candidates.count());
+        fprintf(stderr, "Emitting shard %lu with %lu elements.\n", idx,
+                stage2_candidates.count());
         if (nullptr != guess) {
             write_stage2_candidates(stage2_candidates.ptr(),
-                                    stage2_candidates.count(),
-                                    idx, guess);
+                                    stage2_candidates.count(), idx, guess);
         } else {
             write_stage2_candidates(stage2_candidates.ptr(),
                                     stage2_candidates.count(), idx);
@@ -159,9 +157,8 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
         fprintf(stderr, "Emitting shard %lu with 1 element.\n", idx);
         // Write every shard and then clear, because we only care about the one
         // with the correct guess.
-        write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(),
-                                idx, guess);
-
+        write_stage2_candidates(stage2_candidates.ptr(),
+                                stage2_candidates.count(), idx, guess);
         stage2_candidates.clear();
     }
 
@@ -170,7 +167,7 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
     fflush(stdout);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     int my_argc = argc;
 
     SetVersionString(version_string());
@@ -181,13 +178,14 @@ int main(int argc, char* argv[]) {
         FLAGS_runtests = true;
     }
 
-    const char* input_filename = argv[non_flag];
+    const char *input_filename = argv[non_flag];
 
     // Read all the stage1 candidates into memory at once.
     vector<stage1_candidate> candidates;
 
     stage2_candidate_array stage2_candidates;
-    stage2_candidate_array stage2_tmp_array(FLAGS_stage2_candidates_per_stage1_candidate);
+    stage2_candidate_array stage2_tmp_array(
+        FLAGS_stage2_candidates_per_stage1_candidate);
 
     auto input_file = fopen(FLAGS_input_shard.c_str(), "r");
     if (nullptr == input_file) {
@@ -203,8 +201,10 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Read %ld candidates from stage1.\n", candidates.size());
-    printf("Starting stage2...\n  * Stage2 shards will be no larger than %d candidates.\n",
-           FLAGS_stage2_shard_size);
+    printf(
+        "Starting stage2...\n  * Stage2 shards will be no larger than %d "
+        "candidates.\n",
+        FLAGS_stage2_shard_size);
 
     if (FLAGS_runtests) {
         correct_guess guess[1] = {
@@ -217,7 +217,8 @@ int main(int argc, char* argv[]) {
 
         for (auto candidate : candidates) {
             stage2_tmp_array.clear();
-            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand, candidates.size());
+            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand,
+                   candidates.size());
 
             vector<vector<stage2a>> table(0x1000000);
             mitm_stage2a(test[0], candidate, table, guess);
@@ -277,7 +278,8 @@ int main(int argc, char* argv[]) {
 
         size_t current_stage1_cand = 0;
         for (auto candidate : candidates) {
-            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand, candidates.size());
+            printf("On stage1 candidate %lu of %lu.\n", current_stage1_cand,
+                   candidates.size());
             stage2_tmp_array.clear();
 #ifdef DEBUG
             fprintf(stderr, "Stage 1 candidate:\nmaybek20s: ");
@@ -303,7 +305,8 @@ int main(int argc, char* argv[]) {
                              (candidates.size() - 1 == current_stage1_cand));
 
             if (FLAGS_stop_after <= current_stage1_cand) {
-                fprintf(stderr, "Stopping on shard %lu after %lutotal candidates.\n",
+                fprintf(stderr,
+                        "Stopping on shard %lu after %lutotal candidates.\n",
                         idx, stage2_candidate_total);
                 break;
             }

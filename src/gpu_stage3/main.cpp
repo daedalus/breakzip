@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
         FLAGS_runtests ? "Test archive 0" : (const char *)FLAGS_target.c_str(),
         FLAGS_input_shard.c_str());
 
-    keys result;
+    keys result = {0, 0, 0};
     for (int i = 0; i < stage2_candidate_count; ++i) {
         gpu_stage3(archive, stage2_candidates[i], &result, c);
         if (result.crck00 != 0 || result.k10 != 0 || result.k20 != 0) {

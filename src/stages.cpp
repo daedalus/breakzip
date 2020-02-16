@@ -142,9 +142,10 @@ guess_t correct_guess_start(uint8_t stage, guess_t correct) {
         default:
             break;
     }
-    DPRINT("correct_guess_start: correct: %s\n"
-           "correct_guess_start:   mine: %s\n",
-           correct.str().c_str(), mine.str().c_str());
+    DPRINT(
+        "correct_guess_start: correct: %s\n"
+        "correct_guess_start:   mine: %s\n",
+        correct.str().c_str(), mine.str().c_str());
     return mine;
 }
 
@@ -170,9 +171,10 @@ guess_t correct_guess_end(uint8_t stage, guess_t correct) {
         default:
             break;
     }
-    DPRINT("correct_guess_end: correct: %s\n"
-           "correct_guess_end:   mine: %s\n",
-           correct.str().c_str(), mine.str().c_str());
+    DPRINT(
+        "correct_guess_end: correct: %s\n"
+        "correct_guess_end:   mine: %s\n",
+        correct.str().c_str(), mine.str().c_str());
     return mine;
 }
 
