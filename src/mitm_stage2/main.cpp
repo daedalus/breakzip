@@ -100,17 +100,51 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
                       const stage2_candidate_array &stage2_tmp_array,
                       /* out */ size_t &idx,
                       const size_t &stage2b_count,
-                      const correct_guess *guess = nullptr) {
+                      const correct_guess *guess = nullptr,
+                      bool force_write = false) {
 
-    if (false == stage2_candidates.merge(stage2_tmp_array)) {
+    // Usually force_write is associated with being on the last part of a shard,
+    // where you want to write out whatever is left in the arrays, regardless
+    // of shard rollover.
+    if (force_write) {
+        if (false == stage2_candidates.merge(stage2_tmp_array)) {
+            fprintf(stderr, "Emitting shard %lu with %lu elements.\n",
+                    idx, stage2_candidates.count());
+
+            // If the current array is too full, write it out, clear, and merge
+            // again before we write the final chunk of data.
+            write_stage2_candidates(stage2_candidates.ptr(),
+                                    stage2_candidates.count(),
+                                    idx);
+
+            stage2_candidates.clear();
+            if (false == stage2_candidates.merge(stage2_tmp_array)) {
+                fprintf(stderr, "FATAL: Failed to merge arrays after clear.\n");
+                exit(-1);
+            }
+        }
+
+        // Write whatever's left in the candidate array.
+        write_stage2_candidates(stage2_candidates.ptr(),
+                                stage2_candidates.count(),
+                                idx);
+
+    } else if (false == stage2_candidates.merge(stage2_tmp_array)) {
+        // This is usually the case for shards that aren't the last shard.
         // Output the current shard, however many elements it has.
-        fprintf(stderr, "Emitting shard %lu with %lu elements.\n", idx, stage2_candidates.count());
+        fprintf(stderr, "Emitting shard %lu with %lu elements.\n",
+                idx, stage2_candidates.count());
         if (nullptr != guess) {
-            write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(),
+            write_stage2_candidates(stage2_candidates.ptr(),
+                                    stage2_candidates.count(),
                                     idx, guess);
         } else {
-            write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(), idx);
+            write_stage2_candidates(stage2_candidates.ptr(),
+                                    stage2_candidates.count(), idx);
         }
+
+        // Only increment the shard number when we write one.
+        idx += 1;
 
         // TODO(leaf): If the shard size is smaller than the number of entries
         // in stage2_candidates, make sure they all get written.
@@ -120,18 +154,18 @@ void merge_candidates(/* out */ stage2_candidate_array &stage2_candidates,
             exit(-1);
         }
 
-        // Increment the shard number.
-        idx += 1;
     } else if (FLAGS_only_emit_correct) {
+        // This is usually the case when producing test data.
+        fprintf(stderr, "Emitting shard %lu with 1 element.\n", idx);
         // Write every shard and then clear, because we only care about the one
         // with the correct guess.
         write_stage2_candidates(stage2_candidates.ptr(), stage2_candidates.count(),
                                 idx, guess);
+
         stage2_candidates.clear();
-        idx += 1;
     }
 
-    printf("shard[%lu] => %lu more candidates, %lu total.\n", idx,
+    printf("shard[%lu] => %lu more candidates, %lu pending.\n", idx,
            stage2b_count, stage2_candidates.count());
     fflush(stdout);
 }
@@ -196,7 +230,7 @@ int main(int argc, char* argv[]) {
             merge_candidates(stage2_candidates, stage2_tmp_array, idx,
                              stage2b_count, guess);
 
-            if (FLAGS_stop_after <= stage2_candidate_total) {
+            if (FLAGS_stop_after <= current_stage1_cand) {
                 fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
                         (int)idx);
                 break;
@@ -264,11 +298,13 @@ int main(int argc, char* argv[]) {
             stage2_tmp_array.incr(stage2b_count);
             stage2_candidate_total += stage2b_count;
 
-            merge_candidates(stage2_candidates, stage2_tmp_array, idx, stage2b_count);
+            merge_candidates(stage2_candidates, stage2_tmp_array, idx,
+                             stage2b_count, nullptr,
+                             (candidates.size() - 1 == current_stage1_cand));
 
-            if (FLAGS_stop_after <= idx) {
-                fprintf(stderr, "Stopping after %d candidates. Goodbye.\n",
-                        (int)idx);
+            if (FLAGS_stop_after <= current_stage1_cand) {
+                fprintf(stderr, "Stopping on shard %lu after %lutotal candidates.\n",
+                        idx, stage2_candidate_total);
                 break;
             }
 

@@ -224,13 +224,8 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
                shard_number, stage2_candidate_count, output_filename);
 
         write_word(output_file, (uint32_t)stage2_candidate_count);
-    } else {
-        write_word(output_file, 1);
-    }
+    } 
 
-    if (!FLAGS_only_emit_correct) {
-        write_word(output_file, (uint32_t)stage2_candidate_count);
-    }
 #ifdef DEBUG
     if (nullptr != correct) {
         fprintf(
