@@ -492,11 +492,10 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                     #endif
 
 #ifndef __CUDACC__
-                    if (m2xf1 != (c2.m2 >> 24)) {
+                    if (m2xf1 != ((c2.m2 >> 8) & 0xff)) {
                         fprintf(stderr,
-                                "Should never happen! m2xf1 = %02x, c2.m2 "
-                                ">> 24 = %02x\n",
-                                m2xf1, c2.m2 >> 24);
+                                "Should never happen! m2xf1 = %02x, ((c2.m2 >> 8) & 0xff) = %02x\n",
+                                m2xf1, c2.m2 >> 8);
                         exit(-1);
                     }
 #endif
@@ -527,11 +526,10 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                     #endif
 
 #ifndef __CUDACC__
-                    if (m2yf1 != (c2.m2 & 0xff)) {
+                    if (m2yf1 != ((c2.m2 >> 16) & 0xff)) {
                         fprintf(stderr,
-                                "Should never happen! m2yf1 = %02x, c2.m2 "
-                                "& 0xff = %02x\n",
-                                m2yf1, c2.m2 & 0xff);
+                                "Should never happen! m2yf1 = %02x, ((c2.m2 >> 16) & 0xff) = %02x\n",
+                                m2yf1, ((c2.m2 >> 16) & 0xff));
                         exit(-1);
                     }
 #endif
@@ -815,7 +813,6 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
             }
         }
         if (still_good) {
-            keys good = {crc32k00, k10, k20};
             result->crck00 = crc32k00;
             result->k10 = k10;
             result->k20 = k20;
