@@ -140,7 +140,9 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
     uint32_t k20 = c2.maybek20;
     uint8_t s0 = gpu_get_s0(k20);
     uint16_t start8 = 0;
-
+    #ifndef __CUDACC__
+    if (c) { start8 = c->chunk8; }
+    #endif
     for (uint16_t chunk8 = start8; chunk8 < 0x100; ++chunk8) {
 #ifndef __CUDACC__
         if (c && (chunk8 == c->chunk8)) {
@@ -232,6 +234,9 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
 #endif
 
         uint16_t start9 = 0;
+        #ifndef __CUDACC__
+        if (c) { start9 = c->chunk9; }
+        #endif
 
         for (uint16_t chunk9 = start9; chunk9 < 0x100; ++chunk9) {
 #ifndef __CUDACC__
