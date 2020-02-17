@@ -139,8 +139,9 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
     keys *result, const mitm::correct_guess *c) {
     uint32_t k20 = c2.maybek20;
     uint8_t s0 = gpu_get_s0(k20);
+    uint16_t start8 = 0;
 
-    for (uint16_t chunk8 = 0; chunk8 < 0x100; ++chunk8) {
+    for (uint16_t chunk8 = start8; chunk8 < 0x100; ++chunk8) {
 #ifndef __CUDACC__
         if (c && (chunk8 == c->chunk8)) {
             fprintf(stderr, "On correct chunk8: %02x\n", chunk8);
@@ -219,6 +220,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
         uint32_t k22yf0 = gpu_crc32(k21yf0, m2yf0);
         uint8_t s2yf0 = gpu_get_s0(k22yf0);
 
+
 #ifndef __CUDACC__
         if ((info.file[0].x[2] ^ s2xf0 ^ s2yf0) != info.file[0].h[2]) {
             fprintf(stderr,
@@ -229,7 +231,9 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
         }
 #endif
 
-        for (uint16_t chunk9 = 0; chunk9 < 0x100; ++chunk9) {
+        uint16_t start9 = 0;
+
+        for (uint16_t chunk9 = start9; chunk9 < 0x100; ++chunk9) {
 #ifndef __CUDACC__
             if (c && (chunk8 == c->chunk8) && (chunk9 == c->chunk9)) {
                 fprintf(stderr, "On correct chunk9: %02x\n", chunk9);
@@ -256,7 +260,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
 
                 uint32_t k03yf0 = gpu_crc32(k02yf0, info.file[0].x[2] ^ s2xf0);
                 uint32_t extra3yf0 =
-                    (extra2yf0 + (k02yf0 & 0xff)) * CRYPTCONST + 1;
+                    (extra2yf0 + (k03yf0 & 0xff)) * CRYPTCONST + 1;
                 bound = 0x1000000 - (extra3yf0 & 0xffffff);
                 if ((cb30 >> 1) & 1) {
                     lower = bound > lower ? bound : lower;
@@ -272,8 +276,8 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                 "chunk8 = %02x, chunk9 = %02x, cb30 = %x\n",
                                 chunk8, chunk9, cb30);
                     }
+                    fprintf(stderr, "\n");
 #endif
-
                     continue;
                 }
                 uint8_t m3yf0 = chunk9 + (extra3yf0 >> 24) + ((cb30 >> 1) & 1);
@@ -287,11 +291,11 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                         fprintf(stderr,
                                 "Failed to use correct guess! Wrong stream "
                                 "bytes. chunk8 = %02x, chunk9 = %02x, cb30 "
-                                "= %x\n",
-                                chunk8, chunk9, cb30);
+                                "= %x, s3xf0 = %02x, s3yf0 = %02x\n",
+                                chunk8, chunk9, cb30, s3xf0, s3yf0);
                     }
+                    fprintf(stderr, "\n");
 #endif
-
                     continue;
                 }
 
@@ -412,6 +416,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                     "cb31 = %x\n",
                                     chunk8, chunk9, cb31);
                         }
+                        fprintf(stderr, "\n");
 #endif
                         continue;
                     }
@@ -421,7 +426,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                     uint32_t k03yf1 =
                         gpu_crc32(k02yf1, info.file[1].x[2] ^ s2xf1);
                     uint32_t extra3yf1 =
-                        (extra2yf1 + (k02yf1 & 0xff)) * CRYPTCONST + 1;
+                        (extra2yf1 + (k03yf1 & 0xff)) * CRYPTCONST + 1;
                     uint8_t m3yf1 =
                         chunk9 + (extra3yf1 >> 24) + ((cb31 >> 1) & 1);
                     bound = 0x1000000 - (extra3yf1 & 0xffffff);
@@ -441,6 +446,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                     "%02x, cb31 = %x\n",
                                     chunk8, chunk9, cb31);
                         }
+                        fprintf(stderr, "\n");
 #endif
                         continue;
                     }
@@ -566,21 +572,21 @@ void gpu_stage4(const mitm::archive_info &info,
 
             uint32_t k10(uint32_t((neighbor[0] + msbs[0]) * CRYPTCONST_INV));
             bool still_good = true;
-            uint32_t k0n, bound, k1cn, k2n;
+            uint32_t k0n, extra, k1cn, k2n;
             for (int f = 0; (f < 2) && still_good; ++f) {
                 const uint8_t *bytes = info.file[f].x;
                 for (int xy = 0; (xy < 2) && still_good; ++xy) {
-                    bound = 0;
+                    extra = 0;
                     k0n = crck00 ^ gpu_crc32tab[bytes[0]];
                     k1cn = k10;
                     k2n = k20;
                     for (int idx = 0; (idx < 3) && still_good; ++idx) {
                         uint8_t lsbk0n = k0n & 0xff;
-                        bound = (bound + lsbk0n) * CRYPTCONST + 1;
+                        extra = (extra + lsbk0n) * CRYPTCONST + 1;
                         k1cn = k1cn * CRYPTCONST;
                         uint8_t carry_bit = ((k1cn & 0xffffff) +
-                                             (bound & 0xffffff)) > 0x01000000;
-                        k2n = gpu_crc32(k2n, (k1cn + bound) >> 24);
+                                             (extra & 0xffffff)) > 0x01000000;
+                        k2n = gpu_crc32(k2n, (k1cn + extra) >> 24);
                         still_good &= (getbits(bits, idx, f, xy) == carry_bit);
                         k0n = gpu_crc32(k0n, bytes[idx + 1]);
                     }
@@ -619,20 +625,20 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
             is_correct = true;
         }
         bool still_good = true;
-        uint32_t k0n, bound, k1cn, k2n;
+        uint32_t k0n, extra, k1cn, k2n;
         for (int f = 0; (f < 2) && still_good; ++f) {
             const uint8_t *bytes = info.file[f].x;
             uint8_t sn[10][2];
             for (int xy = 0; (xy < 2) && still_good; ++xy) {
-                bound = 0;
+                extra = 0;
                 k0n = crc32k00 ^ gpu_crc32tab[bytes[0]];
                 k1cn = k10;
                 k2n = k20;
                 for (int idx = 0; idx < 10; ++idx) {
                     uint8_t lsbk0n = k0n & 0xff;
-                    bound = (bound + lsbk0n) * CRYPTCONST + 1;
+                    extra = (extra + lsbk0n) * CRYPTCONST + 1;
                     k1cn = k1cn * CRYPTCONST;
-                    k2n = gpu_crc32(k2n, (k1cn + bound) >> 24);
+                    k2n = gpu_crc32(k2n, (k1cn + extra) >> 24);
                     sn[idx][xy] = gpu_get_s0(k2n);
                     k0n = gpu_crc32(k0n, bytes[idx + 1]);
                 }
