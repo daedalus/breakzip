@@ -544,7 +544,7 @@ void gpu_stage4(const mitm::archive_info &info,
             -319 * msbs[0] + 137 * msbs[1] - 245 * msbs[2] - 85 * msbs[3]};
 
         for (int i = 0; i < 4; ++i) {
-            w[i] = -(w[i] & 0x00ffffff);
+            w[i] = -(w[i] & 0xffffffff);
         }
 
         int64_t v[4] = {(13604679 * w[0] - 563513 * w[1] - 8196160 * w[2] -
