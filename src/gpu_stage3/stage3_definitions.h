@@ -140,10 +140,11 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
     uint32_t k20 = c2.maybek20;
     uint8_t s0 = gpu_get_s0(k20);
     uint16_t start8 = 0;
+    uint16_t end8 = 0x100;
     #ifndef __CUDACC__
-    if (c) { start8 = c->chunk8; }
+    if (c) { start8 = c->chunk8; end8 = c->chunk8 + 1; }
     #endif
-    for (uint16_t chunk8 = start8; chunk8 < 0x100; ++chunk8) {
+    for (uint16_t chunk8 = start8; chunk8 < end8; ++chunk8) {
 #ifndef __CUDACC__
         if (c && (chunk8 == c->chunk8)) {
             fprintf(stderr, "On correct chunk8: %02x\n", chunk8);
@@ -234,11 +235,12 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
 #endif
 
         uint16_t start9 = 0;
+        uint16_t end9 = 0x100;
         #ifndef __CUDACC__
-        if (c) { start9 = c->chunk9; }
+        if (c) { start9 = c->chunk9; end9 = c->chunk9 + 1; }
         #endif
 
-        for (uint16_t chunk9 = start9; chunk9 < 0x100; ++chunk9) {
+        for (uint16_t chunk9 = start9; chunk9 < end9; ++chunk9) {
 #ifndef __CUDACC__
             if (c && (chunk8 == c->chunk8) && (chunk9 == c->chunk9)) {
                 fprintf(stderr, "On correct chunk9: %02x\n", chunk9);
@@ -476,6 +478,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
 #ifdef __CUDACC__
 __device__ __constant__
 #endif
+    // TODO: sort these by frequency
     int64_t ntable[35][4] = {{-14363699, -11151615, -7227643, 6235929},
                              {-13800186, 4864286, -2714218, 16925678},
                              {-8196160, -13783360, -38464, 8655040},
@@ -513,7 +516,7 @@ __device__ __constant__
                              {26503270, 15376894, 795126, 24084942}};
 
 #define getbits(bits, idx, f, xy) \
-    ((bits) >> (((2 - (idx)) * 4) + ((f)*2) + (xy)))
+    (((bits) >> (((2 - (idx)) * 4) + ((f)*2) + (xy))) & 1)
 
 CUDA_HOSTDEVICE
 void gpu_stage4(const mitm::archive_info &info,
@@ -522,12 +525,16 @@ void gpu_stage4(const mitm::archive_info &info,
                 const uint8_t cb30, const uint8_t cb31, uint32_t crck00,
                 uint32_t k20, keys *result, const mitm::correct_guess *c) {
     int64_t msbs[4];
-    uint16_t bits = (c2.cb << 4) | (cb30 << 2) | cb31;
+    uint16_t bits = (c2.cb << 4) | (cb31 << 2) | cb30;
 
     msbs[0] = c2.chunk3 << 24;
     msbs[1] = c2.chunk7 << 24;
     msbs[2] = chunk9 << 24;
-    for (uint16_t chunk11 = 0; chunk11 < 0x100; ++chunk11) {
+    uint16_t start11 = 0, end11 = 0x100;
+    #ifndef __CUDACC__
+    if (c) { start11 = c->chunk11; end11 = start11 + 1; }
+    #endif
+    for (uint16_t chunk11 = start11; chunk11 < end11; ++chunk11) {
         msbs[3] = chunk11 << 24;
         bool is_correct = false;
         if (c && (chunk8 == c->chunk8) && (chunk9 == c->chunk9) &&
@@ -578,11 +585,13 @@ void gpu_stage4(const mitm::archive_info &info,
             uint32_t k10(uint32_t((neighbor[0] + msbs[0]) * CRYPTCONST_INV));
             bool still_good = true;
             uint32_t k0n, extra, k1cn, k2n;
+            uint8_t s0 = gpu_get_s0(k20);
             for (int f = 0; (f < 2) && still_good; ++f) {
                 const uint8_t *bytes = info.file[f].x;
+                uint8_t s[3] = {0, 0, 0};
                 for (int xy = 0; (xy < 2) && still_good; ++xy) {
                     extra = 0;
-                    k0n = crck00 ^ gpu_crc32tab[bytes[0]];
+                    k0n = crck00 ^ gpu_crc32tab[bytes[0] ^ (s0 * xy)];
                     k1cn = k10;
                     k2n = k20;
                     for (int idx = 0; (idx < 3) && still_good; ++idx) {
@@ -593,12 +602,18 @@ void gpu_stage4(const mitm::archive_info &info,
                                              (extra & 0xffffff)) > 0x01000000;
                         k2n = gpu_crc32(k2n, (k1cn + extra) >> 24);
                         still_good &= (getbits(bits, idx, f, xy) == carry_bit);
-                        k0n = gpu_crc32(k0n, bytes[idx + 1]);
+                        printf("f: %d, xy: %d, idx: %d, k0n: %08x, k1cn: %08x, cb: %x, gb: %x, k2n: %08x, sg: %x\n", f, xy, idx, k0n, k1cn, carry_bit, getbits(bits, idx, f, xy), k2n, still_good);
+                        k0n = gpu_crc32(k0n, bytes[idx + 1] ^ s[idx]);
+                        s[idx] = gpu_get_s0(k2n);
                     }
                 }
             }
             if (still_good) {
+                printf("Calling stages5to10: crck00: %08x, k10: %08x, k20: %08x\n", crck00, k10, k20);
                 gpu_stages5to10(info, crck00, k10, k20, result, c);
+                if (result->crck00 != 0 || result->k10 != 0 || result->k20 != 0) {
+                    return;
+                }
             }  // NV(leaf): notice trailing else if below, please.
 #ifndef __CUDACC__
             else if (is_correct) {
