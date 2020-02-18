@@ -139,11 +139,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
     keys *result, const mitm::correct_guess *c) {
     uint32_t k20 = c2.maybek20;
     uint8_t s0 = gpu_get_s0(k20);
-    uint16_t start8 = 0;
-    #ifndef __CUDACC__
-    if (c) { start8 = c->chunk8; }
-    #endif
-    for (uint16_t chunk8 = start8; chunk8 < 0x100; ++chunk8) {
+    for (uint16_t chunk8 = 0; chunk8 < 0x100; ++chunk8) {
 #ifndef __CUDACC__
         if (c && (chunk8 == c->chunk8)) {
             fprintf(stderr, "On correct chunk8: %02x\n", chunk8);
@@ -233,12 +229,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
         }
 #endif
 
-        uint16_t start9 = 0;
-        #ifndef __CUDACC__
-        if (c) { start9 = c->chunk9; }
-        #endif
-
-        for (uint16_t chunk9 = start9; chunk9 < 0x100; ++chunk9) {
+        for (uint16_t chunk9 = 0; chunk9 < 0x100; ++chunk9) {
 #ifndef __CUDACC__
             if (c && (chunk8 == c->chunk8) && (chunk9 == c->chunk9)) {
                 fprintf(stderr, "On correct chunk9: %02x\n", chunk9);
@@ -476,6 +467,7 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
 #ifdef __CUDACC__
 __device__ __constant__
 #endif
+    // TODO: sort these by frequency
     int64_t ntable[35][4] = {{-14363699, -11151615, -7227643, 6235929},
                              {-13800186, 4864286, -2714218, 16925678},
                              {-8196160, -13783360, -38464, 8655040},
@@ -513,7 +505,7 @@ __device__ __constant__
                              {26503270, 15376894, 795126, 24084942}};
 
 #define getbits(bits, idx, f, xy) \
-    ((bits) >> (((2 - (idx)) * 4) + ((f)*2) + (xy)))
+    (((bits) >> (((2 - (idx)) * 4) + ((f)*2) + (xy))) & 1)
 
 CUDA_HOSTDEVICE
 void gpu_stage4(const mitm::archive_info &info,
@@ -522,7 +514,7 @@ void gpu_stage4(const mitm::archive_info &info,
                 const uint8_t cb30, const uint8_t cb31, uint32_t crck00,
                 uint32_t k20, keys *result, const mitm::correct_guess *c) {
     int64_t msbs[4];
-    uint16_t bits = (c2.cb << 4) | (cb30 << 2) | cb31;
+    uint16_t bits = (c2.cb << 4) | (cb31 << 2) | cb30;
 
     msbs[0] = c2.chunk3 << 24;
     msbs[1] = c2.chunk7 << 24;
@@ -578,11 +570,13 @@ void gpu_stage4(const mitm::archive_info &info,
             uint32_t k10(uint32_t((neighbor[0] + msbs[0]) * CRYPTCONST_INV));
             bool still_good = true;
             uint32_t k0n, extra, k1cn, k2n;
+            uint8_t s0 = gpu_get_s0(k20);
             for (int f = 0; (f < 2) && still_good; ++f) {
                 const uint8_t *bytes = info.file[f].x;
+                uint8_t s[3] = {0, 0, 0};
                 for (int xy = 0; (xy < 2) && still_good; ++xy) {
                     extra = 0;
-                    k0n = crck00 ^ gpu_crc32tab[bytes[0]];
+                    k0n = crck00 ^ gpu_crc32tab[bytes[0] ^ (s0 * xy)];
                     k1cn = k10;
                     k2n = k20;
                     for (int idx = 0; (idx < 3) && still_good; ++idx) {
@@ -593,12 +587,16 @@ void gpu_stage4(const mitm::archive_info &info,
                                              (extra & 0xffffff)) > 0x01000000;
                         k2n = gpu_crc32(k2n, (k1cn + extra) >> 24);
                         still_good &= (getbits(bits, idx, f, xy) == carry_bit);
-                        k0n = gpu_crc32(k0n, bytes[idx + 1]);
+                        k0n = gpu_crc32(k0n, bytes[idx + 1] ^ s[idx]);
+                        s[idx] = gpu_get_s0(k2n);
                     }
                 }
             }
             if (still_good) {
                 gpu_stages5to10(info, crck00, k10, k20, result, c);
+                if (result->crck00 != 0 || result->k10 != 0 || result->k20 != 0) {
+                    return;
+                }
             }  // NV(leaf): notice trailing else if below, please.
 #ifndef __CUDACC__
             else if (is_correct) {
@@ -616,6 +614,8 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
     result->crck00 = 0;
     result->k10 = 0;
     result->k20 = 0;
+    uint8_t s0 = gpu_get_s0(k20);
+
     for (uint16_t chunk10 = 0; chunk10 < 0x100; ++chunk10) {
         bool is_correct = false;
         uint32_t crc32k00 = crck00 | (chunk10 << 24);
@@ -633,10 +633,10 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
         uint32_t k0n, extra, k1cn, k2n;
         for (int f = 0; (f < 2) && still_good; ++f) {
             const uint8_t *bytes = info.file[f].x;
-            uint8_t sn[10][2];
-            for (int xy = 0; (xy < 2) && still_good; ++xy) {
+            uint8_t sn[10][2] = {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}};
+            for (int xy = 0; xy < 2; ++xy) {
                 extra = 0;
-                k0n = crc32k00 ^ gpu_crc32tab[bytes[0]];
+                k0n = crc32k00 ^ gpu_crc32tab[bytes[0] ^ (s0 * xy)];
                 k1cn = k10;
                 k2n = k20;
                 for (int idx = 0; idx < 10; ++idx) {
@@ -645,11 +645,11 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
                     k1cn = k1cn * CRYPTCONST;
                     k2n = gpu_crc32(k2n, (k1cn + extra) >> 24);
                     sn[idx][xy] = gpu_get_s0(k2n);
-                    k0n = gpu_crc32(k0n, bytes[idx + 1]);
+                    k0n = gpu_crc32(k0n, bytes[idx + 1] ^ sn[idx][1 - xy]);
                 }
             }
             for (int idx = 3; (idx < 10) && still_good; ++idx) {
-                if ((info.file[f].x[idx] ^ sn[idx][0] ^ sn[idx][1]) !=
+                if ((info.file[f].x[idx] ^ sn[idx - 1][0] ^ sn[idx - 1][1]) !=
                     info.file[f].h[idx]) {
                     still_good = false;
                     break;
