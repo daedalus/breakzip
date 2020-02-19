@@ -311,6 +311,18 @@ int main(int argc, char *argv[]) {
                         host_results[i].crck00,
                         host_results[i].k10,
                         host_results[i].k20);
+                auto keyfile = fopen(FLAGS_output.c_str(), "a+");
+                if (nullptr == keyfile) {
+                    fprintf(stderr, "Can't open output key file %s: %s",
+                            FLAGS_output.c_str(), strerror(errno));
+                } else {
+                    fprintf(stdout, "Valid Keys Found: crck00=%u k10=%u k20=%u\n", 
+                            host_results[i].crck00,
+                            host_results[i].k10,
+                            host_results[i].k20);
+                    fclose(keyfile);
+                }
+
                 success = true;
                 break;
             }
