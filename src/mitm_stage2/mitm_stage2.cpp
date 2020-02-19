@@ -226,7 +226,7 @@ void write_stage2_candidates(const stage2_candidate* const stage2_candidates,
         write_word(output_file, (uint32_t)stage2_candidate_count);
     }
 
-#ifdef DEBUG 
+#ifdef DEBUG
     if (nullptr != correct) {
         fprintf(
             stderr,

@@ -23,6 +23,9 @@ DEFINE_int32(
     "An estimate of the maximum number of stage2 candidates per stage1 "
     "candidate.");
 DEFINE_int32(stage2_shard_size, 1000000, "Size of a stage2 shard.");
+DECLARE_int32(test_archive);
+DEFINE_int32(test_archive, 0,
+             "The index of the test archive to use when running tests.");
 
 using namespace mitm;
 using namespace mitm_stage1;
@@ -207,9 +210,7 @@ int main(int argc, char *argv[]) {
         FLAGS_stage2_shard_size);
 
     if (FLAGS_runtests) {
-        correct_guess guess[1] = {
-            correct(mitm::test[0])};  //,
-                                      // correct(mitm::test[1])};
+        correct_guess guess[1] = {correct(mitm::test[FLAGS_test_archive])};
 
         size_t idx = 0;
         size_t stage2_candidate_total = 0;
@@ -221,10 +222,11 @@ int main(int argc, char *argv[]) {
                    candidates.size());
 
             vector<vector<stage2a>> table(0x1000000);
-            mitm_stage2a(test[0], candidate, table, guess);
+            mitm_stage2a(test[FLAGS_test_archive], candidate, table, guess);
             size_t stage2b_count = 0;
-            mitm_stage2b(test[0], candidate, table, stage2_tmp_array.ptr(),
-                         stage2_tmp_array.size(), stage2b_count, guess);
+            mitm_stage2b(test[FLAGS_test_archive], candidate, table,
+                         stage2_tmp_array.ptr(), stage2_tmp_array.size(),
+                         stage2b_count, guess);
             stage2_tmp_array.incr(stage2b_count);
             stage2_candidate_total += stage2b_count;
 
