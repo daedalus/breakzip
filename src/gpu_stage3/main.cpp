@@ -12,6 +12,8 @@ DECLARE_int32(srand_seed);
 DEFINE_int32(stop_after, -1,
              "If set to a positive value, the program "
              "will stop after processing <stop_after> stage1 candidates.");
+DECLARE_int32(test_archive);
+DEFINE_int32(test_archive, 0, "Which test archive to use when running tests.");
 
 using namespace mitm;
 using namespace mitm_stage1;
@@ -62,7 +64,7 @@ int main(int argc, char *argv[]) {
 
     archive_info archive;
     size_t idx = 0;
-    correct_guess guess[2] = {correct(mitm::test[0]), correct(mitm::test[1])};
+    correct_guess guess[2] = {correct(mitm::test[FLAGS_test_archive])};
     correct_guess *c = nullptr;
 
     // Generate the x array from the seed.
@@ -92,7 +94,7 @@ int main(int argc, char *argv[]) {
 
     if (FLAGS_runtests) {
         c = &(guess[0]);
-        archive = mitm::test[0];
+        archive = mitm::test[FLAGS_test_archive];
     }
 
     if ((archive.file[0].x[0] != archive.file[0].h[0]) ||

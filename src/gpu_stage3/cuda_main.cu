@@ -19,6 +19,9 @@ DEFINE_int32(stop_after, -1,
              "will stop after processing <stop_after> stage1 candidates.");
 DEFINE_int32(cuda_device, -1,
              "Which CUDA device to use, -1 to use them all.");
+DECLARE_int32(test_archive);
+DEFINE_int32(test_archive, 0,
+             "Which test archive to use when running tests.");
 
 using namespace mitm;
 using namespace mitm_stage1;
@@ -123,7 +126,7 @@ int main(int argc, char *argv[]) {
             stage2_candidate_count);
 
     archive_info archive;
-    correct_guess guess[2] = {correct(mitm::test[0]), correct(mitm::test[1])};
+    correct_guess guess[2] = {correct(mitm::test[FLAGS_test_archive])};
     correct_guess *c = nullptr;
 
     // Generate the x array from the seed.
@@ -153,7 +156,7 @@ int main(int argc, char *argv[]) {
 
     if (FLAGS_runtests) {
         c = &(guess[0]);
-        archive = mitm::test[0];
+        archive = mitm::test[FLAGS_test_archive];
     }
 
     if ((archive.file[0].x[0] != archive.file[0].h[0]) ||

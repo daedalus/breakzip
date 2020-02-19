@@ -10,6 +10,9 @@ DECLARE_bool(runtests);
 DECLARE_bool(only_emit_correct);
 DECLARE_string(target);
 DECLARE_int32(srand_seed);
+DECLARE_int32(test_archive);
+DEFINE_int32(test_archive, 0,
+             "The index of the test archive to use when running tests.");
 
 using namespace mitm;
 using namespace mitm_stage1;
@@ -35,14 +38,14 @@ int main(int argc, char *argv[]) {
     }
 
     if (FLAGS_runtests) {
-        correct_guess guess[2] = {correct(mitm::test[0]),
-                                  correct(mitm::test[1])};
+        correct_guess guess[1] = {correct(mitm::test[FLAGS_test_archive])};
         vector<vector<stage1a>> table(0x01000000);
         vector<stage1_candidate> candidates(0);
         size_t correct_idx = 0;
 
-        mitm_stage1a(test[0], table, &(guess[0]));
-        mitm_stage1b(test[0], table, candidates, &(guess[0]), &correct_idx);
+        mitm_stage1a(test[FLAGS_test_archive], table, guess);
+        mitm_stage1b(test[FLAGS_test_archive], table, candidates, guess,
+                     &correct_idx);
 
         if (correct_candidate(guess[0], candidates[correct_idx])) {
             printf(

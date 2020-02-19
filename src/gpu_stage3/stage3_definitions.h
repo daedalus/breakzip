@@ -218,7 +218,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
         uint32_t k22yf0 = gpu_crc32(k21yf0, m2yf0);
         uint8_t s2yf0 = gpu_get_s0(k22yf0);
 
-
 #ifndef __CUDACC__
         if ((info.file[0].x[2] ^ s2xf0 ^ s2yf0) != info.file[0].h[2]) {
             fprintf(stderr,
@@ -272,7 +271,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                 "chunk8 = %02x, chunk9 = %02x, cb30 = %x\n",
                                 chunk8, chunk9, cb30);
                     }
-                    fprintf(stderr, "\n");
 #endif
                     continue;
                 }
@@ -290,12 +288,13 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                 "= %x, s3xf0 = %02x, s3yf0 = %02x\n",
                                 chunk8, chunk9, cb30, s3xf0, s3yf0);
                     }
-                    fprintf(stderr, "\n");
 #endif
                     continue;
                 }
 
                 for (uint8_t cb31 = 0; cb31 < 4; ++cb31) {
+                    uint32_t upper1 = upper;
+                    uint32_t lower1 = lower;
                     // Do it again for file 1
                     uint32_t k01xf1 = crck00 ^ gpu_crc32tab[info.file[1].x[0]];
                     uint32_t extra1xf1 = (k01xf1 & 0xff) * CRYPTCONST + 1;
@@ -397,11 +396,12 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                     uint8_t m3xf1 = chunk9 + (extra3xf1 >> 24) + (cb31 & 1);
                     bound = 0x1000000 - (extra3xf1 & 0xffffff);
                     if (cb31 & 1) {
-                        lower = bound > lower ? bound : lower;
+                        lower1 = bound > lower1 ? bound : lower1;
                     } else {
-                        upper = bound < upper ? bound : upper;
+                        upper1 = bound < upper1 ? bound : upper1;
                     }
-                    if (upper < lower) {
+
+                    if (upper1 < lower1) {
 #ifndef __CUDACC__
                         if (c && (chunk8 == c->chunk8) &&
                             (chunk9 == c->chunk9) &&
@@ -412,7 +412,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                     "cb31 = %x\n",
                                     chunk8, chunk9, cb31);
                         }
-                        fprintf(stderr, "\n");
 #endif
                         continue;
                     }
@@ -427,11 +426,11 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                         chunk9 + (extra3yf1 >> 24) + ((cb31 >> 1) & 1);
                     bound = 0x1000000 - (extra3yf1 & 0xffffff);
                     if ((cb31 >> 1) & 1) {
-                        lower = bound > lower ? bound : lower;
+                        lower1 = bound > lower1 ? bound : lower1;
                     } else {
-                        upper = bound < upper ? bound : upper;
+                        upper1 = bound < upper1 ? bound : upper1;
                     }
-                    if (upper < lower) {
+                    if (upper1 < lower1) {
 #ifndef __CUDACC__
                         if (c && (chunk8 == c->chunk8) &&
                             (chunk9 == c->chunk9) &&
@@ -442,7 +441,6 @@ CUDA_HOSTDEVICE void gpu_stage3_internal(
                                     "%02x, cb31 = %x\n",
                                     chunk8, chunk9, cb31);
                         }
-                        fprintf(stderr, "\n");
 #endif
                         continue;
                     }
@@ -594,7 +592,8 @@ void gpu_stage4(const mitm::archive_info &info,
             }
             if (still_good) {
                 gpu_stages5to10(info, crck00, k10, k20, result, c);
-                if (result->crck00 != 0 || result->k10 != 0 || result->k20 != 0) {
+                if (result->crck00 != 0 || result->k10 != 0 ||
+                    result->k20 != 0) {
                     return;
                 }
             }  // NV(leaf): notice trailing else if below, please.
@@ -633,7 +632,8 @@ void gpu_stages5to10(const mitm::archive_info &info, const uint32_t crck00,
         uint32_t k0n, extra, k1cn, k2n;
         for (int f = 0; (f < 2) && still_good; ++f) {
             const uint8_t *bytes = info.file[f].x;
-            uint8_t sn[10][2] = {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}};
+            uint8_t sn[10][2] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
+                                 {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}};
             for (int xy = 0; xy < 2; ++xy) {
                 extra = 0;
                 k0n = crc32k00 ^ gpu_crc32tab[bytes[0] ^ (s0 * xy)];
