@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "Can't open output key file %s: %s",
                         FLAGS_output.c_str(), strerror(errno));
             } else {
-                fprintf(keyfile, "Valid Keys Found: crck00=%u k10=%u k20=%u\n", 
+                fprintf(keyfile, "Valid Keys Found: crck00=%08x k10=%08x k20=%08x\n",
                         result.crck00,
                         result.k10,
                         result.k20);

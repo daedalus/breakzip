@@ -22,7 +22,7 @@ typedef struct archive_info {
     uint32_t key[3];
 } archive_info;
 
-extern archive_info test[3];
+extern archive_info test[5];
 
 typedef struct correct_guess {
     uint16_t chunk1;  // Bits 15..0  of key20
