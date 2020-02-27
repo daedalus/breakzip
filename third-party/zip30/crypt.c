@@ -234,7 +234,7 @@ void crypthead(passwd, crc)
         unsigned int seed = (unsigned)t ^ ZCR_SEED2;
         srand(seed);
         fprintf(stderr, "crypthead: \ncrypthead: {\n"
-                        "crypthead:    0, 0, // start, end\n"
+                        "crypthead:    0, 0, // start, end\n");
         fprintf(stderr, "crypthead:    { %d, %ld, %d, // pid, time, seed\n",
                 getpid(), t, seed);
     }
