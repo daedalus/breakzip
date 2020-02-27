@@ -6,4 +6,4 @@ CUDA_DEVICE=${2:-0}
 
 echo ${SHARD_FILE}
 
-head -n 10 ${SHARD_FILE} | xargs -I % -- /bin/bash -c "build.out/src/gpu_stage3/cuda_stage3 -cuda_device ${CUDA_DEVICE} -input_shard % -target ../nullified.zip -output stage3.out"
+cat ${SHARD_FILE} | xargs -I % -- /bin/bash -c "build.out/src/gpu_stage3/cuda_stage3 -cuda_device ${CUDA_DEVICE} -input_shard % -target ../nullified.zip -output stage3.out"
