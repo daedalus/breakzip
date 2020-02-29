@@ -59,10 +59,6 @@ install(FILES ${LIBS} DESTINATION lib/breakziplib)
 install(FILES ${LIB_FILES} DESTINATION lib/breakziplib)
 install(FILES ${SHARE_FILES} DESTINATION share/breakzip)
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-set(LIBS ${LIBS} Threads::Threads)
-
 if (WITH_TCMALLOC)
     find_package(TCMALLOC REQUIRED)
     include_directories(${TCMALLOC_INCLUDE_DIRS})
