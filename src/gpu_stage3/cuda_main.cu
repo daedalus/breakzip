@@ -82,16 +82,9 @@ __global__ void gpu_stage3_kernel(const gpu_stage2_candidate *candidates,
     if (i < stage2_candidate_count) {
         keys result = {0, 0, 0};
         stage3::gpu_stage3_internal(*archive, candidates[i], &result, &c);
-
-        if (result.crck00 != 0 || result.k10 != 0 || result.k20 != 0) {
-            results[i].crck00 = 1;
-            results[i].k10 = 0;
-            results[i].k20 = 0;
-        } else {
-            results[i].crck00 = 0;
-            results[i].k10 = 0;
-            results[i].k20 = 0;
-        }
+        results[i].crck00 = result.crck00;
+        results[i].k10 = result.k10;
+        results[i].k20 = result.k20;
     }
 }
 
@@ -307,7 +300,7 @@ int main(int argc, char *argv[]) {
         bool success = false;
         for (int i = 0; i < stage2_candidate_count; ++i) {
             if (host_results[i].crck00 != 0 || host_results[i].k10 != 0 || host_results[i].k20 != 0) {
-                fprintf(stdout, "FINAL: Success! Keys: crck00=%u k10=%u k20=%u\n", 
+                fprintf(stdout, "FINAL: Success! Keys: crck00=%08x k10=%08x k20=%08x\n",
                         host_results[i].crck00,
                         host_results[i].k10,
                         host_results[i].k20);
@@ -316,7 +309,7 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Can't open output key file %s: %s",
                             FLAGS_output.c_str(), strerror(errno));
                 } else {
-                    fprintf(keyfile, "Valid Keys Found: crck00=%u k10=%u k20=%u\n", 
+                    fprintf(keyfile, "Valid Keys Found: crck00=%08x k10=%08x k20=%08x\n",
                             host_results[i].crck00,
                             host_results[i].k10,
                             host_results[i].k20);
