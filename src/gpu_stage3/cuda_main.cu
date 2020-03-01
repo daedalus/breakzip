@@ -78,7 +78,7 @@ __global__ void gpu_stage3_kernel(const gpu_stage2_candidate *candidates,
                                   const archive_info* archive,
                                   const uint32_t stage2_candidate_count,
                                   const mitm::correct_guess& c) {
-    int i = blockIdx.x + blockDim.x * threadIdx.x;
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i < stage2_candidate_count) {
         keys result = {0, 0, 0};
         stage3::gpu_stage3_internal(*archive, candidates[i], &result, &c);
