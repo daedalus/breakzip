@@ -88,6 +88,18 @@ __global__ void gpu_stage3_kernel(const gpu_stage2_candidate *candidates,
     }
 }
 
+int find_k00_from_crc32(uint32_t crck00) {
+    uint32_t crc32entry = 0;
+    uint8_t crck00fb = (crck00 >> 24) & 0xff;
+    for (uint16_t i = 0; i < 256; i++) {
+        uint8_t crc32fb = (crc32tab[i] >> 24) & 0xff;
+        if (crc32fb == crck00fb) {
+            crc32entry = ((crck00 ^ crc32tab[i]) << 8) | i;
+        }
+    }
+    return crc32entry;
+}
+
 int main(int argc, char *argv[]) {
     int my_argc = argc;
 
@@ -300,8 +312,10 @@ int main(int argc, char *argv[]) {
         bool success = false;
         for (int i = 0; i < stage2_candidate_count; ++i) {
             if (host_results[i].crck00 != 0 || host_results[i].k10 != 0 || host_results[i].k20 != 0) {
-                fprintf(stdout, "FINAL: Success! Keys: crck00=%08x k10=%08x k20=%08x\n",
+                uint32_t k00 = find_k00_from_crc32(host_results[i].crck00);
+                fprintf(stdout, "FINAL: Success! Keys: crck00=%08x k00=%08x k10=%08x k20=%08x\n",
                         host_results[i].crck00,
+                        k00,
                         host_results[i].k10,
                         host_results[i].k20);
                 auto keyfile = fopen(FLAGS_output.c_str(), "a+");
@@ -309,8 +323,9 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Can't open output key file %s: %s",
                             FLAGS_output.c_str(), strerror(errno));
                 } else {
-                    fprintf(keyfile, "Valid Keys Found: crck00=%08x k10=%08x k20=%08x\n",
+                    fprintf(keyfile, "Valid Keys Found: crck00=%08x k00=%08x k10=%08x k20=%08x\n",
                             host_results[i].crck00,
+                            k00,
                             host_results[i].k10,
                             host_results[i].k20);
                     fclose(keyfile);
