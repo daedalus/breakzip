@@ -34,6 +34,18 @@ const char *usage_message = R"usage(
     Stage1 prints the name of the shard containing the correct guess.
     )usage";
 
+int find_k00_from_crc32(uint32_t crck00) {
+    uint32_t crc32entry = 0;
+    uint8_t crck00fb = (crck00 >> 24) & 0xff;
+    for (uint16_t i = 0; i < 256; i++) {
+        uint8_t crc32fb = (crc32tab[i] >> 24) & 0xff;
+        if (crc32fb == crck00fb) {
+            crc32entry = ((crck00 ^ crc32tab[i]) << 8) | i;
+        }
+    }
+    return crc32entry;
+}
+
 int main(int argc, char *argv[]) {
     int my_argc = argc;
 
@@ -112,15 +124,17 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < stage2_candidate_count; ++i) {
         gpu_stage3(archive, stage2_candidates[i], &result, c);
         if (result.crck00 != 0 || result.k10 != 0 || result.k20 != 0) {
-            fprintf(stderr, "Found keys! crck00: %08x, k10: %08x, k20: %08x\n",
-                    result.crck00, result.k10, result.k20);
+            uint32_t k00 = find_k00_from_crc32(result.crck00);
+            fprintf(stderr, "Found keys! crck00: %08x, k00: %08x, k10: %08x, k20: %08x\n",
+                    result.crck00, k00, result.k10, result.k20);
             auto keyfile = fopen(FLAGS_output.c_str(), "a+");
             if (nullptr == keyfile) {
                 fprintf(stderr, "Can't open output key file %s: %s",
                         FLAGS_output.c_str(), strerror(errno));
             } else {
-                fprintf(keyfile, "Valid Keys Found: crck00=%08x k10=%08x k20=%08x\n",
+                fprintf(keyfile, "Valid Keys Found: crck00=%08x , k00: %08x, k10=%08x k20=%08x\n",
                         result.crck00,
+                        k00,
                         result.k10,
                         result.k20);
                 fclose(keyfile);
