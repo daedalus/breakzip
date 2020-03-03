@@ -95,6 +95,20 @@ int main(int argc, char *argv[]) {
     SetUsageMessage(usage_message);
     auto non_flag = ParseCommandLineFlags(&my_argc, &argv, false);
 
+    // check cuda device existence and fail fast if something is wrong
+    int cuda_device_count = 0;
+    cudaError_t err = cudaGetDeviceCount(&cuda_device_count);
+
+    if (err != cudaSuccess) {
+        printf("%s\n", cudaGetErrorString(err));
+        exit(-1);
+    }
+
+    if (0 == cuda_device_count) {
+        fprintf(stderr, "Host has no CUDA capable devices. Use cpu_stage3, instead?\n");
+        exit(-1);
+    }
+
     // We build the preimages once for all candidates.
     vector<vector<uint16_t>> preimages(0x100);
     build_preimages(preimages);
@@ -155,14 +169,6 @@ int main(int argc, char *argv[]) {
     if ((archive.file[0].x[0] != archive.file[0].h[0]) ||
         (archive.file[1].x[0] != archive.file[1].h[0])) {
         fprintf(stderr, "Given seed does not generate the initial bytes!");
-        exit(-1);
-    }
-
-    int cuda_device_count = 0;
-    cudaGetDeviceCount(&cuda_device_count);
-
-    if (0 == cuda_device_count) {
-        fprintf(stderr, "Host has no CUDA capable devices. Use cpu_stage3, instead?\n");
         exit(-1);
     }
 
