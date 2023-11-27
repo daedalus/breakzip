@@ -32,48 +32,53 @@ def Usage():
 def FormatCharHex(d):
     s = hex(ord(d))
     if len(s) == 3:
-        s = "0x0" + s[2]
+        s = f"0x0{s[2]}"
     return s
 
 
 args = sys.argv[1:]
-if not(len(sys.argv[1:]) == 2):
+if len(sys.argv[1:]) != 2:
     Usage()
 
-out_h = args[1] + "_ptxdump.h"
-out_c = args[1] + "_ptxdump.c"
+out_h = f"{args[1]}_ptxdump.h"
+out_c = f"{args[1]}_ptxdump.c"
 
 
-h_in = open(args[0], 'r')
-source_bytes = h_in.read()
-source_bytes_len = len(source_bytes)
+with open(args[0], 'r') as h_in:
+    source_bytes = h_in.read()
+    source_bytes_len = len(source_bytes)
 
-h_out_c = open(out_c, 'w')
-h_out_c.writelines(g_Header)
-h_out_c.writelines("#include \"" + out_h + "\"\n\n")
-h_out_c.writelines("unsigned char " + args[1] + "_ptxdump[" + str(source_bytes_len+1) + "] = {\n")
+    h_out_c = open(out_c, 'w')
+    h_out_c.writelines(g_Header)
+    h_out_c.writelines("#include \"" + out_h + "\"\n\n")
+    h_out_c.writelines(
+        f"unsigned char {args[1]}_ptxdump[{str(source_bytes_len + 1)}"
+        + "] = {\n"
+    )
 
-h_out_h = open(out_h, 'w')
-macro_h = "__" + args[1] + "_ptxdump_h__"
-h_out_h.writelines(g_Header)
-h_out_h.writelines("#ifndef " + macro_h + "\n")
-h_out_h.writelines("#define " + macro_h + "\n\n")
-h_out_h.writelines('#if defined __cplusplus\nextern "C" {\n#endif\n\n')
-h_out_h.writelines("extern unsigned char " + args[1] + "_ptxdump[" + str(source_bytes_len+1) + "];\n\n")
-h_out_h.writelines("#if defined __cplusplus\n}\n#endif\n\n")
-h_out_h.writelines("#endif //" + macro_h + "\n")
+    h_out_h = open(out_h, 'w')
+    macro_h = f"__{args[1]}_ptxdump_h__"
+    h_out_h.writelines(g_Header)
+    h_out_h.writelines(f"#ifndef {macro_h}" + "\n")
+    h_out_h.writelines(f"#define {macro_h}" + "\n\n")
+    h_out_h.writelines('#if defined __cplusplus\nextern "C" {\n#endif\n\n')
+    h_out_h.writelines(
+        f"extern unsigned char {args[1]}_ptxdump[{str(source_bytes_len + 1)}"
+        + "];\n\n"
+    )
+    h_out_h.writelines("#if defined __cplusplus\n}\n#endif\n\n")
+    h_out_h.writelines(f"#endif //{macro_h}" + "\n")
 
-newlinecnt = 0
-for i in range(0, source_bytes_len):
-    h_out_c.write(FormatCharHex(source_bytes[i]) + ", ")
-    newlinecnt += 1
-    if newlinecnt == 16:
-        newlinecnt = 0
-        h_out_c.write("\n")
-h_out_c.write("0x00\n};\n")
+    newlinecnt = 0
+    for i in range(0, source_bytes_len):
+        h_out_c.write(f"{FormatCharHex(source_bytes[i])}, ")
+        newlinecnt += 1
+        if newlinecnt == 16:
+            newlinecnt = 0
+            h_out_c.write("\n")
+    h_out_c.write("0x00\n};\n")
 
-h_in.close()
 h_out_c.close()
 h_out_h.close()
 
-print("ptx2c: CUmodule " + args[0] + " packed successfully")
+print(f"ptx2c: CUmodule {args[0]} packed successfully")
